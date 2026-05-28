@@ -1,0 +1,13 @@
+name: v1-baseline
+description: Phase 1 baseline — AI Search hybrid retrieval, no personalization.
+embedding_model: text-embedding-3-large
+embedding_dim: 3072
+chunk_size_tokens: 600
+chunk_overlap_tokens: 75
+retrieval_top_k: 30
+ranker:
+  type: passthrough        # Phase 1 — no ranker; rely on AI Search hybrid order
+generation:
+  model: gpt-4o
+  temperature: 0.0
+  max_tokens: 800

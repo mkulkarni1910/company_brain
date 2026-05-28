@@ -1,0 +1,10 @@
+{"qid":"q001","query":"what is our PTO policy?","expected_doc_ids":["up:policy-pto"],"expected_chunk_substrings":["20 days"],"tags":["policy","pto"]}
+{"qid":"q002","query":"how many days of PTO do full-time employees accrue?","expected_doc_ids":["up:policy-pto"],"expected_chunk_substrings":["20 days"],"tags":["policy","pto"]}
+{"qid":"q003","query":"what is the dinner reimbursement limit?","expected_doc_ids":["up:policy-expenses"],"expected_chunk_substrings":["$90 dinner"],"tags":["policy","expenses"]}
+{"qid":"q004","query":"what is the per-night hotel limit in tier-1 cities?","expected_doc_ids":["up:policy-expenses"],"expected_chunk_substrings":["$300"],"tags":["policy","expenses"]}
+{"qid":"q005","query":"is MFA required?","expected_doc_ids":["up:policy-security"],"expected_chunk_substrings":["Multi-factor authentication is required"],"tags":["policy","security"]}
+{"qid":"q006","query":"what is our Q3 ARR target?","expected_doc_ids":["up:planning-q3-sales-plan"],"expected_chunk_substrings":["$42M ARR"],"tags":["planning","sales"]}
+{"qid":"q007","query":"who owns the renewal-plus motion?","expected_doc_ids":["up:planning-q3-sales-plan"],"expected_chunk_substrings":["Alex"],"tags":["planning","sales"]}
+{"qid":"q008","query":"what are the H2 product roadmap themes?","expected_doc_ids":["up:planning-roadmap"],"expected_chunk_substrings":["trust","scale","personalization"],"tags":["planning","product"]}
+{"qid":"q009","query":"how should I respond to a payments service alert?","expected_doc_ids":["up:engineering-oncall-runbook"],"expected_chunk_substrings":["Acknowledge within 5 minutes"],"tags":["engineering","oncall"]}
+{"qid":"q010","query":"what feature flag sheds traffic to the secondary processor?","expected_doc_ids":["up:engineering-oncall-runbook"],"expected_chunk_substrings":["payments.gateway.secondary_pct"],"tags":["engineering","oncall"]}
