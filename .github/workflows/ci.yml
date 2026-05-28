@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  brain-api:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: brain-api } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with: { version: "latest" }
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run pytest -v -m "not integration"
+
+  web:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm, cache-dependency-path: web/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
