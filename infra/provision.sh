@@ -49,7 +49,7 @@ deploy_model() {
   fi
 }
 deploy_model "gpt-4o" "gpt-4o" "2024-11-20" "Standard" 30
-deploy_model "gpt-4o-mini" "gpt-4o-mini" "2024-07-18" "Standard" 30
+deploy_model "gpt-4-1-mini" "gpt-4.1-mini" "2025-04-14" "Standard" 30
 deploy_model "text-embedding-3-large" "text-embedding-3-large" "1" "Standard" 30
 
 # Redis
