@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Header, HTTPException
 
 from app.auth import InvalidToken, user_from_bearer
+from app.config import get_settings
 from app.deps import get_orchestrator
 from app.domain.identity import User
 from app.domain.query import Answer, QueryRequest
@@ -26,7 +27,7 @@ def _debug_user(header: str) -> User:
 
 
 async def _resolve_user(authorization: str | None, debug_header: str | None) -> User:
-    if debug_header:
+    if debug_header and get_settings().enable_debug_auth:
         return _debug_user(debug_header)
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="auth required")

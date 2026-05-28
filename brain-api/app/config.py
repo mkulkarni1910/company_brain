@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     # Brain
     brain_tenant_id: str = "t-test"
     brain_log_level: str = "INFO"
+    enable_debug_auth: bool = False
 
 
 @lru_cache(maxsize=1)

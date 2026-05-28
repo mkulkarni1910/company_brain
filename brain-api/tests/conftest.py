@@ -62,6 +62,7 @@ def _default_env(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
         "AZURE_AI_SEARCH_INDEX": "brain-content-t-test",
         "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
         "AZURE_REDIS_HOST": "test.redis.cache.windows.net",
+        "ENABLE_DEBUG_AUTH": "true",
     }
     for k, v in defaults.items():
         monkeypatch.setenv(k, v)
