@@ -48,7 +48,7 @@ deploy_model() {
       --model-format OpenAI --sku-name "$sku" --sku-capacity "$capacity" 1>/dev/null
   fi
 }
-deploy_model "gpt-4o" "gpt-4o" "2024-08-06" "Standard" 30
+deploy_model "gpt-4o" "gpt-4o" "2024-11-20" "Standard" 30
 deploy_model "gpt-4o-mini" "gpt-4o-mini" "2024-07-18" "Standard" 30
 deploy_model "text-embedding-3-large" "text-embedding-3-large" "1" "Standard" 30
 
