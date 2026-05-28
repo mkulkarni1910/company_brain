@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -10,6 +11,7 @@ import httpx
 
 CORPUS = Path(__file__).parent / "corpus"
 API = "http://localhost:8000"
+ADMIN_KEY = os.environ.get("ADMIN_API_KEY", "")
 
 
 def main() -> None:
@@ -39,7 +41,11 @@ def main() -> None:
                 "modified_at": now,
                 "mime": "text/markdown",
             }
-            r = client.post(f"{API}/admin/ingest", json=payload)
+            r = client.post(
+                f"{API}/admin/ingest",
+                json=payload,
+                headers={"x-admin-key": ADMIN_KEY},
+            )
             r.raise_for_status()
             print(f"{rel}: {r.json()['chunks_indexed']} chunks")
     print("Done.")

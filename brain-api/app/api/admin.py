@@ -1,10 +1,23 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException
 
+from app.config import get_settings
 from app.deps import get_ingest_pipeline
 from app.domain.chunk import SourceDoc
 from app.ingest.pipeline import IngestPipeline, IngestResult
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+
+def require_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
+    """Phase 1 admin auth: shared API key via x-admin-key header.
+
+    Rejects with 403 when ADMIN_API_KEY is unset (closed by default) or when
+    the supplied header does not match.
+    """
+    expected = get_settings().admin_api_key
+    if not expected or x_admin_key != expected:
+        raise HTTPException(status_code=403, detail="admin key required")
+
+
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_key)])
 
 
 @router.post("/ingest", response_model=None)

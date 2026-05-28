@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
 from app.main import app
 
 
@@ -23,6 +24,10 @@ def test_post_admin_ingest_returns_count() -> None:
         "mime": "text/markdown",
     }
     client = TestClient(app)
-    resp = client.post("/admin/ingest", json=payload)
+    resp = client.post(
+        "/admin/ingest",
+        json=payload,
+        headers={"x-admin-key": get_settings().admin_api_key or ""},
+    )
     assert resp.status_code == 200
     assert resp.json()["chunks_indexed"] >= 1
