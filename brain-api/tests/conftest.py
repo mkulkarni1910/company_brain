@@ -33,6 +33,18 @@ def _clear_ai_search_client_cache() -> None:
 
 
 @pytest.fixture(autouse=True)
+def _clear_redis_cache_pool() -> None:
+    """Reset the Redis cache pool lru_cache between tests.
+
+    Same loop-binding issue as the AI Search client: the cached redis
+    connection pool is bound to the event loop that created it.
+    """
+    from app.cache.redis_cache import _pool
+
+    _pool.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def _default_env(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """Default test env so Settings can instantiate without a real .env.
 

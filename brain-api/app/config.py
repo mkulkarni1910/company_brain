@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     azure_redis_host: str
     azure_redis_port: int = 6380
     azure_redis_ssl: bool = True
+    redis_key: str | None = None
 
     # Key Vault (optional in dev)
     azure_key_vault_url: str | None = None
