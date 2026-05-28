@@ -1,0 +1,52 @@
+[project]
+name = "brain-api"
+version = "0.1.0"
+description = "Company Brain — Zone 4 intelligence layer"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.6",
+  "httpx>=0.27",
+  "azure-identity>=1.19",
+  "azure-search-documents>=11.6.0b8",
+  "azure-keyvault-secrets>=4.8",
+  "openai>=1.54",
+  "semantic-kernel>=1.18",
+  "redis>=5.2",
+  "python-jose[cryptography]>=3.3",
+  "tenacity>=9.0",
+  "opentelemetry-api>=1.28",
+  "opentelemetry-sdk>=1.28",
+  "opentelemetry-instrumentation-fastapi>=0.49b0",
+  "opentelemetry-instrumentation-httpx>=0.49b0",
+  "azure-monitor-opentelemetry>=1.6",
+  "tiktoken>=0.8",
+  "structlog>=24.4",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=6.0",
+  "respx>=0.21",
+  "ruff>=0.7",
+  "mypy>=1.13",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+markers = [
+  "integration: tests that hit real Azure resources (skip with -m 'not integration')",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
