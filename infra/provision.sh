@@ -49,7 +49,11 @@ deploy_model() {
   fi
 }
 deploy_model "gpt-4o" "gpt-4o" "2024-11-20" "Standard" 30
-deploy_model "gpt-4-1-mini" "gpt-4.1-mini" "2025-04-14" "Standard" 30
+# Plan-step deployment (orchestrator classifier) is deferred to Phase 2 when the
+# plan step lands. Phase 1 orchestrator is cache → retrieve → answer; no planner
+# call is made. When re-enabled, pick a current-GA mini model and request quota
+# for it (`az cognitiveservices usage list --location <region>`).
+# deploy_model "gpt-4-1-mini" "gpt-4.1-mini" "2025-04-14" "Standard" 30
 deploy_model "text-embedding-3-large" "text-embedding-3-large" "1" "Standard" 30
 
 # Redis
