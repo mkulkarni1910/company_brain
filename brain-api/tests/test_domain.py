@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from app.domain.chunk import Chunk, SourceDoc
 from app.domain.identity import User
-from app.domain.query import Answer, Candidate, Citation, QueryRequest
+from app.domain.query import QueryRequest
 
 
 def test_user_principal_set_includes_self_and_groups() -> None:

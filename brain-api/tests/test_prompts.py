@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
 from app.domain.chunk import Chunk
-from app.domain.query import Candidate, Citation
+from app.domain.query import Candidate
 from app.generation.prompts import (
     build_grounded_messages,
     parse_citations_from_answer,
