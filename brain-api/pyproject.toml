@@ -50,3 +50,16 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
 ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Allow FastAPI's Depends/Header/Query/Body/etc. as argument defaults.
+extend-immutable-calls = [
+  "fastapi.Depends",
+  "fastapi.Header",
+  "fastapi.Query",
+  "fastapi.Body",
+  "fastapi.Path",
+  "fastapi.Cookie",
+  "fastapi.Form",
+  "fastapi.File",
+]

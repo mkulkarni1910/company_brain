@@ -22,6 +22,15 @@ def _clear_ai_search_client_cache() -> None:
 
     _client.cache_clear()
 
+    # app.deps also caches AISearchClient/HybridRetriever/IngestPipeline
+    # instances that transitively hold the same loop-bound session.
+    from app import deps
+
+    deps.get_embedder.cache_clear()
+    deps.get_ai_search.cache_clear()
+    deps.get_ingest_pipeline.cache_clear()
+    deps.get_retriever.cache_clear()
+
 
 @pytest.fixture(autouse=True)
 def _default_env(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
