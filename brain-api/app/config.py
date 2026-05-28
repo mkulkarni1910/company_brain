@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     # Azure identity
     azure_tenant_id: str
     azure_client_id: str
+    azure_api_client_id: str | None = None
+    azure_api_scope: str | None = None
 
     # AI Search
     azure_ai_search_endpoint: str
