@@ -12,7 +12,9 @@ def test_filter_includes_tenant_and_principals() -> None:
     )
     f = build_acl_filter(u)
     assert "tenant_id eq 't-test'" in f
-    assert "search.in(acl_principals" in f
+    # acl_principals is a Collection(Edm.String), so search.in must be
+    # applied per-element via the OData `any` lambda.
+    assert "acl_principals/any(p: search.in(p" in f
     # all principals present (any order)
     for p in {"u-1", "g-sales", "g-central"}:
         assert p in f
