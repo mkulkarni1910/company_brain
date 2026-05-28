@@ -30,6 +30,8 @@ def _clear_ai_search_client_cache() -> None:
     deps.get_ai_search.cache_clear()
     deps.get_ingest_pipeline.cache_clear()
     deps.get_retriever.cache_clear()
+    deps.get_cache.cache_clear()
+    deps.get_orchestrator.cache_clear()
 
 
 @pytest.fixture(autouse=True)

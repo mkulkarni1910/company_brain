@@ -1,7 +1,9 @@
 from functools import lru_cache
 
+from app.cache.redis_cache import RedisCache
 from app.generation.azure_openai import AzureOpenAIClient
 from app.ingest.pipeline import IngestPipeline
+from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
 
@@ -24,3 +26,17 @@ def get_ingest_pipeline() -> IngestPipeline:
 @lru_cache(maxsize=1)
 def get_retriever() -> HybridRetriever:
     return HybridRetriever(search=get_ai_search(), embedder=get_embedder())
+
+
+@lru_cache(maxsize=1)
+def get_cache() -> RedisCache:
+    return RedisCache()
+
+
+@lru_cache(maxsize=1)
+def get_orchestrator() -> SemanticKernelOrchestrator:
+    return SemanticKernelOrchestrator(
+        retriever=get_retriever(),
+        llm=get_embedder(),
+        cache=get_cache(),
+    )
