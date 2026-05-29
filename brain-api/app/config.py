@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     cosmos_gremlin_database: str = "brain"
     cosmos_gremlin_graph: str = "people"
 
+    # Azure Data Explorer (Activity pillar)
+    adx_cluster_uri: str | None = None
+    adx_database: str = "brain"
+
     # Key Vault (optional in dev)
     azure_key_vault_url: str | None = None
 
@@ -47,9 +51,10 @@ class Settings(BaseSettings):
     enable_debug_auth: bool = False
     admin_api_key: str | None = None
 
-    # Personalized ranker weights (Phase 2a: content + people only)
-    rank_weight_content: float = 0.7
+    # Personalized ranker weights (Phase 2b: content + people + activity)
+    rank_weight_content: float = 0.5
     rank_weight_people: float = 0.3
+    rank_weight_activity: float = 0.2
 
 
 @lru_cache(maxsize=1)

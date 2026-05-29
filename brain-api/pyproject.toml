@@ -25,6 +25,7 @@ dependencies = [
   "tiktoken>=0.8",
   "structlog>=24.4",
   "gremlinpython>=3.7",
+  "azure-kusto-data>=4.5",
 ]
 
 [dependency-groups]
