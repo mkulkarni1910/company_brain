@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         weight_content=get_settings().rank_weight_content,
         weight_people=get_settings().rank_weight_people,
         weight_activity=get_settings().rank_weight_activity,
+        weight_recency=get_settings().rank_weight_recency,
     )
     app.state.activity_store = ActivityStore()
     app.state.activity = ActivitySignal(store=app.state.activity_store)

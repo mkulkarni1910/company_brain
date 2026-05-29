@@ -55,10 +55,11 @@ class Settings(BaseSettings):
     acl_doc_ttl_seconds: int | None = None  # None = persistent (live ACL is authoritative)
     acl_fail_closed_on_missing: bool = False  # strict: drop docs with no live ACL entry
 
-    # Personalized ranker weights (Phase 2b: content + people + activity)
-    rank_weight_content: float = 0.5
-    rank_weight_people: float = 0.3
-    rank_weight_activity: float = 0.2
+    # Personalized ranker weights (Phase 4: content + people + activity + recency; sum 1.0)
+    rank_weight_content: float = 0.45
+    rank_weight_people: float = 0.25
+    rank_weight_activity: float = 0.15
+    rank_weight_recency: float = 0.15
 
     # Live Fetch (Phase 3)
     live_fetch_enabled: bool = True
