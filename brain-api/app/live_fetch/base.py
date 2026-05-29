@@ -25,7 +25,7 @@ _WORD = re.compile(r"[a-z0-9'-]+")
 def needs_live_fetch(query: str) -> bool:
     q = " ".join(_WORD.findall(query.lower()))
     padded = f" {q} "
-    return any(f" {term} " in padded or term in q for term in _FRESHNESS_TERMS)
+    return any(f" {term} " in padded for term in _FRESHNESS_TERMS)
 
 
 class LiveFetcher(Protocol):
