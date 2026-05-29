@@ -9,6 +9,7 @@ from app.domain.query import QueryRequest
 from app.generation.azure_openai import AzureOpenAIClient
 from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.orchestrator.kernel import SemanticKernelOrchestrator
+from app.orchestrator.planner import QueryPlanner
 from app.people.graph_client import PeopleGraphClient
 from app.people.proximity import PeopleProximity
 from app.ranking.personalized_ranker import PersonalizedRanker
@@ -33,6 +34,7 @@ def _build() -> tuple[SemanticKernelOrchestrator, list]:
         ranker=PersonalizedRanker(weight_content=0.5, weight_people=0.3, weight_activity=0.2),
         activity=ActivitySignal(store=activity_store),
         live_fetcher=MSGraphSearchFetcher(),
+        planner=QueryPlanner(llm=embedder),
     )
     return orch, closeables
 

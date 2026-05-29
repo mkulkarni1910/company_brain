@@ -4,7 +4,9 @@ from datetime import UTC, datetime
 from app.domain.chunk import Chunk
 from app.domain.identity import User
 from app.domain.query import Candidate, QueryRequest
+from app.live_fetch.base import needs_live_fetch as _heur
 from app.orchestrator.kernel import SemanticKernelOrchestrator
+from app.orchestrator.planner import QueryPlan
 from app.ranking.personalized_ranker import PersonalizedRanker
 
 
@@ -59,12 +61,20 @@ class _FakeLLM:
     async def complete(self, **kw): return "answer [1] [2]"
 
 
+class _FakePlanner:
+    # Deterministic/offline: drive needs_live_fetch from the freshness heuristic
+    # (matches the prior behaviour these tests assert on), no LLM call.
+    async def plan(self, query):
+        return QueryPlan(needs_retrieval=True, needs_live_fetch=_heur(query),
+                         entities=[], rewrite=query)
+
+
 def _orch(live_fetcher) -> SemanticKernelOrchestrator:
     return SemanticKernelOrchestrator(
         retriever=_FakeRetriever(), llm=_FakeLLM(), cache=_FakeCache(),
         acl_store=_FakeACLStore(), proximity=_FakeProximity(), activity=_FakeActivity(),
         ranker=PersonalizedRanker(weight_content=1.0, weight_people=0.0, weight_activity=0.0),
-        live_fetcher=live_fetcher,
+        live_fetcher=live_fetcher, planner=_FakePlanner(),
     )
 
 

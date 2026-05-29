@@ -13,7 +13,8 @@ from app.domain.identity import User
 from app.domain.query import Answer, Candidate, QueryRequest, RankedResult
 from app.generation.azure_openai import AzureOpenAIClient
 from app.generation.prompts import build_grounded_messages, parse_citations_from_answer
-from app.live_fetch.base import LiveFetcher, needs_live_fetch
+from app.live_fetch.base import LiveFetcher
+from app.orchestrator.planner import QueryPlanner
 from app.people.proximity import PeopleProximity
 from app.ranking.personalized_ranker import PersonalizedRanker
 from app.retrieval.hybrid_retriever import HybridRetriever
@@ -29,10 +30,11 @@ def _cache_key(user: User, query: str) -> str:
 
 
 class SemanticKernelOrchestrator:
-    """Phase 3: cache -> (retrieve || live-fetch) -> ACL re-check (indexed) ->
-    merge -> proximity -> activity -> rank -> answer.
+    """Phase 4: cache -> plan (LLM rewrite + live-fetch decision) ->
+    (retrieve || live-fetch) -> ACL re-check (indexed) -> merge -> proximity ->
+    activity -> rank -> answer.
 
-    Plan step is still a heuristic (needs_live_fetch); LLM plan step deferred.
+    The plan step uses QueryPlanner (gpt-4o), degrading to the freshness heuristic.
     """
 
     def __init__(
@@ -46,6 +48,7 @@ class SemanticKernelOrchestrator:
         ranker: PersonalizedRanker,
         activity: ActivitySignal,
         live_fetcher: LiveFetcher,
+        planner: QueryPlanner,
     ) -> None:
         self._retriever = retriever
         self._llm = llm
@@ -55,18 +58,22 @@ class SemanticKernelOrchestrator:
         self._ranker = ranker
         self._activity = activity
         self._live_fetcher = live_fetcher
+        self._planner = planner
 
     async def aclose(self) -> None:
         return None
 
     async def retrieve_ranked(self, request: QueryRequest, *, user: User) -> list[Candidate]:
         settings = get_settings()
+        # LLM plan step: rewrite the query for retrieval + decide whether Live Fetch
+        # is needed. Degrades to the freshness heuristic on any failure (planner owns it).
+        plan = await self._planner.plan(request.query)
         # Fan out indexed retrieval and (conditionally) live fetch concurrently.
         retrieve_task = asyncio.create_task(
-            self._retriever.retrieve(query=request.query, user=user, k=max(request.k, 10))
+            self._retriever.retrieve(query=plan.rewrite, user=user, k=max(request.k, 10))
         )
         live: list[Candidate] = []
-        if settings.live_fetch_enabled and needs_live_fetch(request.query):
+        if settings.live_fetch_enabled and plan.needs_live_fetch:
             try:
                 live = await asyncio.wait_for(
                     self._live_fetcher.fetch(query=request.query, user=user),
