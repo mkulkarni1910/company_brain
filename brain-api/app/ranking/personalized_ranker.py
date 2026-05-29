@@ -1,10 +1,12 @@
-"""Personalized multi-signal ranker (Phase 2a: Content + People).
+"""Personalized multi-signal ranker (Phase 2b: Content + People + Activity).
 
-final = w_content * normalize(content_rrf) + w_people * proximity
+final = w_content * normalize(content_rrf)
+      + w_people  * proximity
+      + w_activity * activity
 
-Content uses the retriever's RRF score (already rank-derived); proximity is the
-People-pillar signal in [0,1]. Activity (ADX) is added as a third weighted term
-in Phase 2b. Weights are injected (sourced from Settings by the orchestrator).
+Content uses the retriever's RRF score (rank-derived); proximity is the People
+pillar signal; activity is the engagement signal — both in [0,1]. Weights are
+injected (sourced from Settings by the orchestrator).
 """
 
 from __future__ import annotations
@@ -22,15 +24,23 @@ def _normalize(values: dict[str, float]) -> dict[str, float]:
 
 
 class PersonalizedRanker:
-    def __init__(self, *, weight_content: float, weight_people: float) -> None:
+    def __init__(
+        self, *, weight_content: float, weight_people: float, weight_activity: float = 0.0
+    ) -> None:
         self._wc = weight_content
         self._wp = weight_people
+        self._wa = weight_activity
 
     def rank(
-        self, *, candidates: list[Candidate], proximity: dict[str, float]
+        self,
+        *,
+        candidates: list[Candidate],
+        proximity: dict[str, float],
+        activity: dict[str, float] | None = None,
     ) -> list[RankedResult]:
         if not candidates:
             return []
+        activity = activity or {}
         content_norm = _normalize(
             {c.chunk.chunk_id: c.raw_scores.get("content_rrf", 0.0) for c in candidates}
         )
@@ -38,12 +48,17 @@ class PersonalizedRanker:
         for c in candidates:
             content = content_norm.get(c.chunk.chunk_id, 0.0)
             people = proximity.get(c.chunk.doc_id, 0.0)
-            final = self._wc * content + self._wp * people
+            engagement = activity.get(c.chunk.doc_id, 0.0)
+            final = self._wc * content + self._wp * people + self._wa * engagement
             scored.append(
                 RankedResult(
                     candidate=c,
                     final_score=final,
-                    signal_breakdown={"content": content, "people": people},
+                    signal_breakdown={
+                        "content": content,
+                        "people": people,
+                        "activity": engagement,
+                    },
                     rank=0,
                 )
             )
