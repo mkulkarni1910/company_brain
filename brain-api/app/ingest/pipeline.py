@@ -53,7 +53,11 @@ class IngestPipeline:
         ]
         await self._search.upsert_chunks(chunks)
         if self._acl_store is not None:
+            from app.config import get_settings
             await self._acl_store.set_doc_principals(
-                tenant_id=doc.tenant_id, doc_id=doc.doc_id, principals=doc.acl_principals
+                tenant_id=doc.tenant_id,
+                doc_id=doc.doc_id,
+                principals=doc.acl_principals,
+                ttl_seconds=get_settings().acl_doc_ttl_seconds,
             )
         return IngestResult(doc_id=doc.doc_id, chunks_indexed=len(chunks))

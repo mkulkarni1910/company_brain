@@ -44,10 +44,15 @@ class ACLStore:
         await self._r.aclose()
 
     async def set_doc_principals(
-        self, *, tenant_id: str, doc_id: str, principals: list[str], ttl_seconds: int = 900
+        self, *, tenant_id: str, doc_id: str, principals: list[str], ttl_seconds: int | None = None
     ) -> None:
         try:
-            await self._r.set(_doc_key(tenant_id, doc_id), json.dumps(sorted(principals)), ex=ttl_seconds)
+            key = _doc_key(tenant_id, doc_id)
+            value = json.dumps(sorted(principals))
+            if ttl_seconds is None:
+                await self._r.set(key, value)  # persistent: live ACL is authoritative
+            else:
+                await self._r.set(key, value, ex=ttl_seconds)
         except (RedisError, ConnectionError, TimeoutError, OSError) as e:
             logger.warning("ACLStore write failed (doc=%s): %s", doc_id, e)
 
@@ -65,16 +70,25 @@ class ACLStore:
         return set(json.loads(v))
 
     async def recheck(self, *, candidates: list[Candidate], user: User) -> list[Candidate]:
+        fail_closed_on_missing = getattr(self, "_fail_closed", None)
+        if fail_closed_on_missing is None:
+            fail_closed_on_missing = get_settings().acl_fail_closed_on_missing
         principals = user.principals()
         kept: list[Candidate] = []
         for c in candidates:
             try:
                 live = await self.doc_principals(tenant_id=user.tenant_id, doc_id=c.chunk.doc_id)
             except ACLStoreError:
-                # fail-closed: cannot verify -> drop
                 logger.warning("ACL store unreachable; dropping doc %s (fail-closed)", c.chunk.doc_id)
                 continue
-            allowed = live if live is not None else set(c.chunk.acl_principals)
+            if live is None:
+                # No live entry. Strict mode fails closed; otherwise fall back to
+                # the chunk's index-time ACL (covers docs ingested before the store).
+                if fail_closed_on_missing:
+                    continue
+                allowed = set(c.chunk.acl_principals)
+            else:
+                allowed = live  # live entry is authoritative (persistent; revocation propagates)
             if principals & allowed:
                 kept.append(c)
         return kept

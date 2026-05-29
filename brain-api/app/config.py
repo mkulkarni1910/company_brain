@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     enable_debug_auth: bool = False
     admin_api_key: str | None = None
 
+    # ACL store
+    acl_doc_ttl_seconds: int | None = None  # None = persistent (live ACL is authoritative)
+    acl_fail_closed_on_missing: bool = False  # strict: drop docs with no live ACL entry
+
     # Personalized ranker weights (Phase 2b: content + people + activity)
     rank_weight_content: float = 0.5
     rank_weight_people: float = 0.3
