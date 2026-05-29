@@ -3,11 +3,14 @@ from __future__ import annotations
 import hashlib
 import uuid
 
+from app.acl.store import ACLStore
 from app.cache.redis_cache import RedisCache
 from app.domain.identity import User
-from app.domain.query import Answer, Candidate, QueryRequest
+from app.domain.query import Answer, Candidate, QueryRequest, RankedResult
 from app.generation.azure_openai import AzureOpenAIClient
 from app.generation.prompts import build_grounded_messages, parse_citations_from_answer
+from app.people.proximity import PeopleProximity
+from app.ranking.personalized_ranker import PersonalizedRanker
 from app.retrieval.hybrid_retriever import HybridRetriever
 
 
@@ -19,9 +22,9 @@ def _cache_key(user: User, query: str) -> str:
 
 
 class SemanticKernelOrchestrator:
-    """Phase 1: cache → retrieve → answer.
+    """Phase 2a: cache -> retrieve -> ACL re-check -> proximity -> rank -> answer.
 
-    Plan step + Live Fetch routing are stubbed; this is intentional for Phase 1.
+    Plan step + Live Fetch are still stubbed (Phase 3). Activity signal is Phase 2b.
     """
 
     def __init__(
@@ -30,29 +33,48 @@ class SemanticKernelOrchestrator:
         retriever: HybridRetriever,
         llm: AzureOpenAIClient,
         cache: RedisCache,
+        acl_store: ACLStore,
+        proximity: PeopleProximity,
+        ranker: PersonalizedRanker,
     ) -> None:
         self._retriever = retriever
         self._llm = llm
         self._cache = cache
+        self._acl_store = acl_store
+        self._proximity = proximity
+        self._ranker = ranker
 
     async def aclose(self) -> None:
-        # Orchestrator owns no sockets of its own; its collaborators are closed
-        # by the lifespan. Method exists so shutdown can call it uniformly.
         return None
+
+    async def retrieve_ranked(self, request: QueryRequest, *, user: User) -> list[Candidate]:
+        candidates = await self._retriever.retrieve(
+            query=request.query, user=user, k=max(request.k, 10)
+        )
+        if not candidates:
+            return []
+        # Query-time ACL re-check (double-enforcement, fail-closed on store error).
+        candidates = await self._acl_store.recheck(candidates=candidates, user=user)
+        if not candidates:
+            return []
+        # People proximity over the surviving candidate docs.
+        proximity = await self._proximity.score(
+            user=user, doc_ids=[c.chunk.doc_id for c in candidates]
+        )
+        ranked: list[RankedResult] = self._ranker.rank(
+            candidates=candidates, proximity=proximity
+        )
+        return [r.candidate for r in ranked]
 
     async def answer(self, request: QueryRequest, *, user: User) -> Answer:
         query_id = str(uuid.uuid4())
 
-        # 1. Cache lookup
         key = _cache_key(user, request.query)
         cached = await self._cache.get_json(key)
         if cached:
             return Answer.model_validate({**cached, "query_id": query_id})
 
-        # 2. Retrieve
-        candidates: list[Candidate] = await self._retriever.retrieve(
-            query=request.query, user=user, k=max(request.k, 5)
-        )
+        candidates = await self.retrieve_ranked(request, user=user)
         if not candidates:
             return Answer(
                 text="I don't have information about that.",
@@ -60,28 +82,14 @@ class SemanticKernelOrchestrator:
                 query_id=query_id,
             )
 
-        # 3. Generate grounded answer
         messages = build_grounded_messages(query=request.query, candidates=candidates[:5])
         text = await self._llm.complete(messages=messages, temperature=0.0, max_tokens=800)
         citations = parse_citations_from_answer(text, candidates[:5])
 
         answer = Answer(text=text, citations=citations, query_id=query_id)
 
-        # 4. Cache (10 min). Strip query_id so it gets re-minted per request.
         cache_blob = answer.model_dump()
         cache_blob.pop("query_id", None)
         await self._cache.set_json(key, cache_blob, ttl_seconds=600)
 
         return answer
-
-    async def retrieve_ranked(self, request: QueryRequest, *, user: User) -> list[Candidate]:
-        """Return candidates in final rank order WITHOUT generating an answer.
-
-        Phase 2a: this is the retriever's output. Task 10 enriches it with
-        People proximity, ACL re-check, and the personalized ranker so the
-        eval metric reflects personalization. Used by /admin/retrieve for the
-        retrieval-quality eval gate.
-        """
-        return await self._retriever.retrieve(
-            query=request.query, user=user, k=max(request.k, 10)
-        )
