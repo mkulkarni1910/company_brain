@@ -34,8 +34,10 @@ _CREATE = (
     "DocId:string, ChunkId:string, EventType:string, Source:string, DurationMs:int)"
 )
 
-# Recency-weighted engagement: exp decay (tau=14d), self-engagement weighted 2x,
-# over a 30-day window. Parameterized to avoid KQL injection.
+# Recency-weighted, per-event-type engagement over a 30-day window. Positive
+# signals add; thumbs_down subtracts; query is neutral. Self-engagement weighted
+# 2x. Parameterized (string + todynamic) to stay injection-safe on the free
+# cluster (see note above).
 #
 # NOTE (ADX SDK/cluster adaptation): `dids` is declared as a `string` (a JSON
 # array) and parsed inside KQL with `todynamic()`, rather than a native
@@ -48,7 +50,14 @@ _SCORE_QUERY = (
     "| where TenantId == tid and DocId in (todynamic(dids)) and Timestamp > ago(30d)\n"
     "| extend recency = exp(-1.0 * datetime_diff('day', now(), Timestamp) / 14.0)\n"
     "| extend self_weight = iif(UserId == uid, 2.0, 1.0)\n"
-    "| summarize score = sum(recency * self_weight) by DocId"
+    "| extend type_weight = case("
+    "EventType == 'thumbs_up', 2.0, "
+    "EventType == 'thumbs_down', -2.0, "
+    "EventType == 'dwell', 1.5, "
+    "EventType == 'view', 1.0, "
+    "EventType == 'click', 1.0, "
+    "0.0)\n"
+    "| summarize score = sum(recency * self_weight * type_weight) by DocId"
 )
 
 
