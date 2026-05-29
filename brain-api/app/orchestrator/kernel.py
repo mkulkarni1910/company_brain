@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 
 from app.acl.store import ACLStore
@@ -12,6 +13,8 @@ from app.generation.prompts import build_grounded_messages, parse_citations_from
 from app.people.proximity import PeopleProximity
 from app.ranking.personalized_ranker import PersonalizedRanker
 from app.retrieval.hybrid_retriever import HybridRetriever
+
+logger = logging.getLogger(__name__)
 
 
 def _cache_key(user: User, query: str) -> str:
@@ -58,9 +61,16 @@ class SemanticKernelOrchestrator:
         if not candidates:
             return []
         # People proximity over the surviving candidate docs.
-        proximity = await self._proximity.score(
-            user=user, doc_ids=[c.chunk.doc_id for c in candidates]
-        )
+        # Spec §3.2: Cosmos down -> skip People signal (proximity=0); ranker still runs.
+        # A Cosmos/Gremlin failure can surface as various exception types from
+        # gremlinpython/aiohttp, so catch broad Exception (excludes CancelledError).
+        try:
+            proximity = await self._proximity.score(
+                user=user, doc_ids=[c.chunk.doc_id for c in candidates]
+            )
+        except Exception as e:
+            logger.warning("People graph (Cosmos) unavailable; degrading to proximity=0: %s", e)
+            proximity = {}
         ranked: list[RankedResult] = self._ranker.rank(
             candidates=candidates, proximity=proximity
         )
