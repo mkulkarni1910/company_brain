@@ -59,6 +59,12 @@ class Settings(BaseSettings):
     # Live Fetch (Phase 3)
     live_fetch_enabled: bool = True
     live_fetch_timeout_ms: int = 600
+    # When False (single-identity mode), live results are NOT trusted as per-user:
+    # they go through the same fail-closed ACL recheck as indexed candidates (and
+    # are dropped, since they carry no acl_principals). Set True ONLY when fetch()
+    # uses a genuine per-user OBO token (Phase 4) — then Graph has already trimmed
+    # hits to the requesting user and the recheck may be bypassed for them.
+    live_fetch_obo_enabled: bool = False
 
 
 @lru_cache(maxsize=1)

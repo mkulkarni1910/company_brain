@@ -26,8 +26,11 @@ class _FakeRetriever:
 
 class _FakeACLStore:
     async def recheck(self, *, candidates, user):
-        # only indexed candidates reach here; keep them all
-        return candidates
+        # Mimic real fail-closed recheck: keep a candidate only if the user's
+        # principals intersect the chunk's acl_principals. A live candidate with
+        # acl_principals=[] therefore gets DROPPED (no per-user OBO trimming).
+        principals = user.principals()
+        return [c for c in candidates if principals & set(c.chunk.acl_principals)]
 
 
 class _FakeProximity:
@@ -65,11 +68,28 @@ def _orch(live_fetcher) -> SemanticKernelOrchestrator:
     )
 
 
-def test_live_candidates_merged_for_freshness_query() -> None:
+def test_live_dropped_failclosed_without_obo() -> None:
+    # Default: live_fetch_obo_enabled=False. The live candidate has no
+    # acl_principals (single service identity, NOT per-user trimmed), so the
+    # fail-closed recheck DROPS it. Only the indexed candidate survives.
     orch = _orch(_FakeLiveFetcher())
     cands = asyncio.run(orch.retrieve_ranked(QueryRequest(query="who is on call right now?"), user=_user()))
     doc_ids = {c.chunk.doc_id for c in cands}
-    assert "graph:live-1" in doc_ids        # live merged (and survived ACL — it had no acl_principals)
+    assert "graph:live-1" not in doc_ids     # live dropped fail-closed (no per-user OBO)
+    assert "idx-1" in doc_ids                # indexed retained
+
+
+def test_live_kept_with_obo(monkeypatch) -> None:
+    # With genuine per-user OBO, live results are already user-trimmed -> bypass
+    # recheck and keep them.
+    from app.config import get_settings
+
+    monkeypatch.setenv("LIVE_FETCH_OBO_ENABLED", "true")
+    get_settings.cache_clear()
+    orch = _orch(_FakeLiveFetcher())
+    cands = asyncio.run(orch.retrieve_ranked(QueryRequest(query="who is on call right now?"), user=_user()))
+    doc_ids = {c.chunk.doc_id for c in cands}
+    assert "graph:live-1" in doc_ids         # live kept (recheck bypassed under OBO)
     assert "idx-1" in doc_ids                # indexed retained
 
 

@@ -80,12 +80,20 @@ class SemanticKernelOrchestrator:
         if not indexed and not live:
             return []
 
-        # Query-time ACL re-check applies ONLY to indexed candidates; live results
-        # were already permission-trimmed by Graph's user-scoped token.
-        if indexed:
-            indexed = await self._acl_store.recheck(candidates=indexed, user=user)
-
-        candidates = indexed + live
+        # Query-time ACL re-check. The recheck may be BYPASSED for live results
+        # ONLY when Live Fetch used a genuine per-user OBO token (live_fetch_obo_enabled)
+        # — i.e. Graph itself permission-trimmed the hits for the requesting user.
+        # In single-identity mode (default) the fetcher runs as one service identity,
+        # NOT the requesting user, so live results are NOT trusted: they go through
+        # the same fail-closed recheck as indexed candidates. Live candidates carry
+        # acl_principals=[], so the recheck (Redis miss -> index-ACL fallback -> empty
+        # intersection) drops them. This prevents surfacing service-identity-visible
+        # documents to arbitrary users until real per-user OBO lands (Phase 4).
+        if settings.live_fetch_obo_enabled:
+            indexed = await self._acl_store.recheck(candidates=indexed, user=user) if indexed else []
+            candidates = indexed + live
+        else:
+            candidates = await self._acl_store.recheck(candidates=indexed + live, user=user)
         if not candidates:
             return []
 
