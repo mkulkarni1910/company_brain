@@ -20,6 +20,13 @@ class Candidate(BaseModel):
     live_payload: dict | None = None
 
 
+class RankedResult(BaseModel):
+    candidate: Candidate
+    final_score: float
+    signal_breakdown: dict[str, float] = Field(default_factory=dict)
+    rank: int
+
+
 class Citation(BaseModel):
     doc_id: str
     chunk_id: str
