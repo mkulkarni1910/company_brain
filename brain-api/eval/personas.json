@@ -1,0 +1,12 @@
+{
+  "sales_rep": {
+    "user_id": "p-sales", "tenant_id": "t-test",
+    "email": "sales@contoso.com", "display_name": "Sales Persona",
+    "group_ids": ["t-test:everyone", "g-sales"]
+  },
+  "engineer": {
+    "user_id": "p-eng", "tenant_id": "t-test",
+    "email": "eng@contoso.com", "display_name": "Eng Persona",
+    "group_ids": ["t-test:everyone", "g-eng"]
+  }
+}
