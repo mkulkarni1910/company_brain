@@ -10,7 +10,7 @@ def test_admin_retrieve_returns_ranked_doc_ids() -> None:
         resp = client.post(
             "/admin/retrieve",
             json={"query": "PTO policy", "k": 10},
-            headers={"x-debug-bypass-auth": "t-test,u-eval,t-test:everyone"},
+            headers={"x-debug-bypass-auth": "t-eval,u-eval,t-eval:everyone"},
         )
         assert resp.status_code == 200
         body = resp.json()

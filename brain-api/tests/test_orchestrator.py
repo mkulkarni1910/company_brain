@@ -48,8 +48,8 @@ async def _aclose_all(closeables: list) -> None:
 async def test_orchestrator_returns_answer_with_citations() -> None:
     orch, closeables = _build()
     try:
-        user = User(user_id="u-orch", tenant_id="t-test", email="u@x",
-                    display_name="U", group_ids={"t-test:everyone"})
+        user = User(user_id="u-orch", tenant_id="t-eval", email="u@x",
+                    display_name="U", group_ids={"t-eval:everyone"})
         answer = await orch.answer(QueryRequest(query="what is the PTO policy?"), user=user)
         assert isinstance(answer.text, str) and len(answer.text) > 0
         assert any("pto" in c.doc_id.lower() for c in answer.citations)
@@ -61,8 +61,8 @@ async def test_orchestrator_returns_answer_with_citations() -> None:
 async def test_orchestrator_refuses_out_of_corpus() -> None:
     orch, closeables = _build()
     try:
-        user = User(user_id="u-orch", tenant_id="t-test", email="u@x",
-                    display_name="U", group_ids={"t-test:everyone"})
+        user = User(user_id="u-orch", tenant_id="t-eval", email="u@x",
+                    display_name="U", group_ids={"t-eval:everyone"})
         answer = await orch.answer(
             QueryRequest(query="what is the recipe for chocolate chip cookies?"), user=user
         )
