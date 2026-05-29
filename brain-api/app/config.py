@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     azure_redis_ssl: bool = True
     redis_key: str | None = None
 
+    # Cosmos DB Gremlin (People pillar)
+    cosmos_gremlin_endpoint: str | None = None
+    cosmos_gremlin_key: str | None = None
+    cosmos_gremlin_database: str = "brain"
+    cosmos_gremlin_graph: str = "people"
+
     # Key Vault (optional in dev)
     azure_key_vault_url: str | None = None
 
@@ -40,6 +46,10 @@ class Settings(BaseSettings):
     brain_log_level: str = "INFO"
     enable_debug_auth: bool = False
     admin_api_key: str | None = None
+
+    # Personalized ranker weights (Phase 2a: content + people only)
+    rank_weight_content: float = 0.7
+    rank_weight_people: float = 0.3
 
 
 @lru_cache(maxsize=1)
