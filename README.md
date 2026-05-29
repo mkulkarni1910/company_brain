@@ -72,8 +72,10 @@ Phase 1 baseline: 1.0 / 1.0 on 10 golden Qs (2026-05-29).
 - Phase 2b (done): Activity pillar (Azure Data Explorer free cluster) + engagement
   signal as the ranker's third weighted term. /feedback ingests events; recent
   engagement lifts ranking.
-- Phase 3: Live Fetch via Microsoft Graph search.
-- Phase 4: APIM gateway, OpenTelemetry, per-tenant index, JWKS caching, Event Hubs
-  ingest path, ACL freshness-SLA gate, hardening.
+- Phase 3 (done): Live Fetch via Microsoft Graph /search — freshness queries merge
+  live results into ranking. Heuristic trigger; DefaultAzureCredential (single-identity).
+- Phase 4: per-user OBO for Live Fetch, LLM plan-step classifier, APIM gateway,
+  OpenTelemetry, per-tenant index, JWKS caching, Event Hubs ingest, ACL freshness-SLA,
+  eval-index isolation, hardening.
 
 Each gets its own plan in `docs/superpowers/plans/`.

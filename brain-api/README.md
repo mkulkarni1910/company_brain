@@ -55,6 +55,16 @@ events; the ranker fuses a recency-weighted engagement score as its third signal
 Create the free cluster per `infra/adx_setup.md`, then `POST /admin/seed-activity`
 to populate demo engagement. ADX outages degrade gracefully to activity=0.
 
+## Phase 3 — Live Fetch (freshness)
+
+Time-sensitive queries (containing "now", "today", "current", "latest",
+"on call", "recent", etc.) trigger a query-time Microsoft Graph `/search` call,
+merged into the ranked candidate set. Graph authenticates via
+DefaultAzureCredential (single-identity for now; per-user OBO is Phase 4).
+Live Fetch runs under a hard timeout (`LIVE_FETCH_TIMEOUT_MS`, default 600) and
+degrades to index-only on any failure — it never blocks the answer. Toggle with
+`LIVE_FETCH_ENABLED`.
+
 See `docs/superpowers/specs/2026-05-28-company-brain-zone4-design.md` for the
 full architecture and `docs/superpowers/plans/2026-05-28-company-brain-phase1-mvp-qa.md`
 for the implementation plan.
