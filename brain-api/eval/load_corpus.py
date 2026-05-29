@@ -12,6 +12,9 @@ import httpx
 CORPUS = Path(__file__).parent / "corpus"
 API = "http://localhost:8000"
 ADMIN_KEY = os.environ.get("ADMIN_API_KEY", "")
+EVAL_TENANT = os.environ.get("EVAL_TENANT", "t-eval")
+# Ingest embeds + indexes per doc; tolerate Azure OpenAI retry/backoff spikes.
+INGEST_TIMEOUT_S = float(os.environ.get("INGEST_TIMEOUT_S", "180"))
 
 
 def main() -> None:
@@ -21,7 +24,7 @@ def main() -> None:
         sys.exit(1)
 
     now = datetime.now(UTC).isoformat()
-    with httpx.Client(timeout=60.0) as client:
+    with httpx.Client(timeout=INGEST_TIMEOUT_S) as client:
         for p in paths:
             rel = p.relative_to(CORPUS)
             # AI Search doc keys cannot contain '/', '.', or '\'.
@@ -30,13 +33,13 @@ def main() -> None:
             doc_id = f"up:{safe}"
             payload = {
                 "doc_id": doc_id,
-                "tenant_id": "t-test",
+                "tenant_id": EVAL_TENANT,
                 "source": "uploaded",
                 "source_url": f"local://{rel.as_posix()}",
                 "title": p.stem.replace("-", " ").title(),
                 "body": p.read_text(),
                 "author_id": None,
-                "acl_principals": ["t-test:everyone"],
+                "acl_principals": [f"{EVAL_TENANT}:everyone"],
                 "created_at": now,
                 "modified_at": now,
                 "mime": "text/markdown",

@@ -19,7 +19,7 @@ from pathlib import Path
 import httpx
 
 API = "http://localhost:8000"
-DEBUG_USER = "t-test,u-eval,t-test:everyone"
+DEBUG_USER = "t-eval,u-eval,t-eval:everyone"
 
 
 def _load_golden(path: Path) -> list[dict]:

@@ -1,3 +1,4 @@
+import os
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -50,15 +51,16 @@ async def seed_people(users_limit: int = 50, groups_limit: int = 50) -> dict:
 
 @router.post("/seed-activity")
 async def seed_activity(events_per_doc: int = 5) -> dict:
-    """Generate synthetic engagement: u-sales engages the sales plan, u-eng the eng plan."""
-    tenant = get_settings().brain_tenant_id
+    """Generate synthetic engagement on real corpus docs so the ranker's activity
+    signal is demonstrable: a heavily-viewed doc ranks above an equally-relevant one."""
+    tenant = os.environ.get("EVAL_TENANT", "t-eval")
     store = ActivityStore()
     try:
         await store.ensure_table()
         now = datetime.now(UTC)
         plan = [
-            ("p-sales", "up:persona-sales-plan"),
-            ("p-eng", "up:persona-eng-plan"),
+            ("u-eval", "up:planning-q3-sales-plan"),
+            ("u-eval", "up:engineering-oncall-runbook"),
         ]
         written = 0
         for user_id, doc_id in plan:
@@ -66,8 +68,7 @@ async def seed_activity(events_per_doc: int = 5) -> dict:
                 await store.ingest_event(ActivityEvent(
                     timestamp=now - timedelta(hours=i),
                     tenant_id=tenant, user_id=user_id, doc_id=doc_id,
-                    event_type="view", source="uploaded",
-                ))
+                    event_type="view", source="uploaded"))
                 written += 1
         return {"tenant_id": tenant, "events_written": written}
     finally:
