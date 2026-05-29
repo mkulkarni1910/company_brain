@@ -1,5 +1,6 @@
 from fastapi import Request
 
+from app.activity.store import ActivityStore
 from app.cache.redis_cache import RedisCache
 from app.generation.azure_openai import AzureOpenAIClient
 from app.ingest.pipeline import IngestPipeline
@@ -26,6 +27,10 @@ def get_retriever(request: Request) -> HybridRetriever:
 
 def get_orchestrator(request: Request) -> SemanticKernelOrchestrator:
     return request.app.state.orchestrator
+
+
+def get_activity_store(request: Request) -> ActivityStore:
+    return request.app.state.activity_store
 
 
 def get_ingest_pipeline(request: Request) -> IngestPipeline:

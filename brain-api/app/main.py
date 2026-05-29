@@ -4,7 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.acl.store import ACLStore
+from app.activity.signal import ActivitySignal
+from app.activity.store import ActivityStore
 from app.api.admin import router as admin_router
+from app.api.feedback import router as feedback_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
 from app.cache.redis_cache import RedisCache
@@ -34,6 +37,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         weight_content=get_settings().rank_weight_content,
         weight_people=get_settings().rank_weight_people,
     )
+    app.state.activity_store = ActivityStore()
+    app.state.activity = ActivitySignal(store=app.state.activity_store)
     app.state.orchestrator = SemanticKernelOrchestrator(
         retriever=app.state.retriever,
         llm=app.state.embedder,
@@ -48,6 +53,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.orchestrator.aclose()
         await app.state.acl_store.aclose()
         await app.state.people_graph.aclose()
+        await app.state.activity_store.aclose()
         await app.state.cache.aclose()
         await app.state.ai_search.aclose()
         await app.state.embedder.aclose()
@@ -57,6 +63,7 @@ app = FastAPI(title="brain-api", version="0.1.0", lifespan=lifespan)
 app.include_router(admin_router)
 app.include_router(query_router)
 app.include_router(retrieve_router)
+app.include_router(feedback_router)
 
 
 @app.get("/healthz")
