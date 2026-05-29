@@ -69,6 +69,11 @@ class _FakeCache:
         return None
 
 
+class _FakeLiveFetcher:
+    async def fetch(self, *, query: str, user: User) -> list[Candidate]:
+        return []
+
+
 async def test_retrieve_ranked_degrades_when_proximity_raises() -> None:
     c_hi = _candidate("up:high", rrf=0.9)
     c_lo = _candidate("up:low", rrf=0.1)
@@ -80,6 +85,7 @@ async def test_retrieve_ranked_degrades_when_proximity_raises() -> None:
         proximity=_BrokenProximity(),
         ranker=PersonalizedRanker(weight_content=0.7, weight_people=0.3),
         activity=_BrokenActivity(),
+        live_fetcher=_FakeLiveFetcher(),
     )
 
     user = User(

@@ -13,6 +13,7 @@ from app.api.retrieve import router as retrieve_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings
 from app.generation.azure_openai import AzureOpenAIClient
+from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.people.graph_client import PeopleGraphClient
 from app.people.proximity import PeopleProximity
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     app.state.activity_store = ActivityStore()
     app.state.activity = ActivitySignal(store=app.state.activity_store)
+    app.state.live_fetcher = MSGraphSearchFetcher()
     app.state.orchestrator = SemanticKernelOrchestrator(
         retriever=app.state.retriever,
         llm=app.state.embedder,
@@ -48,6 +50,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         proximity=app.state.proximity,
         ranker=app.state.ranker,
         activity=app.state.activity,
+        live_fetcher=app.state.live_fetcher,
     )
     try:
         yield
