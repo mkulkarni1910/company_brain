@@ -23,11 +23,11 @@ def test_post_admin_ingest_returns_count() -> None:
         "modified_at": now,
         "mime": "text/markdown",
     }
-    client = TestClient(app)
-    resp = client.post(
-        "/admin/ingest",
-        json=payload,
-        headers={"x-admin-key": get_settings().admin_api_key or ""},
-    )
+    with TestClient(app) as client:
+        resp = client.post(
+            "/admin/ingest",
+            json=payload,
+            headers={"x-admin-key": get_settings().admin_api_key or ""},
+        )
     assert resp.status_code == 200
     assert resp.json()["chunks_indexed"] >= 1

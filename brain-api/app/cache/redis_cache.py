@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from functools import lru_cache
 
 import redis.asyncio as redis
 from redis.exceptions import RedisError
@@ -12,25 +11,7 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Errors that mean "Redis is unreachable/broken" — treated as a cache miss /
-# no-op rather than failing the request. The cache is non-essential to
-# correctness, so a Redis outage must degrade gracefully, not return 500.
 _CACHE_ERRORS = (RedisError, ConnectionError, TimeoutError, OSError)
-
-
-@lru_cache(maxsize=1)
-def _pool() -> redis.Redis:
-    s = get_settings()
-    # Azure Cache for Redis: use AAD via the access key OR managed identity (preview).
-    # For Phase 1 simplicity, use the primary key from Settings (loaded from .env);
-    # this moves to Key Vault in Phase 4 hardening.
-    return redis.Redis(
-        host=s.azure_redis_host,
-        port=s.azure_redis_port,
-        ssl=s.azure_redis_ssl,
-        password=s.redis_key,
-        decode_responses=True,
-    )
 
 
 def _embed_key(text: str) -> str:
@@ -40,7 +21,17 @@ def _embed_key(text: str) -> str:
 
 class RedisCache:
     def __init__(self) -> None:
-        self._r = _pool()
+        s = get_settings()
+        self._r = redis.Redis(
+            host=s.azure_redis_host,
+            port=s.azure_redis_port,
+            ssl=s.azure_redis_ssl,
+            password=s.redis_key,
+            decode_responses=True,
+        )
+
+    async def aclose(self) -> None:
+        await self._r.aclose()
 
     async def set_json(self, key: str, value: dict, ttl_seconds: int) -> None:
         try:

@@ -6,12 +6,12 @@ from app.main import app
 
 @pytest.mark.integration
 def test_query_returns_grounded_answer_with_citations() -> None:
-    client = TestClient(app)
-    resp = client.post(
-        "/query",
-        json={"query": "what is our PTO policy?"},
-        headers={"x-debug-bypass-auth": "t-test,u-x,t-test:everyone"},
-    )
+    with TestClient(app) as client:
+        resp = client.post(
+            "/query",
+            json={"query": "what is our PTO policy?"},
+            headers={"x-debug-bypass-auth": "t-test,u-x,t-test:everyone"},
+        )
     assert resp.status_code == 200
     body = resp.json()
     assert "answer" not in body  # field is named `text`

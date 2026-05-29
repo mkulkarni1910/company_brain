@@ -35,6 +35,11 @@ class SemanticKernelOrchestrator:
         self._llm = llm
         self._cache = cache
 
+    async def aclose(self) -> None:
+        # Orchestrator owns no sockets of its own; its collaborators are closed
+        # by the lifespan. Method exists so shutdown can call it uniformly.
+        return None
+
     async def answer(self, request: QueryRequest, *, user: User) -> Answer:
         query_id = str(uuid.uuid4())
 

@@ -16,12 +16,12 @@ def test_debug_header_ignored_when_flag_disabled(monkeypatch) -> None:  # noqa: 
 
     get_settings.cache_clear()
 
-    client = TestClient(app)
-    resp = client.post(
-        "/query",
-        json={"query": "what is our PTO policy?"},
-        headers={"x-debug-bypass-auth": "t-test,u-x,t-test:everyone"},
-    )
+    with TestClient(app) as client:
+        resp = client.post(
+            "/query",
+            json={"query": "what is our PTO policy?"},
+            headers={"x-debug-bypass-auth": "t-test,u-x,t-test:everyone"},
+        )
     assert resp.status_code == 401
 
 

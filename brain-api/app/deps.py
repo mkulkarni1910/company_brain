@@ -1,4 +1,4 @@
-from functools import lru_cache
+from fastapi import Request
 
 from app.cache.redis_cache import RedisCache
 from app.generation.azure_openai import AzureOpenAIClient
@@ -8,35 +8,27 @@ from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
 
 
-@lru_cache(maxsize=1)
-def get_embedder() -> AzureOpenAIClient:
-    return AzureOpenAIClient()
+def get_embedder(request: Request) -> AzureOpenAIClient:
+    return request.app.state.embedder
 
 
-@lru_cache(maxsize=1)
-def get_ai_search() -> AISearchClient:
-    return AISearchClient()
+def get_ai_search(request: Request) -> AISearchClient:
+    return request.app.state.ai_search
 
 
-@lru_cache(maxsize=1)
-def get_ingest_pipeline() -> IngestPipeline:
-    return IngestPipeline(embedder=get_embedder(), search=get_ai_search())
+def get_cache(request: Request) -> RedisCache:
+    return request.app.state.cache
 
 
-@lru_cache(maxsize=1)
-def get_retriever() -> HybridRetriever:
-    return HybridRetriever(search=get_ai_search(), embedder=get_embedder())
+def get_retriever(request: Request) -> HybridRetriever:
+    return request.app.state.retriever
 
 
-@lru_cache(maxsize=1)
-def get_cache() -> RedisCache:
-    return RedisCache()
+def get_orchestrator(request: Request) -> SemanticKernelOrchestrator:
+    return request.app.state.orchestrator
 
 
-@lru_cache(maxsize=1)
-def get_orchestrator() -> SemanticKernelOrchestrator:
-    return SemanticKernelOrchestrator(
-        retriever=get_retriever(),
-        llm=get_embedder(),
-        cache=get_cache(),
+def get_ingest_pipeline(request: Request) -> IngestPipeline:
+    return IngestPipeline(
+        embedder=request.app.state.embedder, search=request.app.state.ai_search
     )

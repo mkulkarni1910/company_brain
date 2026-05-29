@@ -10,43 +10,6 @@ def _clear_settings_cache() -> None:
 
 
 @pytest.fixture(autouse=True)
-def _clear_ai_search_client_cache() -> None:
-    """Reset the AI Search client lru_cache between tests.
-
-    The cached SearchClient holds an aiohttp session bound to the event
-    loop that first created it. pytest-asyncio uses a per-test event loop,
-    so reusing the cached client across tests fails with
-    "Event loop is closed". Clearing forces a fresh client per test.
-    """
-    from app.retrieval.ai_search_client import _client
-
-    _client.cache_clear()
-
-    # app.deps also caches AISearchClient/HybridRetriever/IngestPipeline
-    # instances that transitively hold the same loop-bound session.
-    from app import deps
-
-    deps.get_embedder.cache_clear()
-    deps.get_ai_search.cache_clear()
-    deps.get_ingest_pipeline.cache_clear()
-    deps.get_retriever.cache_clear()
-    deps.get_cache.cache_clear()
-    deps.get_orchestrator.cache_clear()
-
-
-@pytest.fixture(autouse=True)
-def _clear_redis_cache_pool() -> None:
-    """Reset the Redis cache pool lru_cache between tests.
-
-    Same loop-binding issue as the AI Search client: the cached redis
-    connection pool is bound to the event loop that created it.
-    """
-    from app.cache.redis_cache import _pool
-
-    _pool.cache_clear()
-
-
-@pytest.fixture(autouse=True)
 def _default_env(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """Default test env so Settings can instantiate without a real .env.
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from functools import lru_cache
-
 from azure.identity.aio import DefaultAzureCredential
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.models import VectorizedQuery
@@ -14,7 +12,6 @@ from app.domain.identity import User
 
 def _to_search_doc(c: Chunk) -> dict:
     d = c.model_dump(mode="python")
-    # AI Search expects ISO format datetimes
     d["created_at"] = c.created_at.isoformat()
     d["modified_at"] = c.modified_at.isoformat()
     return d
@@ -24,25 +21,23 @@ def _from_search_doc(d: dict) -> Chunk:
     return Chunk.model_validate(d)
 
 
-@lru_cache(maxsize=1)
-def _client() -> SearchClient:
-    s = get_settings()
-    return SearchClient(
-        endpoint=s.azure_ai_search_endpoint,
-        index_name=s.azure_ai_search_index,
-        credential=DefaultAzureCredential(),
-    )
-
-
 class AISearchClient:
     def __init__(self) -> None:
-        self._cli = _client()
+        s = get_settings()
+        self._credential = DefaultAzureCredential()
+        self._cli = SearchClient(
+            endpoint=s.azure_ai_search_endpoint,
+            index_name=s.azure_ai_search_index,
+            credential=self._credential,
+        )
+
+    async def aclose(self) -> None:
+        await self._cli.close()
+        await self._credential.close()
 
     async def upsert_chunks(self, chunks: list[Chunk]) -> None:
         if not chunks:
             return
-        # chunk_id values contain '#', which AI Search rejects as an unsafe key
-        # unless allowUnsafeKeys=true is passed as a query parameter.
         await self._cli.merge_or_upload_documents(
             documents=[_to_search_doc(c) for c in chunks],
             params={"allowUnsafeKeys": "true"},
@@ -70,7 +65,6 @@ class AISearchClient:
         )
         chunks: list[Chunk] = []
         async for r in results:
-            # restore content_vector as empty (we don't retrieve it)
             r["content_vector"] = []
             chunks.append(_from_search_doc(r))
         return chunks
