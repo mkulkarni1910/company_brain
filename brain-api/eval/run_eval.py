@@ -43,11 +43,8 @@ def run_retrieval(golden: list[dict]) -> dict:
     with httpx.Client(timeout=30.0) as client:
         for q in golden:
             t0 = time.perf_counter()
-            # Retrieval mode = hit /query but only look at retrieved doc ids.
-            # We use a special bypass: call /admin/raw-retrieve? In Phase 1 we
-            # reuse /query and parse citations as a proxy for top retrieved docs.
             resp = client.post(
-                f"{API}/query",
+                f"{API}/admin/retrieve",
                 json={"query": q["query"], "k": 10},
                 headers={"x-debug-bypass-auth": DEBUG_USER},
             )
@@ -57,8 +54,7 @@ def run_retrieval(golden: list[dict]) -> dict:
                 recalls.append(0.0)
                 rrs.append(0.0)
                 continue
-            body = resp.json()
-            doc_ids = [c["doc_id"] for c in body.get("citations", [])]
+            doc_ids = resp.json().get("doc_ids", [])
             rank = _hit_rank(q["expected_doc_ids"], doc_ids)
             recalls.append(1.0 if rank else 0.0)
             rrs.append(1.0 / rank if rank else 0.0)

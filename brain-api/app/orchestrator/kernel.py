@@ -73,3 +73,15 @@ class SemanticKernelOrchestrator:
         await self._cache.set_json(key, cache_blob, ttl_seconds=600)
 
         return answer
+
+    async def retrieve_ranked(self, request: QueryRequest, *, user: User) -> list[Candidate]:
+        """Return candidates in final rank order WITHOUT generating an answer.
+
+        Phase 2a: this is the retriever's output. Task 10 enriches it with
+        People proximity, ACL re-check, and the personalized ranker so the
+        eval metric reflects personalization. Used by /admin/retrieve for the
+        retrieval-quality eval gate.
+        """
+        return await self._retriever.retrieve(
+            query=request.query, user=user, k=max(request.k, 10)
+        )
