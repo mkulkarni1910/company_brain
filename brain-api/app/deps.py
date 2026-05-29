@@ -30,5 +30,7 @@ def get_orchestrator(request: Request) -> SemanticKernelOrchestrator:
 
 def get_ingest_pipeline(request: Request) -> IngestPipeline:
     return IngestPipeline(
-        embedder=request.app.state.embedder, search=request.app.state.ai_search
+        embedder=request.app.state.embedder,
+        search=request.app.state.ai_search,
+        acl_store=request.app.state.acl_store,
     )
