@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     rank_weight_people: float = 0.3
     rank_weight_activity: float = 0.2
 
+    # Live Fetch (Phase 3)
+    live_fetch_enabled: bool = True
+    live_fetch_timeout_ms: int = 600
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
