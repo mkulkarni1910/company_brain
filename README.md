@@ -74,8 +74,10 @@ Phase 1 baseline: 1.0 / 1.0 on 10 golden Qs (2026-05-29).
   engagement lifts ranking.
 - Phase 3 (done): Live Fetch via Microsoft Graph /search — freshness queries merge
   live results into ranking. Heuristic trigger; DefaultAzureCredential (single-identity).
-- Phase 4: per-user OBO for Live Fetch, LLM plan-step classifier, APIM gateway,
-  OpenTelemetry, per-tenant index, JWKS caching, Event Hubs ingest, ACL freshness-SLA,
-  eval-index isolation, hardening.
+- Phase 4 (done, pure-code Zone 4 completion): LLM plan-step classifier, ranker
+  recency signal, per-event-type engagement weighting, ACL freshness gate, eval
+  isolation.
+- Phase 5 (infra / needs Entra): per-user OBO for Live Fetch, APIM gateway,
+  OpenTelemetry, Event Hubs ingest path, per-tenant index isolation, JWKS caching.
 
 Each gets its own plan in `docs/superpowers/plans/`.

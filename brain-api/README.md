@@ -65,6 +65,19 @@ Live Fetch runs under a hard timeout (`LIVE_FETCH_TIMEOUT_MS`, default 600) and
 degrades to index-only on any failure — it never blocks the answer. Toggle with
 `LIVE_FETCH_ENABLED`.
 
+## Phase 4 — Intelligence-layer completion
+
+- **LLM plan step**: gpt-4o rewrites the query and decides Live Fetch need
+  (heuristic fallback on failure).
+- **Recency signal**: ranker term `exp(-Δdays/30)` from `modified_at`
+  (`RANK_WEIGHT_RECENCY`, default 0.15; content 0.45 / people 0.25 / activity 0.15
+  / recency 0.15) — also surfaces Live Fetch results.
+- **Per-event-type engagement**: thumbs_up/+, thumbs_down/−, view/click/dwell/+.
+- **ACL freshness gate**: doc-ACL entries are persistent (live ACL is
+  authoritative); `ACL_FAIL_CLOSED_ON_MISSING` enables strict drop-on-no-entry.
+- **Eval isolation**: golden corpus loads under a dedicated tenant
+  (`EVAL_TENANT`, default `t-eval`) so shared-index test docs don't pollute the metric.
+
 See `docs/superpowers/specs/2026-05-28-company-brain-zone4-design.md` for the
 full architecture and `docs/superpowers/plans/2026-05-28-company-brain-phase1-mvp-qa.md`
 for the implementation plan.
