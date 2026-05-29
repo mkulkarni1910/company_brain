@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.acl.store import ACLStore
 from app.domain.chunk import Chunk, SourceDoc
 from app.generation.azure_openai import AzureOpenAIClient
 from app.ingest.chunker import chunk_markdown
@@ -15,9 +16,16 @@ class IngestResult:
 
 
 class IngestPipeline:
-    def __init__(self, *, embedder: AzureOpenAIClient, search: AISearchClient) -> None:
+    def __init__(
+        self,
+        *,
+        embedder: AzureOpenAIClient,
+        search: AISearchClient,
+        acl_store: ACLStore | None = None,
+    ) -> None:
         self._embedder = embedder
         self._search = search
+        self._acl_store = acl_store
 
     async def process(self, doc: SourceDoc) -> IngestResult:
         pieces = chunk_markdown(doc.body, max_tokens=600, overlap_tokens=75)
@@ -44,4 +52,8 @@ class IngestPipeline:
             for p, v in zip(pieces, vectors, strict=True)
         ]
         await self._search.upsert_chunks(chunks)
+        if self._acl_store is not None:
+            await self._acl_store.set_doc_principals(
+                tenant_id=doc.tenant_id, doc_id=doc.doc_id, principals=doc.acl_principals
+            )
         return IngestResult(doc_id=doc.doc_id, chunks_indexed=len(chunks))
