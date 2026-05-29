@@ -5,12 +5,16 @@ from app.domain.query import Candidate
 from app.generation.azure_openai import AzureOpenAIClient
 from app.retrieval.ai_search_client import AISearchClient
 
+# Reciprocal Rank Fusion constant (standard default; dampens top-rank dominance).
+_RRF_K = 60
+
 
 class HybridRetriever:
-    """Phase 1: fan-out only to AI Search (hybrid: vector + BM25 + semantic).
+    """Phase 2a: fan-out to AI Search (hybrid: vector + BM25 + semantic).
 
-    Later phases extend this with People proximity (Cosmos Gremlin) and
-    Activity signal (ADX) joins.
+    Records each candidate's content rank and RRF contribution in raw_scores so
+    the PersonalizedRanker can fuse it with the People-proximity signal. The
+    Activity signal (ADX) is added in Phase 2b.
     """
 
     def __init__(self, *, search: AISearchClient, embedder: AzureOpenAIClient) -> None:
@@ -24,7 +28,10 @@ class HybridRetriever:
             Candidate(
                 chunk=c,
                 sources_hit={"vector", "bm25", "semantic"},
-                raw_scores={},
+                raw_scores={
+                    "content_rank": float(i),
+                    "content_rrf": 1.0 / (_RRF_K + i),
+                },
             )
-            for c in chunks
+            for i, c in enumerate(chunks)
         ]
