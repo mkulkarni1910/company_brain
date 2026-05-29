@@ -67,9 +67,10 @@ Phase 1 baseline: 1.0 / 1.0 on 10 golden Qs (2026-05-29).
 
 ## Next phases
 
-- Phase 2 (Days 3–4): People pillar (Cosmos Gremlin), Activity pillar (ADX),
-  personalized ranker. ACL Store + double-enforcement.
-- Phase 3 (Day 5): Live Fetch via Microsoft Graph `/search`.
-- Phase 4 (Days 6–7): APIM front, eval growth to 30 Qs, hardening.
+- Phase 2a (done): People pillar (Cosmos Gremlin), query-time ACL re-check,
+  personalized ranker (Content + People). Same query → different ranking per user.
+- Phase 2b: Activity pillar (Event Hubs + ADX) + engagement signal in the ranker.
+- Phase 3: Live Fetch via Microsoft Graph search.
+- Phase 4: APIM gateway, OpenTelemetry, per-tenant index routing, JWKS caching, hardening.
 
 Each gets its own plan in `docs/superpowers/plans/`.
