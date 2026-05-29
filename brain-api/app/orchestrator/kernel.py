@@ -5,6 +5,7 @@ import logging
 import uuid
 
 from app.acl.store import ACLStore
+from app.activity.signal import ActivitySignal
 from app.cache.redis_cache import RedisCache
 from app.domain.identity import User
 from app.domain.query import Answer, Candidate, QueryRequest, RankedResult
@@ -25,9 +26,9 @@ def _cache_key(user: User, query: str) -> str:
 
 
 class SemanticKernelOrchestrator:
-    """Phase 2a: cache -> retrieve -> ACL re-check -> proximity -> rank -> answer.
+    """Phase 2b: cache -> retrieve -> ACL re-check -> proximity -> activity -> rank -> answer.
 
-    Plan step + Live Fetch are still stubbed (Phase 3). Activity signal is Phase 2b.
+    Plan step + Live Fetch are still stubbed (Phase 3).
     """
 
     def __init__(
@@ -39,6 +40,7 @@ class SemanticKernelOrchestrator:
         acl_store: ACLStore,
         proximity: PeopleProximity,
         ranker: PersonalizedRanker,
+        activity: ActivitySignal,
     ) -> None:
         self._retriever = retriever
         self._llm = llm
@@ -46,6 +48,7 @@ class SemanticKernelOrchestrator:
         self._acl_store = acl_store
         self._proximity = proximity
         self._ranker = ranker
+        self._activity = activity
 
     async def aclose(self) -> None:
         return None
@@ -71,8 +74,16 @@ class SemanticKernelOrchestrator:
         except Exception as e:
             logger.warning("People graph (Cosmos) unavailable; degrading to proximity=0: %s", e)
             proximity = {}
+        # Activity engagement signal. Spec §3.2: ADX down -> skip Activity (activity=0).
+        try:
+            activity = await self._activity.score(
+                user=user, doc_ids=[c.chunk.doc_id for c in candidates]
+            )
+        except Exception as e:
+            logger.warning("Activity store (ADX) unavailable; degrading to activity=0: %s", e)
+            activity = {}
         ranked: list[RankedResult] = self._ranker.rank(
-            candidates=candidates, proximity=proximity
+            candidates=candidates, proximity=proximity, activity=activity
         )
         return [r.candidate for r in ranked]
 

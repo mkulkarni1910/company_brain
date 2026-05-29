@@ -36,6 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.ranker = PersonalizedRanker(
         weight_content=get_settings().rank_weight_content,
         weight_people=get_settings().rank_weight_people,
+        weight_activity=get_settings().rank_weight_activity,
     )
     app.state.activity_store = ActivityStore()
     app.state.activity = ActivitySignal(store=app.state.activity_store)
@@ -46,6 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         acl_store=app.state.acl_store,
         proximity=app.state.proximity,
         ranker=app.state.ranker,
+        activity=app.state.activity,
     )
     try:
         yield

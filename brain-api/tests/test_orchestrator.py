@@ -1,6 +1,8 @@
 import pytest
 
 from app.acl.store import ACLStore
+from app.activity.signal import ActivitySignal
+from app.activity.store import ActivityStore
 from app.cache.redis_cache import RedisCache
 from app.domain.identity import User
 from app.domain.query import QueryRequest
@@ -19,14 +21,16 @@ def _build() -> tuple[SemanticKernelOrchestrator, list]:
     cache = RedisCache()
     acl_store = ACLStore()
     graph = PeopleGraphClient()
-    closeables = [embedder, search, cache, acl_store, graph]
+    activity_store = ActivityStore()
+    closeables = [embedder, search, cache, acl_store, graph, activity_store]
     orch = SemanticKernelOrchestrator(
         retriever=HybridRetriever(search=search, embedder=embedder),
         llm=embedder,
         cache=cache,
         acl_store=acl_store,
         proximity=PeopleProximity(graph=graph),
-        ranker=PersonalizedRanker(weight_content=0.7, weight_people=0.3),
+        ranker=PersonalizedRanker(weight_content=0.5, weight_people=0.3, weight_activity=0.2),
+        activity=ActivitySignal(store=activity_store),
     )
     return orch, closeables
 

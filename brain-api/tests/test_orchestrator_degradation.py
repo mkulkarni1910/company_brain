@@ -1,9 +1,10 @@
-"""Unit test: Cosmos (People graph) outage must not 500 a query.
+"""Unit test: Cosmos (People graph) or ADX (Activity) outage must not 500 a query.
 
-Spec §3.2: "Cosmos down -> skip People signal (proximity=0); ranker still runs."
-The orchestrator owns the degradation policy: a raising proximity.score() must be
-swallowed and treated as empty proximity, so the ranker falls back to pure
-content order. Pure unit test with fake collaborators -- no real Azure.
+Spec §3.2: "Cosmos down -> skip People signal (proximity=0)" and "ADX down ->
+skip Activity (activity=0); ranker still runs." The orchestrator owns the
+degradation policy: a raising proximity.score() or activity.score() must be
+swallowed and treated as empty, so the ranker falls back to pure content order.
+Pure unit test with fake collaborators -- no real Azure.
 """
 
 from __future__ import annotations
@@ -55,6 +56,11 @@ class _BrokenProximity:
         raise RuntimeError("cosmos down")
 
 
+class _BrokenActivity:
+    async def score(self, *, user: User, doc_ids: list[str]) -> dict[str, float]:
+        raise RuntimeError("adx down")
+
+
 class _FakeCache:
     async def get_json(self, key: str):
         return None
@@ -73,6 +79,7 @@ async def test_retrieve_ranked_degrades_when_proximity_raises() -> None:
         acl_store=_FakeACLStore(),
         proximity=_BrokenProximity(),
         ranker=PersonalizedRanker(weight_content=0.7, weight_people=0.3),
+        activity=_BrokenActivity(),
     )
 
     user = User(
