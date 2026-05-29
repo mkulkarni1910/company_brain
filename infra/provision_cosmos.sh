@@ -20,7 +20,8 @@ done
 
 if ! az cosmosdb show -g "$RG" -n "$COSMOS_NAME" &>/dev/null; then
   echo "Creating Cosmos DB Gremlin account $COSMOS_NAME (serverless)..."
-  az cosmosdb create -g "$RG" -n "$COSMOS_NAME" -l "$LOCATION" \
+  az cosmosdb create -g "$RG" -n "$COSMOS_NAME" \
+    --locations regionName="$LOCATION" \
     --capabilities EnableGremlin EnableServerless \
     --default-consistency-level Session 1>/dev/null
 fi
