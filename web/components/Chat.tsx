@@ -231,8 +231,14 @@ function FeedbackBar({ answer, latencyMs }: { answer: Answer; latencyMs?: number
   }
   return (
     <div className="fb">
-      <button className="up" disabled={!!sent} onClick={() => send("thumbs_up")}>{sent === "thumbs_up" ? "✓ Helpful" : "Helpful"}</button>
-      <button className="down" disabled={!!sent} onClick={() => send("thumbs_down")}>{sent === "thumbs_down" ? "✓ Noted" : "Not quite"}</button>
+      <button className="up" disabled={!!sent} onClick={() => send("thumbs_up")}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM7 11l4-7a2 2 0 0 1 2 2v3h5a2 2 0 0 1 2 2.3l-1.3 7A2 2 0 0 1 16.7 20H7" /></svg>
+        {sent === "thumbs_up" ? "Helpful ✓" : "Helpful"}
+      </button>
+      <button className="down" disabled={!!sent} onClick={() => send("thumbs_down")}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17 13V4h3a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1zM17 13l-4 7a2 2 0 0 1-2-2v-3H6a2 2 0 0 1-2-2.3l1.3-7A2 2 0 0 1 7.3 4H17" /></svg>
+        {sent === "thumbs_down" ? "Noted ✓" : "Not quite"}
+      </button>
       <div className="sep" />
       <span className="cached">{latencyMs ? `${latencyMs} ms` : ""} · feedback → activity pillar</span>
     </div>
