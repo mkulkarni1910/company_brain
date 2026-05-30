@@ -122,7 +122,7 @@ export default function Chat() {
               </div>
             )}
             {turns.map((t) => (
-              <div key={t.id}>
+              <div className="turn" key={t.id}>
                 <div className="user-row"><div className="user-msg">{t.query}</div></div>
                 {t.loading && (
                   <div className="answer">
