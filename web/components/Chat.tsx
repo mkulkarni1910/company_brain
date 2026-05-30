@@ -6,11 +6,11 @@ type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; er
 
 const USER_NAME = process.env.NEXT_PUBLIC_USER_NAME ?? "Alex Kim";
 const USER_ROLE = process.env.NEXT_PUBLIC_USER_ROLE ?? "Central · Sales";
-const SUGGESTIONS = [
-  "Who is on call right now?",
-  "What are our planning priorities?",
-  "Latest deployment status",
-  "Expense limits for travel",
+const SUGGESTIONS: { text: string; live?: boolean }[] = [
+  { text: "Who is on call right now?", live: true },
+  { text: "What are our planning priorities?" },
+  { text: "Latest deployment status", live: true },
+  { text: "Expense limits for travel" },
 ];
 const SIGNAL_META: { key: keyof NonNullable<Answer["debug"]>["signals"]; label: string; color: string }[] = [
   { key: "content", label: "Content", color: "var(--amber)" },
@@ -74,9 +74,15 @@ export default function Chat() {
         <div>
           <h2>Workspace</h2>
           <nav className="nav">
-            <a className="active" href="#">Ask</a>
-            <a href="#">Discover</a>
-            <a href="#">History</a>
+            <a className="active" href="#">
+              <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>Ask
+            </a>
+            <a href="#">
+              <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" /></svg>Discover
+            </a>
+            <a href="#">
+              <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>History
+            </a>
           </nav>
         </div>
         <div>
@@ -167,11 +173,18 @@ export default function Chat() {
 
         <div className="composer">
           <form className="box" onSubmit={(e) => { e.preventDefault(); ask(input); }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.8"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /><circle cx="12" cy="12" r="3.2" /></svg>
             <input placeholder="Ask anything across SharePoint, Teams, and live sources…" value={input} onChange={(e) => setInput(e.target.value)} />
-            <button className="send" type="submit" aria-label="Send">→</button>
+            <button className="send" type="submit" aria-label="Send">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m5 12 14-7-7 14-2-5-5-2z" /></svg>
+            </button>
           </form>
           <div className="hintbar">
-            {SUGGESTIONS.map((s) => <span className="sg" key={s} onClick={() => ask(s)}>{s}</span>)}
+            {SUGGESTIONS.map((s) => (
+              <span className="sg" key={s.text} onClick={() => ask(s.text)}>
+                {s.text}{s.live && <b> ⚡ live</b>}
+              </span>
+            ))}
           </div>
         </div>
       </main>
