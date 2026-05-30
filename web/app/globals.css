@@ -164,3 +164,8 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   @media(max-width:1180px){.app{grid-template-columns:268px 1fr}.rail--right{display:none}}
   @media(max-width:880px){.app{grid-template-columns:1fr}.rail{display:none}}
+.empty{margin:auto;text-align:center;padding:80px 0;display:flex;flex-direction:column;align-items:center;gap:14px}
+.glyph.big{width:56px;height:56px;border-radius:16px}
+.empty-h{font-family:"Fraunces",serif;font-weight:500;font-size:26px;margin:6px 0 0}
+.empty-p{color:var(--ink-dim);max-width:420px;margin:0}
+.composer .send{font-size:18px;line-height:1}
