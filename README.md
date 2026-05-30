@@ -81,3 +81,16 @@ Phase 1 baseline: 1.0 / 1.0 on 10 golden Qs (2026-05-29).
   OpenTelemetry, Event Hubs ingest path, per-tenant index isolation, JWKS caching.
 
 Each gets its own plan in `docs/superpowers/plans/`.
+
+## Run the web chat (SubStrateOS, light)
+
+```
+# terminal 1 — API
+cd brain-api && uv run uvicorn app.main:app --port 8000
+# terminal 2 — web
+cd web && cp .env.local.example .env.local && pnpm install && pnpm dev
+```
+Open http://localhost:3000. Runs via debug-auth (no SSO); queries the `t-eval` tenant
+where the demo corpus lives. Ask "what is our PTO policy?" → grounded answer with a
+citation, and the right rail shows the real Content/People/Activity/Recency ranking
+signals for that answer. Helpful / Not quite buttons feed the Activity pillar.
