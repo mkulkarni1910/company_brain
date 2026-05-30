@@ -63,7 +63,7 @@ class SemanticKernelOrchestrator:
     async def aclose(self) -> None:
         return None
 
-    async def retrieve_ranked(self, request: QueryRequest, *, user: User) -> list[Candidate]:
+    async def retrieve_ranked(self, request: QueryRequest, *, user: User) -> list[RankedResult]:
         settings = get_settings()
         # LLM plan step: rewrite the query for retrieval + decide whether Live Fetch
         # is needed. Degrades to the freshness heuristic on any failure (planner owns it).
@@ -123,32 +123,46 @@ class SemanticKernelOrchestrator:
         ranked: list[RankedResult] = self._ranker.rank(
             candidates=candidates, proximity=proximity, activity=activity
         )
-        return [r.candidate for r in ranked]
+        return ranked
 
     async def answer(self, request: QueryRequest, *, user: User) -> Answer:
         query_id = str(uuid.uuid4())
 
         key = _cache_key(user, request.query)
-        cached = await self._cache.get_json(key)
-        if cached:
-            return Answer.model_validate({**cached, "query_id": query_id})
+        # Skip the cache lookup for debug requests so we always compute fresh
+        # ranking signals (a cached answer carries debug=None).
+        if not request.include_debug:
+            cached = await self._cache.get_json(key)
+            if cached:
+                return Answer.model_validate({**cached, "query_id": query_id})
 
-        candidates = await self.retrieve_ranked(request, user=user)
-        if not candidates:
+        ranked = await self.retrieve_ranked(request, user=user)
+        if not ranked:
             return Answer(
                 text="I don't have information about that.",
                 citations=[],
                 query_id=query_id,
             )
 
+        candidates = [r.candidate for r in ranked]
         messages = build_grounded_messages(query=request.query, candidates=candidates[:5])
         text = await self._llm.complete(messages=messages, temperature=0.0, max_tokens=800)
         citations = parse_citations_from_answer(text, candidates[:5])
 
-        answer = Answer(text=text, citations=citations, query_id=query_id)
+        debug = None
+        if request.include_debug:
+            top = ranked[0]
+            debug = {
+                "signals": top.signal_breakdown,
+                "final_score": top.final_score,
+                "candidates_ranked": len(ranked),
+                "live_used": any("live" in r.candidate.sources_hit for r in ranked),
+            }
+        answer = Answer(text=text, citations=citations, query_id=query_id, debug=debug)
 
         cache_blob = answer.model_dump()
         cache_blob.pop("query_id", None)
+        cache_blob.pop("debug", None)
         await self._cache.set_json(key, cache_blob, ttl_seconds=600)
 
         return answer

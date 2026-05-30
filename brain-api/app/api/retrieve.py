@@ -43,9 +43,14 @@ async def retrieve(
     user = _debug_user(x_debug_bypass_auth)
     ranked = await orchestrator.retrieve_ranked(body, user=user)
     return {
-        "doc_ids": [c.chunk.doc_id for c in ranked],
+        "doc_ids": [r.candidate.chunk.doc_id for r in ranked],
         "candidates": [
-            {"doc_id": c.chunk.doc_id, "chunk_id": c.chunk.chunk_id, "scores": c.raw_scores}
-            for c in ranked
+            {
+                "doc_id": r.candidate.chunk.doc_id,
+                "chunk_id": r.candidate.chunk.chunk_id,
+                "scores": r.signal_breakdown,
+                "rank": r.rank,
+            }
+            for r in ranked
         ],
     }

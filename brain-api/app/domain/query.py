@@ -11,6 +11,7 @@ class QueryRequest(BaseModel):
     query: str
     session_id: str | None = None
     k: int = 5
+    include_debug: bool = False
 
 
 class Candidate(BaseModel):

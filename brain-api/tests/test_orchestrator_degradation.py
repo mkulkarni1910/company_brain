@@ -107,4 +107,4 @@ async def test_retrieve_ranked_degrades_when_proximity_raises() -> None:
     result = await orch.retrieve_ranked(QueryRequest(query="anything"), user=user)
 
     # No exception propagated; both candidates returned, ranked by content (hi first).
-    assert [c.chunk.doc_id for c in result] == ["up:high", "up:low"]
+    assert [r.candidate.chunk.doc_id for r in result] == ["up:high", "up:low"]

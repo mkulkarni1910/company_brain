@@ -84,7 +84,7 @@ def test_live_dropped_failclosed_without_obo() -> None:
     # fail-closed recheck DROPS it. Only the indexed candidate survives.
     orch = _orch(_FakeLiveFetcher())
     cands = asyncio.run(orch.retrieve_ranked(QueryRequest(query="who is on call right now?"), user=_user()))
-    doc_ids = {c.chunk.doc_id for c in cands}
+    doc_ids = {r.candidate.chunk.doc_id for r in cands}
     assert "graph:live-1" not in doc_ids     # live dropped fail-closed (no per-user OBO)
     assert "idx-1" in doc_ids                # indexed retained
 
@@ -98,7 +98,7 @@ def test_live_kept_with_obo(monkeypatch) -> None:
     get_settings.cache_clear()
     orch = _orch(_FakeLiveFetcher())
     cands = asyncio.run(orch.retrieve_ranked(QueryRequest(query="who is on call right now?"), user=_user()))
-    doc_ids = {c.chunk.doc_id for c in cands}
+    doc_ids = {r.candidate.chunk.doc_id for r in cands}
     assert "graph:live-1" in doc_ids         # live kept (recheck bypassed under OBO)
     assert "idx-1" in doc_ids                # indexed retained
 
@@ -106,7 +106,7 @@ def test_live_kept_with_obo(monkeypatch) -> None:
 def test_no_live_fetch_for_static_query() -> None:
     orch = _orch(_FakeLiveFetcher())
     cands = asyncio.run(orch.retrieve_ranked(QueryRequest(query="what is our PTO policy?"), user=_user()))
-    doc_ids = {c.chunk.doc_id for c in cands}
+    doc_ids = {r.candidate.chunk.doc_id for r in cands}
     assert "graph:live-1" not in doc_ids     # static query -> no live fetch
     assert "idx-1" in doc_ids
 
@@ -118,7 +118,7 @@ def test_live_fetch_failure_does_not_block() -> None:
 
     orch = _orch(_BrokenLive())
     cands = asyncio.run(orch.retrieve_ranked(QueryRequest(query="latest status now"), user=_user()))
-    assert {c.chunk.doc_id for c in cands} == {"idx-1"}   # degraded to indexed-only, no raise
+    assert {r.candidate.chunk.doc_id for r in cands} == {"idx-1"}   # degraded to indexed-only, no raise
 
 
 def _user() -> User:
