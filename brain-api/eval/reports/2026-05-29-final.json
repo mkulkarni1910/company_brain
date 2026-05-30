@@ -1,0 +1,8 @@
+{
+  "n": 10,
+  "recall_at_10": 1.0,
+  "mrr_at_10": 1.0,
+  "p50_latency_s": 0.214,
+  "p95_latency_s": 1.667,
+  "failures": []
+}
