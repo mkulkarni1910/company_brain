@@ -10,6 +10,8 @@ For tests, a `x-debug-bypass-auth` header still works (see api/query.py).
 
 from __future__ import annotations
 
+import base64
+import json as _json
 from functools import lru_cache
 
 import httpx
@@ -83,3 +85,36 @@ async def user_from_bearer(token: str) -> User:
         display_name=claims.get("name") or claims.get("preferred_username") or user_id,
         group_ids=groups,
     )
+
+
+def user_from_easy_auth_header(principal_b64: str) -> User:
+    """Build a User from the Container Apps Easy Auth X-MS-CLIENT-PRINCIPAL header."""
+    try:
+        payload = _json.loads(base64.b64decode(principal_b64).decode())
+        claims = {(_TYPE_ALIASES.get(c["typ"], c["typ"])): c["val"] for c in payload.get("claims", [])}
+        groups = {
+            c["val"]
+            for c in payload.get("claims", [])
+            if c["typ"] in ("groups", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+        }
+        oid = claims.get("oid") or claims.get("objectidentifier")
+        tid = claims.get("tid") or claims.get("tenantid")
+        if not oid or not tid:
+            raise InvalidToken("missing oid/tid in principal")
+        return User(
+            user_id=oid,
+            tenant_id=tid,
+            email=claims.get("preferred_username") or claims.get("email") or "",
+            display_name=claims.get("name") or oid,
+            group_ids=groups,
+        )
+    except InvalidToken:
+        raise
+    except Exception as e:
+        raise InvalidToken(f"bad easy-auth principal: {e}") from e
+
+
+_TYPE_ALIASES = {
+    "http://schemas.microsoft.com/identity/claims/objectidentifier": "oid",
+    "http://schemas.microsoft.com/identity/claims/tenantid": "tid",
+}
