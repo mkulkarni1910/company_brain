@@ -14,8 +14,15 @@ export type Answer = {
   query_id: string; text: string; citations: Citation[]; debug?: AnswerDebug | null;
 };
 
-// Cached Easy Auth id_token (prod). Fetched once from the same-origin /.auth/me
-// endpoint that Container Apps Easy Auth exposes for the signed-in session.
+export type HistoryEntry = { query: string; query_id: string; ts: string };
+export type TrendingDoc = {
+  doc_id: string; title: string; source: string; source_url: string; snippet: string; score: number;
+};
+export type SourceActivity = { source: string; events: number; score: number };
+export type DiscoverResult = { trending: TrendingDoc[]; by_source: SourceActivity[]; window_days: number };
+
+// Cached Easy Auth id_token (prod). Fetched from the same-origin /.auth/me endpoint
+// that Container Apps Easy Auth exposes for the signed-in session.
 let _idTokenPromise: Promise<string | null> | null = null;
 
 async function easyAuthIdToken(): Promise<string | null> {
@@ -28,6 +35,17 @@ async function easyAuthIdToken(): Promise<string | null> {
   return _idTokenPromise;
 }
 
+// Force Easy Auth to refresh the stored tokens (using the session's refresh token),
+// then drop the cached id_token so the next call re-reads a fresh one from /.auth/me.
+async function refreshEasyAuth(): Promise<void> {
+  _idTokenPromise = null;
+  try {
+    await fetch("/.auth/refresh", { credentials: "include" });
+  } catch {
+    /* best-effort; the retry will re-read /.auth/me regardless */
+  }
+}
+
 // In prod (DEBUG_AUTH empty) → Authorization: Bearer <id_token>.
 // In local dev → x-debug-bypass-auth header.
 async function authHeaders(): Promise<Record<string, string>> {
@@ -36,11 +54,30 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+// Fetch with auth. In prod, a 401 (e.g. the Easy Auth id_token expired after ~1h)
+// triggers one refresh + retry; if it still fails, the session is gone, so we send
+// the user through the Easy Auth login to get a fresh token.
+async function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const send = async () =>
+    fetch(url, { ...init, headers: { ...(init.headers ?? {}), ...(await authHeaders()) } });
+
+  let resp = await send();
+  if (resp.status === 401 && !DEBUG_AUTH) {
+    await refreshEasyAuth();
+    resp = await send();
+    if (resp.status === 401 && typeof window !== "undefined") {
+      const back = window.location.pathname + window.location.search;
+      window.location.href = "/.auth/login/aad?post_login_redirect_uri=" + encodeURIComponent(back);
+    }
+  }
+  return resp;
+}
+
 export async function postQuery(query: string): Promise<{ answer: Answer; latencyMs: number }> {
   const t0 = performance.now();
-  const resp = await fetch(`${API_BASE}/query`, {
+  const resp = await authedFetch(`${API_BASE}/query`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, include_debug: true }),
   });
   if (!resp.ok) throw new Error(`brain-api ${resp.status}: ${await resp.text()}`);
@@ -51,23 +88,16 @@ export async function postQuery(query: string): Promise<{ answer: Answer; latenc
 export async function postFeedback(
   doc_id: string, signal: "thumbs_up" | "thumbs_down", query_id?: string
 ): Promise<void> {
-  await fetch(`${API_BASE}/feedback`, {
+  await authedFetch(`${API_BASE}/feedback`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ doc_id, signal, query_id }),
   }).catch(() => {/* best-effort */});
 }
 
-export type HistoryEntry = { query: string; query_id: string; ts: string };
-export type TrendingDoc = {
-  doc_id: string; title: string; source: string; source_url: string; snippet: string; score: number;
-};
-export type SourceActivity = { source: string; events: number; score: number };
-export type DiscoverResult = { trending: TrendingDoc[]; by_source: SourceActivity[]; window_days: number };
-
 export async function getHistory(): Promise<HistoryEntry[]> {
   try {
-    const resp = await fetch(`${API_BASE}/history`, { headers: { ...(await authHeaders()) } });
+    const resp = await authedFetch(`${API_BASE}/history`);
     if (!resp.ok) return [];
     return (await resp.json()) as HistoryEntry[];
   } catch {
@@ -78,7 +108,7 @@ export async function getHistory(): Promise<HistoryEntry[]> {
 export async function getDiscover(): Promise<DiscoverResult> {
   const empty = { trending: [], by_source: [], window_days: 14 };
   try {
-    const resp = await fetch(`${API_BASE}/discover`, { headers: { ...(await authHeaders()) } });
+    const resp = await authedFetch(`${API_BASE}/discover`);
     if (!resp.ok) return empty;
     return (await resp.json()) as DiscoverResult;
   } catch {
@@ -87,9 +117,9 @@ export async function getDiscover(): Promise<DiscoverResult> {
 }
 
 export async function logClick(doc_id: string, source: string, query_id?: string): Promise<void> {
-  await fetch(`${API_BASE}/feedback`, {
+  await authedFetch(`${API_BASE}/feedback`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ doc_id, signal: "click", source, query_id }),
   }).catch(() => {/* best-effort */});
 }
