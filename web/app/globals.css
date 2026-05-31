@@ -251,3 +251,10 @@
 .fac.on{background:var(--teal-bg);color:var(--ink)}
 .fac.on .ct{color:var(--teal)}
 .fac:hover{background:var(--surface)}
+.fchip-wrap{position:relative}
+.fmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:20;min-width:200px;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);padding:6px;max-height:280px;overflow:auto}
+.fmenu-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 11px;
+  border-radius:8px;font-size:13.5px;color:var(--ink-dim);cursor:pointer}
+.fmenu-item:hover{background:var(--panel);color:var(--ink)}
+.fmenu-ct{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint)}

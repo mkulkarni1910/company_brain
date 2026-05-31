@@ -72,16 +72,19 @@ function SearchView() {
   const [loading, setLoading] = useState(false);
   const [activeSources, setActiveSources] = useState<string[]>([]);
   const [timeIdx, setTimeIdx] = useState(0);
+  const [author, setAuthor] = useState<string | null>(null);
+  const [whoOpen, setWhoOpen] = useState(false);
   const reqId = useRef(0);
 
-  async function run(query: string, sources: string[], days: number | null) {
+  async function run(query: string, sources: string[], days: number | null, authorId: string | null) {
     const text = query.trim();
     if (!text) return;
     const id = ++reqId.current;
     setSubmitted(text); setLoading(true);
-    const opts: { sources?: string[]; date_from?: string } = {};
+    const opts: { sources?: string[]; date_from?: string; author_id?: string } = {};
     if (sources.length) opts.sources = sources;
     if (days != null) opts.date_from = new Date(Date.now() - days * 864e5).toISOString();
+    if (authorId) opts.author_id = authorId;
     const res = await postSearch(text, opts);
     if (id !== reqId.current) return;  // a newer search superseded this one
     setData(res); setLoading(false);
@@ -90,21 +93,39 @@ function SearchView() {
   function toggleSource(s: string) {
     const next = activeSources.includes(s) ? activeSources.filter((x) => x !== s) : [...activeSources, s];
     setActiveSources(next);
-    if (submitted) run(submitted, next, TIME_FILTERS[timeIdx].days);
+    if (submitted) run(submitted, next, TIME_FILTERS[timeIdx].days, author);
   }
 
   return (
     <main className="main">
       <div className="searchwrap">
-        <form className="searchbar" onSubmit={(e) => { e.preventDefault(); run(q, activeSources, TIME_FILTERS[timeIdx].days); }}>
+        <form className="searchbar" onSubmit={(e) => { e.preventDefault(); run(q, activeSources, TIME_FILTERS[timeIdx].days, author); }}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
           <input placeholder="Search across SharePoint, Teams, and more…" value={q} onChange={(e) => setQ(e.target.value)} />
           {q && <span className="clr" onClick={() => { setQ(""); setSubmitted(""); setData(null); }}>✕</span>}
         </form>
         <div className="filters">
-          <div className="fchip" onClick={() => { const n = (timeIdx + 1) % TIME_FILTERS.length; setTimeIdx(n); if (submitted) run(submitted, activeSources, TIME_FILTERS[n].days); }}>
+          <div className="fchip" onClick={() => { const n = (timeIdx + 1) % TIME_FILTERS.length; setTimeIdx(n); if (submitted) run(submitted, activeSources, TIME_FILTERS[n].days, author); }}>
             {TIME_FILTERS[timeIdx].label} <span className="cv">▾</span>
           </div>
+          {submitted && (
+            <div className="fchip-wrap">
+              <div className="fchip" onClick={() => setWhoOpen((o) => !o)}>
+                {author ? (data?.authors.find((a) => a.user_id === author)?.display_name ?? "Who from") : "Who from"} <span className="cv">▾</span>
+              </div>
+              {whoOpen && (
+                <div className="fmenu">
+                  <div className="fmenu-item" onClick={() => { setAuthor(null); setWhoOpen(false); run(submitted, activeSources, TIME_FILTERS[timeIdx].days, null); }}>Anyone</div>
+                  {(data?.authors ?? []).map((a) => (
+                    <div className="fmenu-item" key={a.user_id} onClick={() => { setAuthor(a.user_id); setWhoOpen(false); run(submitted, activeSources, TIME_FILTERS[timeIdx].days, a.user_id); }}>
+                      {a.display_name} <span className="fmenu-ct">{a.count}</span>
+                    </div>
+                  ))}
+                  {(!data || data.authors.length === 0) && <div className="fmenu-item" style={{ opacity: .5 }}>No authors</div>}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <div className="scroll">
