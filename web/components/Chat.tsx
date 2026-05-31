@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { postQuery, postFeedback, Answer, Citation } from "@/lib/api";
+import { postQuery, postFeedback, getHistory, getDiscover, logClick,
+  Answer, Citation, HistoryEntry, DiscoverResult } from "@/lib/api";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
@@ -23,6 +24,74 @@ const SIGNAL_META: { key: keyof NonNullable<Answer["debug"]>["signals"]; label: 
 
 function initials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+function relTime(iso: string): string {
+  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function HistoryView({ onPick }: { onPick: (q: string) => void }) {
+  const [items, setItems] = useState<HistoryEntry[] | null>(null);
+  useEffect(() => { getHistory().then(setItems); }, []);
+  return (
+    <main className="main">
+      <header className="topbar"><div className="title">History</div></header>
+      <div className="scroll">
+        <div className="panel-wrap">
+          {items === null && <div className="empty-p">Loading…</div>}
+          {items?.length === 0 && <div className="empty-p">No questions yet — ask something in Ask.</div>}
+          {items?.map((h) => (
+            <button className="hist-row" key={h.query_id} onClick={() => onPick(h.query)}>
+              <span className="hist-q">{h.query}</span>
+              <span className="hist-t">{relTime(h.ts)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function DiscoverView({ onAsk }: { onAsk: (q: string) => void }) {
+  const [data, setData] = useState<DiscoverResult | null>(null);
+  useEffect(() => { getDiscover().then(setData); }, []);
+  const max = Math.max(1, ...(data?.trending.map((t) => t.score) ?? [1]));
+  return (
+    <main className="main">
+      <header className="topbar"><div className="title">Discover</div>
+        <span className="tenant">trending · last {data?.window_days ?? 14} days</span></header>
+      <div className="scroll">
+        <div className="panel-wrap">
+          {data === null && <div className="empty-p">Loading…</div>}
+          {data?.trending.length === 0 && <div className="empty-p">No activity yet — engagement will surface here.</div>}
+          {data?.trending.map((t) => (
+            <div className="disc-card" key={t.doc_id}>
+              <div className="disc-main">
+                <a className="disc-title" href={t.source_url} target="_blank" rel="noopener noreferrer"
+                   onClick={() => logClick(t.doc_id, t.source)}>{t.title}</a>
+                <span className="disc-src">{t.source}</span>
+                <p className="disc-snip">{t.snippet}</p>
+                <div className="disc-bar"><span style={{ width: `${(t.score / max) * 100}%` }} /></div>
+              </div>
+              <button className="disc-ask" onClick={() => onAsk(`Tell me about ${t.title}`)}>Ask</button>
+            </div>
+          ))}
+          {data && data.by_source.length > 0 && (
+            <div className="disc-sources">
+              <div className="lbl">Activity by source</div>
+              {data.by_source.map((s) => (
+                <div className="src-row" key={s.source}><span>{s.source}</span><span className="meta">{s.events} events</span></div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
 }
 
 // Render the answer as markdown, turning [n] citation markers into clickable
@@ -63,6 +132,7 @@ function AnswerText({ text, citations }: { text: string; citations: Citation[] }
 export default function Chat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
+  const [view, setView] = useState<"ask" | "discover" | "history">("ask");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // newest answer with debug drives the right rail
@@ -97,15 +167,15 @@ export default function Chat() {
         <div>
           <h2>Workspace</h2>
           <nav className="nav">
-            <a className="active" href="#">
+            <button className={view === "ask" ? "active" : ""} onClick={() => setView("ask")}>
               <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>Ask
-            </a>
-            <a href="#">
+            </button>
+            <button className={view === "discover" ? "active" : ""} onClick={() => setView("discover")}>
               <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z" /></svg>Discover
-            </a>
-            <a href="#">
+            </button>
+            <button className={view === "history" ? "active" : ""} onClick={() => setView("history")}>
               <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>History
-            </a>
+            </button>
           </nav>
         </div>
         <div>
@@ -123,7 +193,10 @@ export default function Chat() {
         </div>
       </aside>
 
-      {/* MAIN */}
+      {/* HISTORY / DISCOVER / ASK views */}
+      {view === "history" && <HistoryView onPick={(q) => { setView("ask"); ask(q); }} />}
+      {view === "discover" && <DiscoverView onAsk={(q) => { setView("ask"); ask(q); }} />}
+      {view === "ask" && (
       <main className="main">
         <header className="topbar">
           <div className="title">Ask the brain</div>
@@ -175,7 +248,7 @@ export default function Chat() {
                       <div className="cites">
                         <div className="lbl">Sources</div>
                         {t.answer.citations.map((c, i) => (
-                          <a className="cite" key={c.chunk_id} href={c.source_url} target="_blank" rel="noopener noreferrer">
+                          <a className="cite" key={c.chunk_id} href={c.source_url} target="_blank" rel="noopener noreferrer" onClick={() => logClick(c.doc_id, "uploaded", t.answer!.query_id)}>
                             <span className="n">[{i + 1}]</span>
                             <div>
                               <div className="c-title">{c.title}</div>
@@ -211,8 +284,10 @@ export default function Chat() {
           </div>
         </div>
       </main>
+      )}
 
       {/* RIGHT CONTEXT RAIL */}
+      {view === "ask" && (
       <aside className="rail--right">
         <div>
           <div className="ctx-head"><span className="t">Why this ranked</span></div>
@@ -240,6 +315,7 @@ export default function Chat() {
           <div className="stat"><span>Live fetch</span><span className="v">{latest?.answer?.debug?.live_used ? "yes" : "—"}</span></div>
         </div>
       </aside>
+      )}
     </div>
   );
 }
