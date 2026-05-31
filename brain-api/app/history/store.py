@@ -45,8 +45,10 @@ class HistoryStore:
         entry = HistoryEntry(query=query, query_id=query_id, ts=datetime.now(UTC))
         key = _key(user)
         try:
-            await self._r.lpush(key, entry.model_dump_json())
-            await self._r.ltrim(key, 0, _MAX - 1)
+            async with self._r.pipeline(transaction=False) as pipe:
+                pipe.lpush(key, entry.model_dump_json())
+                pipe.ltrim(key, 0, _MAX - 1)
+                await pipe.execute()
         except _ERRORS as e:
             logger.warning("history add failed (key=%s): %s", key, e)
 
