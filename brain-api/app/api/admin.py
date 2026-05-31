@@ -2,6 +2,7 @@ import os
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel
 
 from app.activity.store import ActivityStore
 from app.config import get_settings
@@ -49,27 +50,37 @@ async def seed_people(users_limit: int = 50, groups_limit: int = 50) -> dict:
         await gc.aclose()
 
 
+class SeedActivityRequest(BaseModel):
+    doc_ids: list[str] = []
+    events_per_doc: int = 6
+
+
 @router.post("/seed-activity")
-async def seed_activity(events_per_doc: int = 5) -> dict:
-    """Generate synthetic engagement on real corpus docs so the ranker's activity
-    signal is demonstrable: a heavily-viewed doc ranks above an equally-relevant one."""
+async def seed_activity(body: SeedActivityRequest) -> dict:
+    """Seed synthetic engagement across real corpus docs so the Discover surface and
+    the ranker's activity signal are demonstrable. Pass real doc_ids; falls back to a
+    known set. Mixes event types + sources so trending and by-source both render."""
     tenant = os.environ.get("EVAL_TENANT", "t-eval")
     store = ActivityStore()
     try:
         await store.ensure_table()
         now = datetime.now(UTC)
-        plan = [
-            ("u-eval", "up:planning-q3-sales-plan"),
-            ("u-eval", "up:engineering-oncall-runbook"),
+        ids = body.doc_ids or [
+            "up:planning-q3-sales-plan",
+            "up:engineering-oncall-runbook",
+            "up:policy-pto",
         ]
+        types = ["view", "view", "click", "dwell", "thumbs_up"]
+        sources = ["sharepoint", "teams", "uploaded"]
         written = 0
-        for user_id, doc_id in plan:
-            for i in range(events_per_doc):
+        for j, doc_id in enumerate(ids):
+            for i in range(body.events_per_doc):
                 await store.ingest_event(ActivityEvent(
-                    timestamp=now - timedelta(hours=i),
-                    tenant_id=tenant, user_id=user_id, doc_id=doc_id,
-                    event_type="view", source="uploaded"))
+                    timestamp=now - timedelta(hours=i + j),
+                    tenant_id=tenant, user_id=f"u-{i % 3}", doc_id=doc_id,
+                    event_type=types[(i + j) % len(types)],
+                    source=sources[(i + j) % len(sources)]))
                 written += 1
-        return {"tenant_id": tenant, "events_written": written}
+        return {"tenant_id": tenant, "events_written": written, "docs": len(ids)}
     finally:
         await store.aclose()
