@@ -71,12 +71,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="brain-api", version="0.1.0", lifespan=lifespan)
 
-# CORS for the local web chat (dev). Tighten/parameterize for production.
+# CORS origins are configurable via CORS_ALLOW_ORIGINS (comma-separated).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        o.strip() for o in get_settings().cors_allow_origins.split(",") if o.strip()
     ],
     allow_methods=["*"],
     allow_headers=["*"],

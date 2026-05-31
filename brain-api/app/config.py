@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     brain_log_level: str = "INFO"
     enable_debug_auth: bool = False
     admin_api_key: str | None = None
+    cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # ACL store
     acl_doc_ttl_seconds: int | None = None  # None = persistent (live ACL is authoritative)
