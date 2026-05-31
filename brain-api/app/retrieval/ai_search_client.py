@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from azure.identity.aio import DefaultAzureCredential
 from azure.search.documents.aio import SearchClient
@@ -119,9 +119,11 @@ class AISearchClient:
         parts = [f"({build_acl_filter(user)})"]
         if sources:
             ids = ",".join(esc(s) for s in sources)
+            # source IDs are internal slugs (no commas); ACL is AND-ed so over-broad sources still can't leak.
             parts.append(f"search.in(source, '{ids}', ',')")
         if date_from is not None:
-            parts.append(f"modified_at ge {date_from.isoformat()}")
+            dt = date_from if date_from.tzinfo else date_from.replace(tzinfo=UTC)
+            parts.append(f"modified_at ge {dt.isoformat()}")
         if author_id:
             parts.append(f"author_id eq '{esc(author_id)}'")
         flt = " and ".join(parts)
@@ -135,6 +137,7 @@ class AISearchClient:
                 semantic_configuration_name="brain-semantic",
                 filter=flt,
                 top=max(top * 4, 20),
+                # NOTE: skip is chunk-level, not doc-level — reliable only for the first page.
                 skip=skip,
                 facets=["source,count:10"],
                 include_total_count=True,

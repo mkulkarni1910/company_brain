@@ -83,3 +83,30 @@ async def test_search_page_degrades_to_empty_on_error() -> None:
     c._cli = Boom()
     page = await c.search_page(query="x", user=_user(), vector=[0.1])
     assert page.results == [] and page.facets == [] and page.total == 0
+
+
+@pytest.mark.asyncio
+async def test_date_from_naive_is_coerced_to_utc() -> None:
+    from datetime import datetime
+    results = FakeResults([], facets={"source": []}, count=0)
+    c = _client(results)
+    await c.search_page(query="x", user=_user(), vector=[0.1],
+                        date_from=datetime(2026, 1, 15, 10, 30))  # naive
+    flt = c._cli.kwargs["filter"]
+    assert "modified_at ge 2026-01-15T10:30:00+00:00" in flt
+
+
+@pytest.mark.asyncio
+async def test_author_id_single_quote_escaped() -> None:
+    results = FakeResults([], facets={"source": []}, count=0)
+    c = _client(results)
+    await c.search_page(query="x", user=_user(), vector=[0.1], author_id="o'brien")
+    assert "author_id eq 'o''brien'" in c._cli.kwargs["filter"]
+
+
+@pytest.mark.asyncio
+async def test_top_limits_result_count() -> None:
+    rows = [_row("d1", "d1#0"), _row("d2", "d2#0"), _row("d3", "d3#0")]
+    results = FakeResults(rows, facets={"source": []}, count=3)
+    page = await _client(results).search_page(query="x", user=_user(), vector=[0.1], top=1)
+    assert len(page.results) == 1 and page.results[0].doc_id == "d1"
