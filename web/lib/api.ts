@@ -57,3 +57,39 @@ export async function postFeedback(
     body: JSON.stringify({ doc_id, signal, query_id }),
   }).catch(() => {/* best-effort */});
 }
+
+export type HistoryEntry = { query: string; query_id: string; ts: string };
+export type TrendingDoc = {
+  doc_id: string; title: string; source: string; source_url: string; snippet: string; score: number;
+};
+export type SourceActivity = { source: string; events: number; score: number };
+export type DiscoverResult = { trending: TrendingDoc[]; by_source: SourceActivity[]; window_days: number };
+
+export async function getHistory(): Promise<HistoryEntry[]> {
+  try {
+    const resp = await fetch(`${API_BASE}/history`, { headers: { ...(await authHeaders()) } });
+    if (!resp.ok) return [];
+    return (await resp.json()) as HistoryEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getDiscover(): Promise<DiscoverResult> {
+  const empty = { trending: [], by_source: [], window_days: 14 };
+  try {
+    const resp = await fetch(`${API_BASE}/discover`, { headers: { ...(await authHeaders()) } });
+    if (!resp.ok) return empty;
+    return (await resp.json()) as DiscoverResult;
+  } catch {
+    return empty;
+  }
+}
+
+export async function logClick(doc_id: string, source: string, query_id?: string): Promise<void> {
+  await fetch(`${API_BASE}/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    body: JSON.stringify({ doc_id, signal: "click", source, query_id }),
+  }).catch(() => {/* best-effort */});
+}
