@@ -8,7 +8,9 @@ from app.acl.store import ACLStore
 from app.activity.signal import ActivitySignal
 from app.activity.store import ActivityStore
 from app.api.admin import router as admin_router
+from app.api.discover import router as discover_router
 from app.api.feedback import router as feedback_router
+from app.api.history import router as history_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
 from app.cache.redis_cache import RedisCache
@@ -94,7 +96,8 @@ app.include_router(admin_router)
 app.include_router(query_router)
 app.include_router(retrieve_router)
 app.include_router(feedback_router)
-# Task 7 will add: app.include_router(history_router); app.include_router(discover_router)
+app.include_router(history_router)
+app.include_router(discover_router)
 
 
 @app.get("/healthz")
