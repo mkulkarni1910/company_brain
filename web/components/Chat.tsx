@@ -74,20 +74,31 @@ function SearchView() {
   const [timeIdx, setTimeIdx] = useState(0);
   const [author, setAuthor] = useState<string | null>(null);
   const [whoOpen, setWhoOpen] = useState(false);
+  const [overview, setOverview] = useState<Answer | null>(null);
+  const [ovLoading, setOvLoading] = useState(false);
   const reqId = useRef(0);
 
   async function run(query: string, sources: string[], days: number | null, authorId: string | null) {
     const text = query.trim();
     if (!text) return;
     const id = ++reqId.current;
-    setSubmitted(text); setLoading(true);
+    setSubmitted(text); setLoading(true); setOverview(null); setOvLoading(false);
     const opts: { sources?: string[]; date_from?: string; author_id?: string } = {};
     if (sources.length) opts.sources = sources;
     if (days != null) opts.date_from = new Date(Date.now() - days * 864e5).toISOString();
     if (authorId) opts.author_id = authorId;
+    // Phase 1: fast results — render immediately.
     const res = await postSearch(text, opts);
     if (id !== reqId.current) return;  // a newer search superseded this one
     setData(res); setLoading(false);
+    // Phase 2: AI Overview, fetched separately so the LLM never blocks results,
+    // and only when there are results to ground it.
+    if (res.results.length > 0) {
+      setOvLoading(true);
+      postQuery(text)
+        .then(({ answer }) => { if (id === reqId.current) { setOverview(answer); setOvLoading(false); } })
+        .catch(() => { if (id === reqId.current) setOvLoading(false); });
+    }
   }
 
   function toggleSource(s: string) {
@@ -102,7 +113,7 @@ function SearchView() {
         <form className="searchbar" onSubmit={(e) => { e.preventDefault(); run(q, activeSources, TIME_FILTERS[timeIdx].days, author); }}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
           <input placeholder="Search across SharePoint, Teams, and more…" value={q} onChange={(e) => setQ(e.target.value)} />
-          {q && <span className="clr" onClick={() => { setQ(""); setSubmitted(""); setData(null); }}>✕</span>}
+          {q && <span className="clr" onClick={() => { setQ(""); setSubmitted(""); setData(null); setOverview(null); setOvLoading(false); }}>✕</span>}
         </form>
         <div className="filters">
           <div className="fchip" onClick={() => { const n = (timeIdx + 1) % TIME_FILTERS.length; setTimeIdx(n); if (submitted) run(submitted, activeSources, TIME_FILTERS[n].days, author); }}>
@@ -134,14 +145,16 @@ function SearchView() {
           <div className="sgrid">
             <div>
               {loading && <div className="empty-p">Searching…</div>}
-              {!loading && data?.answer && (
+              {!loading && data && data.results.length > 0 && (ovLoading || overview) && (
                 <section className="ai">
                   <div className="ai-head">
                     <svg className="ai-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /><circle cx="12" cy="12" r="3.2" /></svg>
                     <span className="ai-title">AI Overview</span>
-                    <span className="ai-badge">● grounded · {data.answer.citations.length} sources</span>
+                    {overview && <span className="ai-badge">● grounded · {overview.citations.length} sources</span>}
                   </div>
-                  <div className="ai-body"><AnswerText text={data.answer.text} citations={data.answer.citations} /></div>
+                  {overview
+                    ? <div className="ai-body"><AnswerText text={overview.text} citations={overview.citations} /></div>
+                    : <div className="ai-body" style={{ color: "var(--ink-faint)" }}>Generating overview…</div>}
                 </section>
               )}
               {!loading && (
@@ -249,7 +262,7 @@ export default function Chat() {
   }
 
   return (
-    <div className="app">
+    <div className={"app" + (view === "ask" ? "" : " app--norail")}>
       {/* LEFT RAIL */}
       <aside className="rail">
         <div className="brand">

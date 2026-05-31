@@ -132,14 +132,14 @@ export type SourceFacet = { source: string; count: number };
 export type PersonHit = { user_id: string; display_name: string; role: string | null };
 export type PersonFacet = { user_id: string; display_name: string; count: number };
 export type SearchResponse = {
-  query: string; answer: Answer | null; results: SearchHit[];
+  query: string; results: SearchHit[];
   facets: SourceFacet[]; people: PersonHit[]; authors: PersonFacet[]; total: number;
 };
 
 export type SearchOpts = { sources?: string[]; date_from?: string; author_id?: string };
 
 export async function postSearch(query: string, opts: SearchOpts = {}): Promise<SearchResponse> {
-  const empty: SearchResponse = { query, answer: null, results: [], facets: [], people: [], authors: [], total: 0 };
+  const empty: SearchResponse = { query, results: [], facets: [], people: [], authors: [], total: 0 };
   try {
     const resp = await authedFetch(`${API_BASE}/search`, {
       method: "POST",

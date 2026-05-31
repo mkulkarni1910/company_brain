@@ -1,32 +1,25 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime
 
 from app.domain.identity import User
-from app.domain.query import Answer, QueryRequest
 from app.domain.search import PersonFacet, PersonHit, SearchResponse
 
 logger = logging.getLogger(__name__)
 
 
 class SearchService:
-    """Glean-style search: faceted result page + grounded AI Overview + people-from-authors.
-    Each part degrades independently; the endpoint never 500s on a data-layer failure."""
+    """Glean-style search: a fast faceted result page + people/authors resolved from
+    result authors. The AI Overview is intentionally NOT produced here — the client
+    requests it separately (via /query) so the slow LLM call never blocks the result
+    list. Every part degrades independently; the endpoint never 500s on a data-layer
+    failure."""
 
-    def __init__(self, *, embedder, search, orchestrator, people) -> None:
+    def __init__(self, *, embedder, search, people) -> None:
         self._embedder = embedder
         self._search = search
-        self._orchestrator = orchestrator
         self._people = people
-
-    async def _overview(self, *, user: User, query: str) -> Answer | None:
-        try:
-            return await self._orchestrator.answer(QueryRequest(query=query), user=user)
-        except Exception as e:  # noqa: BLE001 - overview is optional
-            logger.warning("search overview failed: %s", e)
-            return None
 
     async def result(
         self, *, user: User, query: str, top: int = 10, skip: int = 0,
@@ -35,16 +28,13 @@ class SearchService:
     ) -> SearchResponse:
         q = query.strip()
         if not q:
-            return SearchResponse(query=query, answer=None, results=[], facets=[],
+            return SearchResponse(query=query, results=[], facets=[],
                                   people=[], authors=[], total=0)
 
         vector = await self._embedder.embed(q)
-        page, answer = await asyncio.gather(
-            self._search.search_page(
-                query=q, user=user, vector=vector, top=top, skip=skip,
-                sources=sources, date_from=date_from, author_id=author_id,
-            ),
-            self._overview(user=user, query=q),
+        page = await self._search.search_page(
+            query=q, user=user, vector=vector, top=top, skip=skip,
+            sources=sources, date_from=date_from, author_id=author_id,
         )
 
         result_author_ids = [h.author_id for h in page.results if h.author_id]
@@ -70,6 +60,6 @@ class SearchService:
         ]
 
         return SearchResponse(
-            query=q, answer=answer, results=page.results,
-            facets=page.facets, people=people, authors=authors, total=page.total,
+            query=q, results=page.results, facets=page.facets,
+            people=people, authors=authors, total=page.total,
         )

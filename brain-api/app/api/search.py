@@ -34,7 +34,7 @@ async def search(
         debug_header=x_debug_bypass_auth,
     )
     if service is None:
-        return SearchResponse(query=body.query, answer=None, results=[], facets=[], people=[], total=0)
+        return SearchResponse(query=body.query, results=[], facets=[], people=[], total=0)
     return await service.result(
         user=user, query=body.query, top=min(max(body.top, 1), 25), skip=max(body.skip, 0),
         sources=body.sources, date_from=body.date_from, author_id=body.author_id,

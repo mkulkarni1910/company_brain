@@ -72,7 +72,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.search_service = SearchService(
         embedder=app.state.embedder,
         search=app.state.ai_search,
-        orchestrator=app.state.orchestrator,
         people=app.state.people_graph,
     )
     try:

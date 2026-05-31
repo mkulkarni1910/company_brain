@@ -2,8 +2,6 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.domain.query import Answer
-
 
 class SearchHit(BaseModel):
     doc_id: str
@@ -40,8 +38,10 @@ class SearchPage(BaseModel):
 
 
 class SearchResponse(BaseModel):
+    """Fast search results — facets, people, authors. The AI Overview is fetched
+    separately by the client (via /query) so the LLM never blocks the result list."""
+
     query: str
-    answer: Answer | None = None
     results: list[SearchHit]
     facets: list[SourceFacet]
     people: list[PersonHit]
