@@ -13,7 +13,9 @@ from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
+from app.discover.service import DiscoverService
 from app.generation.azure_openai import AzureOpenAIClient
+from app.history.store import HistoryStore
 from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.orchestrator.planner import QueryPlanner
@@ -57,6 +59,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         live_fetcher=app.state.live_fetcher,
         planner=app.state.planner,
     )
+    app.state.history_store = HistoryStore()
+    app.state.discover_service = DiscoverService(
+        activity=app.state.activity_store,
+        search=app.state.ai_search,
+        cache=app.state.cache,
+    )
     try:
         yield
     finally:
@@ -64,6 +72,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.acl_store.aclose()
         await app.state.people_graph.aclose()
         await app.state.activity_store.aclose()
+        await app.state.history_store.aclose()
         await app.state.cache.aclose()
         await app.state.ai_search.aclose()
         await app.state.embedder.aclose()
@@ -85,6 +94,7 @@ app.include_router(admin_router)
 app.include_router(query_router)
 app.include_router(retrieve_router)
 app.include_router(feedback_router)
+# Task 7 will add: app.include_router(history_router); app.include_router(discover_router)
 
 
 @app.get("/healthz")
