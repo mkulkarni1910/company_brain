@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from azure.identity.aio import DefaultAzureCredential
 from azure.search.documents.aio import SearchClient
 from azure.search.documents.models import VectorizedQuery
@@ -8,6 +10,17 @@ from app.acl.enforcement import build_acl_filter
 from app.config import get_settings
 from app.domain.chunk import Chunk
 from app.domain.identity import User
+from app.domain.search import SearchHit, SearchPage, SourceFacet
+
+
+def _snippet_from(row: dict) -> str:
+    """Prefer a search highlight fragment; strip <b>/<em> tags; else start of content."""
+    hl = row.get("@search.highlights") or {}
+    frags = hl.get("content") or hl.get("title") or []
+    text = frags[0] if frags else (row.get("content") or "")[:200]
+    for tag in ("<b>", "</b>", "<em>", "</em>"):
+        text = text.replace(tag, "")
+    return text.strip()
 
 
 def _to_search_doc(c: Chunk) -> dict:
@@ -92,3 +105,65 @@ class AISearchClient:
             c = _from_search_doc(r)
             out.setdefault(c.doc_id, c)
         return out
+
+    async def search_page(
+        self, *, query: str, user: User, vector: list[float], top: int = 10, skip: int = 0,
+        sources: list[str] | None = None, date_from: datetime | None = None,
+        author_id: str | None = None,
+    ) -> SearchPage:
+        """Faceted, ACL-filtered result page (one hit per doc). Degrades to an empty
+        page on any search error."""
+        def esc(s: str) -> str:
+            return s.replace("'", "''")
+
+        parts = [f"({build_acl_filter(user)})"]
+        if sources:
+            ids = ",".join(esc(s) for s in sources)
+            parts.append(f"search.in(source, '{ids}', ',')")
+        if date_from is not None:
+            parts.append(f"modified_at ge {date_from.isoformat()}")
+        if author_id:
+            parts.append(f"author_id eq '{esc(author_id)}'")
+        flt = " and ".join(parts)
+
+        vq = VectorizedQuery(vector=vector, k_nearest_neighbors=50, fields="content_vector")
+        try:
+            results = await self._cli.search(
+                search_text=query,
+                vector_queries=[vq],
+                query_type="semantic",
+                semantic_configuration_name="brain-semantic",
+                filter=flt,
+                top=max(top * 4, 20),
+                skip=skip,
+                facets=["source,count:10"],
+                include_total_count=True,
+                highlight_fields="content,title",
+                highlight_pre_tag="<b>",
+                highlight_post_tag="</b>",
+                select=[
+                    "chunk_id", "doc_id", "tenant_id", "source", "source_url", "title",
+                    "content", "author_id", "acl_principals", "created_at", "modified_at",
+                    "chunk_index",
+                ],
+            )
+            hits: dict[str, SearchHit] = {}
+            async for r in results:
+                doc_id = r["doc_id"]
+                if doc_id in hits:
+                    continue
+                hits[doc_id] = SearchHit(
+                    doc_id=doc_id, title=r["title"], source=r["source"],
+                    source_url=r["source_url"], author_id=r.get("author_id"),
+                    modified_at=r["modified_at"], snippet=_snippet_from(r),
+                )
+            facets_raw = await results.get_facets() or {}
+            total = await results.get_count() or 0
+        except Exception:  # noqa: BLE001 - search surface degrades to empty
+            return SearchPage(results=[], facets=[], total=0)
+
+        facets = [
+            SourceFacet(source=f["value"], count=int(f["count"]))
+            for f in (facets_raw.get("source") or [])
+        ]
+        return SearchPage(results=list(hits.values())[:top], facets=facets, total=total)
