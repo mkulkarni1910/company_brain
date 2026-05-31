@@ -46,6 +46,6 @@ def test_search_empty_when_service_unavailable() -> None:
             resp = client.post("/search", json={"query": "vision"}, headers=_HDR)
         assert resp.status_code == 200
         assert resp.json() == {"query": "vision", "answer": None, "results": [],
-                               "facets": [], "people": [], "total": 0}
+                               "facets": [], "people": [], "authors": [], "total": 0}
     finally:
         app.dependency_overrides.clear()

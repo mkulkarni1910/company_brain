@@ -110,3 +110,16 @@ async def test_top_limits_result_count() -> None:
     results = FakeResults(rows, facets={"source": []}, count=3)
     page = await _client(results).search_page(query="x", user=_user(), vector=[0.1], top=1)
     assert len(page.results) == 1 and page.results[0].doc_id == "d1"
+
+
+@pytest.mark.asyncio
+async def test_search_page_returns_author_facets() -> None:
+    rows = [_row("d1", "d1#0")]
+    results = FakeResults(rows, facets={
+        "source": [{"value": "sharepoint", "count": 1}],
+        "author_id": [{"value": "u1", "count": 4}, {"value": "u2", "count": 2}],
+    }, count=1)
+    c = _client(results)
+    page = await c.search_page(query="x", user=_user(), vector=[0.1])
+    assert page.author_facets == [("u1", 4), ("u2", 2)]
+    assert "author_id,count:10" in c._cli.kwargs["facets"]

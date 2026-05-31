@@ -26,9 +26,16 @@ class PersonHit(BaseModel):
     role: str | None = None
 
 
+class PersonFacet(BaseModel):
+    user_id: str
+    display_name: str
+    count: int
+
+
 class SearchPage(BaseModel):
     results: list[SearchHit]
     facets: list[SourceFacet]
+    author_facets: list[tuple[str, int]] = []
     total: int
 
 
@@ -38,4 +45,5 @@ class SearchResponse(BaseModel):
     results: list[SearchHit]
     facets: list[SourceFacet]
     people: list[PersonHit]
+    authors: list[PersonFacet] = []
     total: int

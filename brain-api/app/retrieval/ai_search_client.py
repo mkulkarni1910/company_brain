@@ -139,7 +139,7 @@ class AISearchClient:
                 top=max(top * 4, 20),
                 # NOTE: skip is chunk-level, not doc-level — reliable only for the first page.
                 skip=skip,
-                facets=["source,count:10"],
+                facets=["source,count:10", "author_id,count:10"],
                 include_total_count=True,
                 highlight_fields="content,title",
                 highlight_pre_tag="<b>",
@@ -169,4 +169,10 @@ class AISearchClient:
             SourceFacet(source=f["value"], count=int(f["count"]))
             for f in (facets_raw.get("source") or [])
         ]
-        return SearchPage(results=list(hits.values())[:top], facets=facets, total=total)
+        author_facets = [
+            (f["value"], int(f["count"]))
+            for f in (facets_raw.get("author_id") or [])
+            if f.get("value")
+        ]
+        return SearchPage(results=list(hits.values())[:top], facets=facets,
+                          author_facets=author_facets, total=total)
