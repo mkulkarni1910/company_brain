@@ -215,3 +215,48 @@
     text-transform:uppercase;color:var(--ink-faint);margin-bottom:9px}
   .src-row{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-top:1px solid var(--line)}
   .src-row .meta{color:var(--ink-faint);font-family:"JetBrains Mono",monospace;font-size:11px}
+
+/* ── Search view (Glean-style Discover) ─────────────────────────────────── */
+.searchwrap{position:sticky;top:0;z-index:5;background:rgba(254,253,251,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line-soft);padding:20px 36px 14px}
+.searchbar{display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow)}
+.searchbar input{flex:1;border:none;outline:none;background:none;font:inherit;font-size:16px;color:var(--ink)}
+.searchbar .clr{cursor:pointer;color:var(--ink-faint)}
+.filters{display:flex;gap:9px;margin-top:13px}
+.fchip{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:7px 13px;font-size:13px;color:var(--ink-dim);cursor:pointer}
+.fchip svg{width:14px;height:14px;opacity:.7}
+.fchip .cv{font-size:10px;opacity:.6}
+.fchip.on{border-color:#cabd9f;background:var(--amber-bg);color:var(--ink)}
+.sgrid{display:grid;grid-template-columns:1fr 290px;gap:30px;padding:24px 36px 60px;max-width:1180px}
+.ai{background:linear-gradient(180deg,#fff8ea,#fffdf8);border:1px solid #ecd9ad;border-radius:15px;padding:18px 20px;margin-bottom:26px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.ai::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--amber),#e0a83c)}
+.ai-head{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.ai-spark{width:20px;height:20px;color:var(--amber)}
+.ai-title{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--amber);font-weight:500}
+.ai-badge{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--green);background:rgba(63,143,94,.1);border:1px solid rgba(63,143,94,.3);border-radius:99px;padding:3px 9px}
+.ai-body{font-size:15px;line-height:1.7;color:var(--ink)}
+.ai-body b{font-weight:600}
+.rescount{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint);margin:0 0 14px}
+.result{display:flex;gap:14px;padding:16px 2px;border-bottom:1px solid var(--line-soft)}
+.ricon{width:30px;height:30px;border-radius:8px;flex:none;display:grid;place-items:center;font-size:14px;background:var(--panel);border:1px solid var(--line-soft)}
+.rmain{min-width:0;flex:1}
+.rtitle{font-family:"Fraunces",serif;font-size:17px;font-weight:500;color:var(--teal);text-decoration:none}
+.rtitle:hover{text-decoration:underline}
+.rmeta{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-faint);margin:4px 0 7px;flex-wrap:wrap}
+.rmeta .fold{display:flex;align-items:center;gap:4px}
+.rsnip{font-size:13.7px;line-height:1.62;color:var(--ink-dim)}
+.rsnip b{color:var(--ink);font-weight:600}
+.people{padding:16px 2px;border-bottom:1px solid var(--line-soft)}
+.people-h{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--ink-dim);margin-bottom:12px}
+.pcards{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:560px}
+.pcard{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.pcard .pav{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#e7dcc3,#cdbf9e);display:grid;place-items:center;font-weight:700;color:#4a4334;flex:none}
+.pcard .nm{font-weight:600;color:var(--teal);font-size:14px}
+.pcard .rl{font-size:11.5px;color:var(--ink-faint)}
+.facets{position:sticky;top:140px;align-self:start}
+.facet-h{display:flex;align-items:center;justify-content:space-between;margin:24px 2px 8px;font-size:12.5px;color:var(--ink-faint)}
+.fac{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;font-size:13.5px;color:var(--ink-dim);cursor:pointer}
+.fac .ic{width:16px;height:16px;display:grid;place-items:center;font-size:12px}
+.fac .ct{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-faint)}
+.fac.on{background:var(--teal-bg);color:var(--ink)}
+.fac.on .ct{color:var(--teal)}
+.fac:hover{background:var(--surface)}

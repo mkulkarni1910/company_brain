@@ -2,8 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { postQuery, postFeedback, getHistory, getDiscover, logClick,
-  Answer, Citation, HistoryEntry, DiscoverResult } from "@/lib/api";
+import { postQuery, postFeedback, getHistory, logClick, postSearch,
+  Answer, Citation, HistoryEntry, SearchResponse } from "@/lib/api";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
@@ -34,6 +34,10 @@ function relTime(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function sourceIcon(s: string): string {
+  return ({ sharepoint: "📁", teams: "💬", uploaded: "📄", slack: "🟪", jira: "🟦", graph: "🌐" } as Record<string, string>)[s] ?? "📄";
+}
+
 function HistoryView({ onPick }: { onPick: (q: string) => void }) {
   const [items, setItems] = useState<HistoryEntry[] | null>(null);
   useEffect(() => { getHistory().then(setItems); }, []);
@@ -56,39 +60,103 @@ function HistoryView({ onPick }: { onPick: (q: string) => void }) {
   );
 }
 
-function DiscoverView({ onAsk }: { onAsk: (q: string) => void }) {
-  const [data, setData] = useState<DiscoverResult | null>(null);
-  useEffect(() => { getDiscover().then(setData); }, []);
-  const max = Math.max(1, ...(data?.trending.map((t) => t.score) ?? [1]));
+const TIME_FILTERS: { label: string; days: number | null }[] = [
+  { label: "Anytime", days: null }, { label: "Past week", days: 7 },
+  { label: "Past month", days: 30 }, { label: "Past quarter", days: 90 },
+];
+
+function SearchView() {
+  const [q, setQ] = useState("");
+  const [submitted, setSubmitted] = useState("");
+  const [data, setData] = useState<SearchResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [activeSources, setActiveSources] = useState<string[]>([]);
+  const [timeIdx, setTimeIdx] = useState(0);
+
+  async function run(query: string, sources: string[], days: number | null) {
+    const text = query.trim();
+    if (!text) return;
+    setSubmitted(text); setLoading(true);
+    const opts: { sources?: string[]; date_from?: string } = {};
+    if (sources.length) opts.sources = sources;
+    if (days != null) opts.date_from = new Date(Date.now() - days * 864e5).toISOString();
+    const res = await postSearch(text, opts);
+    setData(res); setLoading(false);
+  }
+
+  function toggleSource(s: string) {
+    const next = activeSources.includes(s) ? activeSources.filter((x) => x !== s) : [...activeSources, s];
+    setActiveSources(next);
+    if (submitted) run(submitted, next, TIME_FILTERS[timeIdx].days);
+  }
+
   return (
     <main className="main">
-      <header className="topbar"><div className="title">Discover</div>
-        <span className="tenant">trending · last {data?.window_days ?? 14} days</span></header>
-      <div className="scroll">
-        <div className="panel-wrap">
-          {data === null && <div className="empty-p">Loading…</div>}
-          {data?.trending.length === 0 && <div className="empty-p">No activity yet — engagement will surface here.</div>}
-          {data?.trending.map((t) => (
-            <div className="disc-card" key={t.doc_id}>
-              <div className="disc-main">
-                <a className="disc-title" href={t.source_url} target="_blank" rel="noopener noreferrer"
-                   onClick={() => logClick(t.doc_id, t.source)}>{t.title}</a>
-                <span className="disc-src">{t.source}</span>
-                <p className="disc-snip">{t.snippet}</p>
-                <div className="disc-bar"><span style={{ width: `${(t.score / max) * 100}%` }} /></div>
-              </div>
-              <button className="disc-ask" onClick={() => onAsk(`Tell me about ${t.title}`)}>Ask</button>
-            </div>
-          ))}
-          {data && data.by_source.length > 0 && (
-            <div className="disc-sources">
-              <div className="lbl">Activity by source</div>
-              {data.by_source.map((s) => (
-                <div className="src-row" key={s.source}><span>{s.source}</span><span className="meta">{s.events} events</span></div>
-              ))}
-            </div>
-          )}
+      <div className="searchwrap">
+        <form className="searchbar" onSubmit={(e) => { e.preventDefault(); run(q, activeSources, TIME_FILTERS[timeIdx].days); }}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+          <input placeholder="Search across SharePoint, Teams, and more…" value={q} onChange={(e) => setQ(e.target.value)} />
+          {q && <span className="clr" onClick={() => setQ("")}>✕</span>}
+        </form>
+        <div className="filters">
+          <div className="fchip" onClick={() => { const n = (timeIdx + 1) % TIME_FILTERS.length; setTimeIdx(n); if (submitted) run(submitted, activeSources, TIME_FILTERS[n].days); }}>
+            {TIME_FILTERS[timeIdx].label} <span className="cv">▾</span>
+          </div>
         </div>
+      </div>
+      <div className="scroll">
+        {!submitted && <div className="panel-wrap"><div className="empty-p">Search your company knowledge — grounded answers with sources.</div></div>}
+        {submitted && (
+          <div className="sgrid">
+            <div>
+              {loading && <div className="empty-p">Searching…</div>}
+              {!loading && data?.answer && (
+                <section className="ai">
+                  <div className="ai-head">
+                    <svg className="ai-spark" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /><circle cx="12" cy="12" r="3.2" /></svg>
+                    <span className="ai-title">AI Overview</span>
+                    <span className="ai-badge">● grounded · {data.answer.citations.length} sources</span>
+                  </div>
+                  <div className="ai-body"><AnswerText text={data.answer.text} citations={data.answer.citations} /></div>
+                </section>
+              )}
+              {!loading && (
+                <>
+                  <p className="rescount">{data?.total ?? 0} results · ranked for you</p>
+                  {data?.results.map((h) => (
+                    <div className="result" key={h.doc_id}>
+                      <div className="ricon">{sourceIcon(h.source)}</div>
+                      <div className="rmain">
+                        <a className="rtitle" href={h.source_url} target="_blank" rel="noopener noreferrer" onClick={() => logClick(h.doc_id, h.source)}>{h.title}</a>
+                        <div className="rmeta">{h.author_id ? `${h.author_id} · ` : ""}{relTime(h.modified_at)} · <span className="fold">📁 {h.source}</span></div>
+                        <div className="rsnip">{h.snippet}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {data && data.results.length === 0 && <div className="empty-p">No results.</div>}
+                  {data && data.people.length > 0 && (
+                    <div className="people">
+                      <div className="people-h">People who work on this</div>
+                      <div className="pcards">
+                        {data.people.map((p) => (
+                          <div className="pcard" key={p.user_id}><div className="pav">{initials(p.display_name)}</div><div><div className="nm">{p.display_name}</div>{p.role && <div className="rl">{p.role}</div>}</div></div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <aside className="facets">
+              <div className="facet-h" style={{ marginTop: 0 }}><span>Sources</span></div>
+              {(data?.facets ?? []).map((f) => (
+                <div className={"fac" + (activeSources.includes(f.source) ? " on" : "")} key={f.source} onClick={() => toggleSource(f.source)}>
+                  <span className="ic">{sourceIcon(f.source)}</span>{f.source}<span className="ct">{f.count}</span>
+                </div>
+              ))}
+            </aside>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -195,7 +263,7 @@ export default function Chat() {
 
       {/* HISTORY / DISCOVER / ASK views */}
       {view === "history" && <HistoryView onPick={(q) => { setView("ask"); ask(q); }} />}
-      {view === "discover" && <DiscoverView onAsk={(q) => { setView("ask"); ask(q); }} />}
+      {view === "discover" && <SearchView />}
       {view === "ask" && (
       <main className="main">
         <header className="topbar">
