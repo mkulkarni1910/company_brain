@@ -13,6 +13,7 @@ from typing import Any
 from gremlin_python.driver import client, serializer
 
 from app.config import get_settings
+from app.domain.search import PersonHit
 
 
 class PeopleGraphClient:
@@ -77,6 +78,29 @@ class PeopleGraphClient:
             "  addE(lbl).from('src').to('dst'))",
             {"tid": tenant_id, "a": from_id, "b": to_id, "lbl": label},
         )
+
+    async def resolve_people(self, user_ids: list[str], tenant_id: str) -> list[PersonHit]:
+        """Best-effort: map author user_ids to display names from the People graph.
+        Returns [] on empty input or any graph error; unknown ids are omitted."""
+        if not user_ids:
+            return []
+        try:
+            rows = await self.submit(
+                "g.V().has('user','tenant_id', tid).has('user_id', within(ids))"
+                ".valueMap('user_id','display_name')",
+                {"tid": tenant_id, "ids": user_ids},
+            )
+        except Exception:  # noqa: BLE001 - people block is best-effort
+            return []
+        out: list[PersonHit] = []
+        for r in rows:
+            uid = (r.get("user_id") or [None])[0]
+            name = (r.get("display_name") or [None])[0]
+            if uid and name:
+                out.append(PersonHit(user_id=uid, display_name=name))
+        order = {u: i for i, u in enumerate(user_ids)}
+        out.sort(key=lambda p: order.get(p.user_id, 999))
+        return out
 
     async def aclose(self) -> None:
         def _close() -> None:
