@@ -23,4 +23,11 @@ async def query(
         authorization=authorization,
         debug_header=x_debug_bypass_auth,
     )
-    return await orchestrator.answer(body, user=user)
+    # Raw bearer token (the user assertion) for per-user OBO Live Fetch. Easy Auth
+    # token-store threading is a deploy concern; for now pass the inbound bearer.
+    tok = (
+        authorization.split(" ", 1)[1]
+        if authorization and authorization.lower().startswith("bearer ")
+        else None
+    )
+    return await orchestrator.answer(body, user=user, user_token=tok)

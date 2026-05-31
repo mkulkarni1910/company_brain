@@ -63,7 +63,9 @@ class SemanticKernelOrchestrator:
     async def aclose(self) -> None:
         return None
 
-    async def retrieve_ranked(self, request: QueryRequest, *, user: User) -> list[RankedResult]:
+    async def retrieve_ranked(
+        self, request: QueryRequest, *, user: User, user_token: str | None = None
+    ) -> list[RankedResult]:
         settings = get_settings()
         # LLM plan step: rewrite the query for retrieval + decide whether Live Fetch
         # is needed. Degrades to the freshness heuristic on any failure (planner owns it).
@@ -76,7 +78,9 @@ class SemanticKernelOrchestrator:
         if settings.live_fetch_enabled and plan.needs_live_fetch:
             try:
                 live = await asyncio.wait_for(
-                    self._live_fetcher.fetch(query=request.query, user=user),
+                    self._live_fetcher.fetch(
+                        query=request.query, user=user, user_token=user_token
+                    ),
                     timeout=settings.live_fetch_timeout_ms / 1000.0,
                 )
             except Exception as e:  # timeout or any error: never block the answer on live fetch
@@ -125,7 +129,9 @@ class SemanticKernelOrchestrator:
         )
         return ranked
 
-    async def answer(self, request: QueryRequest, *, user: User) -> Answer:
+    async def answer(
+        self, request: QueryRequest, *, user: User, user_token: str | None = None
+    ) -> Answer:
         query_id = str(uuid.uuid4())
 
         key = _cache_key(user, request.query)
@@ -136,7 +142,7 @@ class SemanticKernelOrchestrator:
             if cached:
                 return Answer.model_validate({**cached, "query_id": query_id})
 
-        ranked = await self.retrieve_ranked(request, user=user)
+        ranked = await self.retrieve_ranked(request, user=user, user_token=user_token)
         if not ranked:
             return Answer(
                 text="I don't have information about that.",

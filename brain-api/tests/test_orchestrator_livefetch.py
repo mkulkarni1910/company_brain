@@ -46,7 +46,7 @@ class _FakeActivity:
 
 
 class _FakeLiveFetcher:
-    async def fetch(self, *, query, user):
+    async def fetch(self, *, query, user, user_token=None):
         # live candidate with NO acl_principals — must survive (Graph-trimmed)
         return [Candidate(chunk=_chunk("graph:live-1", "graph", []),
                           sources_hit={"live"}, raw_scores={"content_rrf": 0.8})]
@@ -113,7 +113,7 @@ def test_no_live_fetch_for_static_query() -> None:
 
 def test_live_fetch_failure_does_not_block() -> None:
     class _BrokenLive:
-        async def fetch(self, *, query, user):
+        async def fetch(self, *, query, user, user_token=None):
             raise RuntimeError("graph down")
 
     orch = _orch(_BrokenLive())

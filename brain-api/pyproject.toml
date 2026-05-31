@@ -10,6 +10,7 @@ dependencies = [
   "pydantic-settings>=2.6",
   "httpx>=0.27",
   "azure-identity>=1.19",
+  "msal>=1.31",
   "azure-search-documents>=11.6.0b8",
   "azure-keyvault-secrets>=4.8",
   "openai>=1.54",

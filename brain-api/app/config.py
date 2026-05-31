@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     azure_client_id: str
     azure_api_client_id: str | None = None
     azure_api_scope: str | None = None
+    # OBO (on-behalf-of) confidential-client secret for the API app registration.
+    # Loaded from Key Vault in prod (secret name: azure-api-client-secret).
+    azure_api_client_secret: str | None = None
 
     # AI Search
     azure_ai_search_endpoint: str
@@ -96,6 +99,9 @@ def load_secrets_from_keyvault(settings: "Settings", client=None) -> None:
     settings.redis_key = _get("redis-key") or settings.redis_key
     settings.cosmos_gremlin_key = _get("cosmos-gremlin-key") or settings.cosmos_gremlin_key
     settings.admin_api_key = _get("admin-api-key") or settings.admin_api_key
+    settings.azure_api_client_secret = (
+        _get("azure-api-client-secret") or settings.azure_api_client_secret
+    )
 
 
 @lru_cache(maxsize=1)

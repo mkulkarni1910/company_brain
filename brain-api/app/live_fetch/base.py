@@ -29,6 +29,8 @@ def needs_live_fetch(query: str) -> bool:
 
 
 class LiveFetcher(Protocol):
-    async def fetch(self, *, query: str, user: User) -> list[Candidate]:
+    async def fetch(
+        self, *, query: str, user: User, user_token: str | None = None
+    ) -> list[Candidate]:
         """Return fresh candidates from source systems, or [] on failure/empty."""
         ...

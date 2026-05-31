@@ -1,10 +1,16 @@
 """Live Fetch via Microsoft Graph /search.
 
-Authenticates with a DefaultAzureCredential Graph token (same pattern as the
-People seeder) — single-identity for Phase 3; per-user OBO is a Phase 4 swap
-localized to _token(). Maps each Graph hit to a synthetic Candidate so live
-results rank and cite uniformly with indexed chunks. Never raises: returns []
-on any error so the orchestrator answer path is never blocked.
+Token acquisition (_token):
+  * Per-user OBO (Phase 4): when a requesting-user token is present AND
+    live_fetch_obo_enabled is set AND the API app's client id+secret are
+    configured, exchange the user assertion for a Graph token via msal's
+    on-behalf-of flow. Graph then permission-trims hits to the requesting user.
+  * Otherwise fall back to the single-identity DefaultAzureCredential principal
+    (Phase 3 behaviour). Any OBO failure also falls back — never raises.
+
+Maps each Graph hit to a synthetic Candidate so live results rank and cite
+uniformly with indexed chunks. Never raises: returns [] on any error so the
+orchestrator answer path is never blocked.
 """
 
 from __future__ import annotations
@@ -15,6 +21,7 @@ from datetime import UTC, datetime
 import httpx
 from azure.identity.aio import DefaultAzureCredential
 
+from app.config import get_settings
 from app.domain.chunk import Chunk
 from app.domain.identity import User
 from app.domain.query import Candidate
@@ -22,23 +29,68 @@ from app.domain.query import Candidate
 logger = logging.getLogger(__name__)
 
 _SEARCH_URL = "https://graph.microsoft.com/v1.0/search/query"
+_GRAPH_SCOPE = "https://graph.microsoft.com/.default"
 _RRF_K = 60
 
 
 class MSGraphSearchFetcher:
-    async def _token(self) -> str:
-        # Phase 3: single-identity (the DefaultAzureCredential principal).
-        # Phase 4 OBO swap touches only this method.
+    async def _obo_token(self, user_token: str) -> str | None:
+        """Exchange the requesting user's token for a Graph token (OBO).
+
+        Returns None if OBO is not configured/enabled or on any failure, so the
+        caller falls back to the single service identity. Never raises.
+        """
+        settings = get_settings()
+        if not (
+            settings.live_fetch_obo_enabled
+            and settings.azure_api_client_id
+            and settings.azure_api_client_secret
+        ):
+            return None
+        try:
+            import msal
+
+            app = msal.ConfidentialClientApplication(
+                settings.azure_api_client_id,
+                authority=f"https://login.microsoftonline.com/{settings.azure_tenant_id}",
+                client_credential=settings.azure_api_client_secret,
+            )
+            result = app.acquire_token_on_behalf_of(
+                user_assertion=user_token, scopes=[_GRAPH_SCOPE]
+            )
+            token = result.get("access_token") if isinstance(result, dict) else None
+            if not token:
+                logger.warning(
+                    "OBO token exchange returned no access_token (%s); "
+                    "falling back to service identity",
+                    (result or {}).get("error") if isinstance(result, dict) else None,
+                )
+                return None
+            return token
+        except Exception as e:
+            logger.warning(
+                "OBO token exchange failed; falling back to service identity: %s", e
+            )
+            return None
+
+    async def _token(self, user_token: str | None = None) -> str:
+        # Per-user OBO when available, else the single-identity service principal.
+        if user_token:
+            obo = await self._obo_token(user_token)
+            if obo:
+                return obo
         cred = DefaultAzureCredential()
         try:
-            tok = await cred.get_token("https://graph.microsoft.com/.default")
+            tok = await cred.get_token(_GRAPH_SCOPE)
             return tok.token
         finally:
             await cred.close()
 
-    async def fetch(self, *, query: str, user: User) -> list[Candidate]:
+    async def fetch(
+        self, *, query: str, user: User, user_token: str | None = None
+    ) -> list[Candidate]:
         try:
-            token = await self._token()
+            token = await self._token(user_token)
             body = {
                 "requests": [
                     {
