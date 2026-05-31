@@ -123,3 +123,31 @@ export async function logClick(doc_id: string, source: string, query_id?: string
     body: JSON.stringify({ doc_id, signal: "click", source, query_id }),
   }).catch(() => {/* best-effort */});
 }
+
+export type SearchHit = {
+  doc_id: string; title: string; source: string; source_url: string;
+  author_id: string | null; modified_at: string; snippet: string;
+};
+export type SourceFacet = { source: string; count: number };
+export type PersonHit = { user_id: string; display_name: string; role: string | null };
+export type SearchResponse = {
+  query: string; answer: Answer | null; results: SearchHit[];
+  facets: SourceFacet[]; people: PersonHit[]; total: number;
+};
+
+export type SearchOpts = { sources?: string[]; date_from?: string; author_id?: string };
+
+export async function postSearch(query: string, opts: SearchOpts = {}): Promise<SearchResponse> {
+  const empty: SearchResponse = { query, answer: null, results: [], facets: [], people: [], total: 0 };
+  try {
+    const resp = await authedFetch(`${API_BASE}/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, ...opts }),
+    });
+    if (!resp.ok) return empty;
+    return (await resp.json()) as SearchResponse;
+  } catch {
+    return empty;
+  }
+}
