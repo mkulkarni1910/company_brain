@@ -41,6 +41,7 @@ class Settings(BaseSettings):
 
     # Key Vault (optional in dev)
     azure_key_vault_url: str | None = None
+    use_key_vault: bool = False
 
     # App Insights (optional in dev)
     applicationinsights_connection_string: str | None = None
@@ -70,6 +71,30 @@ class Settings(BaseSettings):
     # uses a genuine per-user OBO token (Phase 4) — then Graph has already trimmed
     # hits to the requesting user and the recheck may be bypassed for them.
     live_fetch_obo_enabled: bool = False
+
+
+def load_secrets_from_keyvault(settings: "Settings", client=None) -> None:
+    """Overlay secrets from Key Vault onto settings (prod). Secret names:
+    redis-key, cosmos-gremlin-key, admin-api-key, adx is AAD (no secret)."""
+    if not settings.use_key_vault or not settings.azure_key_vault_url:
+        return
+    if client is None:
+        from azure.identity import DefaultAzureCredential
+        from azure.keyvault.secrets import SecretClient
+
+        client = SecretClient(
+            vault_url=settings.azure_key_vault_url, credential=DefaultAzureCredential()
+        )
+
+    def _get(name):
+        try:
+            return client.get_secret(name).value
+        except Exception:
+            return None
+
+    settings.redis_key = _get("redis-key") or settings.redis_key
+    settings.cosmos_gremlin_key = _get("cosmos-gremlin-key") or settings.cosmos_gremlin_key
+    settings.admin_api_key = _get("admin-api-key") or settings.admin_api_key
 
 
 @lru_cache(maxsize=1)

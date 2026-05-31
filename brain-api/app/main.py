@@ -12,7 +12,7 @@ from app.api.feedback import router as feedback_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
 from app.cache.redis_cache import RedisCache
-from app.config import get_settings
+from app.config import get_settings, load_secrets_from_keyvault
 from app.generation.azure_openai import AzureOpenAIClient
 from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.orchestrator.kernel import SemanticKernelOrchestrator
@@ -26,7 +26,7 @@ from app.retrieval.hybrid_retriever import HybridRetriever
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    get_settings()
+    load_secrets_from_keyvault(get_settings())
     app.state.embedder = AzureOpenAIClient()
     app.state.ai_search = AISearchClient()
     app.state.cache = RedisCache()
