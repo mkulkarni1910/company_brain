@@ -84,3 +84,16 @@ async def test_empty_query_returns_empty() -> None:
     page = SearchPage(results=[], facets=[], total=0)
     resp = await _svc(page).result(user=_user(), query="   ")
     assert resp.results == [] and resp.answer is None and resp.total == 0
+
+
+@pytest.mark.asyncio
+async def test_authors_facet_resolved_with_names_and_counts() -> None:
+    from app.domain.search import PersonHit, SearchPage, SourceFacet
+    page = SearchPage(results=[_hit("d1", "u1")], facets=[SourceFacet(source="sharepoint", count=1)],
+                      author_facets=[("u1", 4), ("u2", 2), ("u3", 1)], total=1)
+    svc = _svc(page, answer=None,
+               people=[PersonHit(user_id="u1", display_name="Priya"),
+                       PersonHit(user_id="u2", display_name="Sam")])
+    resp = await svc.result(user=_user(), query="vision")
+    assert [(a.user_id, a.display_name, a.count) for a in resp.authors] == [
+        ("u1", "Priya", 4), ("u2", "Sam", 2)]

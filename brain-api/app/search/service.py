@@ -6,7 +6,7 @@ from datetime import datetime
 
 from app.domain.identity import User
 from app.domain.query import Answer, QueryRequest
-from app.domain.search import SearchResponse
+from app.domain.search import PersonFacet, PersonHit, SearchResponse
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,8 @@ class SearchService:
     ) -> SearchResponse:
         q = query.strip()
         if not q:
-            return SearchResponse(query=query, answer=None, results=[], facets=[], people=[], total=0)
+            return SearchResponse(query=query, answer=None, results=[], facets=[],
+                                  people=[], authors=[], total=0)
 
         vector = await self._embedder.embed(q)
         page, answer = await asyncio.gather(
@@ -46,14 +47,29 @@ class SearchService:
             self._overview(user=user, query=q),
         )
 
-        author_ids = list(dict.fromkeys(h.author_id for h in page.results if h.author_id))
+        result_author_ids = [h.author_id for h in page.results if h.author_id]
+        facet_author_ids = [a for a, _ in page.author_facets]
+        all_ids = list(dict.fromkeys([*result_author_ids, *facet_author_ids]))
         try:
-            people = await self._people.resolve_people(author_ids, user.tenant_id)
+            resolved = await self._people.resolve_people(all_ids, user.tenant_id)
         except Exception as e:  # noqa: BLE001 - people block is best-effort
             logger.warning("search people resolve failed: %s", e)
-            people = []
+            resolved = []
+        name_by_id = {p.user_id: p.display_name for p in resolved}
+
+        seen: set[str] = set()
+        people: list[PersonHit] = []
+        for uid in result_author_ids:
+            if uid in name_by_id and uid not in seen:
+                seen.add(uid)
+                people.append(PersonHit(user_id=uid, display_name=name_by_id[uid]))
+        authors = [
+            PersonFacet(user_id=uid, display_name=name_by_id[uid], count=count)
+            for uid, count in page.author_facets
+            if uid in name_by_id
+        ]
 
         return SearchResponse(
             query=q, answer=answer, results=page.results,
-            facets=page.facets, people=people, total=page.total,
+            facets=page.facets, people=people, authors=authors, total=page.total,
         )
