@@ -61,6 +61,40 @@ _SCORE_QUERY = (
 )
 
 
+# --- Discover surface queries (window/limit are server ints, inlined safely) ---
+_TYPE_WEIGHT = (
+    "| extend type_weight = case("
+    "EventType == 'thumbs_up', 2.0, EventType == 'thumbs_down', -2.0, "
+    "EventType == 'dwell', 1.5, EventType == 'view', 1.0, EventType == 'click', 1.0, 0.0)\n"
+)
+
+
+def _trending_query(window_days: int, limit: int) -> str:
+    w, lim = int(window_days), int(limit)
+    return (
+        "declare query_parameters(tid:string);\n"
+        f"{_TABLE}\n"
+        f"| where TenantId == tid and Timestamp > ago({w}d)\n"
+        "| extend recency = exp(-1.0 * datetime_diff('day', now(), Timestamp) / 14.0)\n"
+        f"{_TYPE_WEIGHT}"
+        "| summarize score = sum(recency * type_weight), events = count() by DocId\n"
+        "| where score > 0\n"
+        f"| top {lim} by score desc"
+    )
+
+
+def _source_query(window_days: int) -> str:
+    w = int(window_days)
+    return (
+        "declare query_parameters(tid:string, dids:string);\n"
+        f"{_TABLE}\n"
+        f"| where TenantId == tid and Timestamp > ago({w}d) and DocId in (todynamic(dids))\n"
+        f"{_TYPE_WEIGHT}"
+        "| summarize score = sum(type_weight), events = count() by Source\n"
+        "| top 6 by score desc"
+    )
+
+
 def _kcsb() -> KustoConnectionStringBuilder:
     s = get_settings()
     if not s.adx_cluster_uri:
@@ -126,3 +160,43 @@ class ActivityStore:
         for row in resp.primary_results[0]:
             out[row["DocId"]] = float(row["score"])
         return out
+
+    async def trending(
+        self, *, tenant_id: str, window_days: int = 14, limit: int = 8
+    ) -> list[tuple[str, float]]:
+        crp = ClientRequestProperties()
+        crp.set_parameter("tid", tenant_id)
+        query = _trending_query(window_days, limit)
+
+        def _run():
+            return self._client.execute_query(self._db, query, crp)
+
+        try:
+            resp = await asyncio.to_thread(_run)
+        except Exception as e:  # noqa: BLE001 - Discover degrades to empty
+            logger.warning("ADX trending failed: %s", e)
+            return []
+        return [(row["DocId"], float(row["score"])) for row in resp.primary_results[0]]
+
+    async def source_breakdown(
+        self, *, tenant_id: str, doc_ids: list[str], window_days: int = 14
+    ) -> list[tuple[str, int, float]]:
+        if not doc_ids:
+            return []
+        crp = ClientRequestProperties()
+        crp.set_parameter("tid", tenant_id)
+        crp.set_parameter("dids", json.dumps(doc_ids))
+        query = _source_query(window_days)
+
+        def _run():
+            return self._client.execute_query(self._db, query, crp)
+
+        try:
+            resp = await asyncio.to_thread(_run)
+        except Exception as e:  # noqa: BLE001 - Discover degrades to empty
+            logger.warning("ADX source_breakdown failed: %s", e)
+            return []
+        return [
+            (row["Source"], int(row["events"]), float(row["score"]))
+            for row in resp.primary_results[0]
+        ]
