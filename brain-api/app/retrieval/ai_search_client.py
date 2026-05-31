@@ -68,3 +68,27 @@ class AISearchClient:
             r["content_vector"] = []
             chunks.append(_from_search_doc(r))
         return chunks
+
+    async def lookup_docs(self, *, doc_ids: list[str], user: User) -> dict[str, Chunk]:
+        """Fetch one chunk of metadata per doc_id, applying the user's ACL filter.
+        Returns only docs the user can access (the ACL enforcement point for Discover)."""
+        if not doc_ids:
+            return {}
+        ids = ",".join(d.replace("'", "''") for d in doc_ids)
+        flt = f"({build_acl_filter(user)}) and search.in(doc_id, '{ids}', ',')"
+        results = await self._cli.search(
+            search_text="*",
+            filter=flt,
+            top=min(1000, len(doc_ids) * 20),
+            select=[
+                "chunk_id", "doc_id", "tenant_id", "source", "source_url", "title",
+                "content", "acl_principals", "author_id", "entities", "created_at",
+                "modified_at", "chunk_index",
+            ],
+        )
+        out: dict[str, Chunk] = {}
+        async for r in results:
+            r["content_vector"] = []
+            c = _from_search_doc(r)
+            out.setdefault(c.doc_id, c)
+        return out
