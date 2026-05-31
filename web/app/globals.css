@@ -3,6 +3,7 @@
     --paper-2:#f6f3ec;        /* rail */
     --surface:#fffefb;        /* cards */
     --surface-2:#ffffff;      /* lifted */
+    --panel:#f5f1e8;          /* warm card surface — between --paper-2 and --surface */
     --line:#d6cdb9;           /* hairlines */
     --line-soft:#e2dac9;
     --ink:#1a1611;            /* primary text — near-espresso, crisp */
@@ -48,7 +49,7 @@
 
   .rail h2{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin:0 0 11px 2px;font-weight:500}
   .nav{display:flex;flex-direction:column;gap:3px}
-  .nav a, .nav button{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--ink-dim);text-decoration:none;font-size:13.5px;font-weight:500;transition:.18s}
+  .nav a, .nav button{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--ink-dim);text-decoration:none;font-size:13.5px;font-weight:500;transition:.18s;background:none;border:none;cursor:pointer;width:100%;text-align:left}
   .nav a .ic, .nav button .ic{width:15px;height:15px;opacity:.8}
   .nav a:hover, .nav button:hover{background:var(--surface);color:var(--ink)}
   .nav a.active, .nav button.active{background:linear-gradient(90deg,var(--amber-bg),transparent);color:var(--ink);box-shadow:inset 2px 0 0 var(--amber)}
@@ -189,8 +190,6 @@
 .empty-h{font-family:"Fraunces",serif;font-weight:500;font-size:26px;margin:6px 0 0}
 .empty-p{color:var(--ink-dim);max-width:420px;margin:0}
 .composer .send{font-size:18px;line-height:1}
-  .nav button{display:flex;align-items:center;gap:11px;width:100%;background:none;border:none;
-    font:inherit;color:inherit;cursor:pointer;text-align:left}
   .panel-wrap{max-width:760px;margin:0 auto;padding:26px 0}
   .hist-row{display:flex;align-items:center;justify-content:space-between;width:100%;gap:14px;
     background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 16px;margin:0 0 9px;
