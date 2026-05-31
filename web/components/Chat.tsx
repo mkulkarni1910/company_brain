@@ -1,6 +1,8 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { postQuery, postFeedback, Answer } from "@/lib/api";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { postQuery, postFeedback, Answer, Citation } from "@/lib/api";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
@@ -23,17 +25,38 @@ function initials(name: string) {
   return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
-// Render answer text, converting [n] markers into citation chips.
-function AnswerText({ text }: { text: string }) {
-  const parts = text.split(/(\[\d+\])/g);
+// Render the answer as markdown, turning [n] citation markers into clickable
+// chips that link to the matching source. We rewrite `[n]` → `[n](<url> "cite")`
+// so react-markdown parses them as links, then style those links as chips via a
+// custom `a` renderer (distinguished by the "cite" title). Real markdown links
+// in the text render normally.
+function AnswerText({ text, citations }: { text: string; citations: Citation[] }) {
+  const md = text.replace(/\[(\d+)\]/g, (whole, n: string) => {
+    const url = citations[Number(n) - 1]?.source_url;
+    return url ? `[${n}](<${url}> "cite")` : whole;
+  });
   return (
-    <p>
-      {parts.map((p, i) => {
-        const m = p.match(/^\[(\d+)\]$/);
-        if (m) return <cite-ref key={i}>{m[1]}</cite-ref>;
-        return <span key={i}>{p}</span>;
-      })}
-    </p>
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        a({ href, title, children }) {
+          if (title === "cite") {
+            return (
+              <a className="cite-link" href={href} target="_blank" rel="noopener noreferrer">
+                <cite-ref>{children}</cite-ref>
+              </a>
+            );
+          }
+          return (
+            <a href={href} target="_blank" rel="noopener noreferrer">
+              {children}
+            </a>
+          );
+        },
+      }}
+    >
+      {md}
+    </ReactMarkdown>
   );
 }
 
@@ -147,7 +170,7 @@ export default function Chat() {
                         <span className="step done" key={s}><span className="num">✓</span>{s}{i < arr.length - 1 && <span className="arrow" style={{ marginLeft: 9 }} />}</span>
                       ))}
                     </div>
-                    <div className="a-body"><AnswerText text={t.answer.text} /></div>
+                    <div className="a-body"><AnswerText text={t.answer.text} citations={t.answer.citations} /></div>
                     {t.answer.citations.length > 0 && (
                       <div className="cites">
                         <div className="lbl">Sources</div>
