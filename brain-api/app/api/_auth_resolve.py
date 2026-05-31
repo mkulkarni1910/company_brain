@@ -22,17 +22,29 @@ def _debug_user(header: str) -> User:
     )
 
 
+def _apply_pilot_tenant(user: User) -> User:
+    """Single-org pilot: map a real authenticated user onto the pilot brain tenant
+    and grant the tenant-wide `everyone` group so the loaded corpus is reachable
+    without per-user provisioning. No-op unless `pilot_single_tenant` is set."""
+    s = get_settings()
+    if not s.pilot_single_tenant:
+        return user
+    user.tenant_id = s.brain_tenant_id
+    user.group_ids = set(user.group_ids) | {f"{s.brain_tenant_id}:everyone"}
+    return user
+
+
 async def resolve_user(
     *, easy_auth: str | None, authorization: str | None, debug_header: str | None
 ) -> User:
     if easy_auth:  # Container Apps Easy Auth (production)
         try:
-            return user_from_easy_auth_header(easy_auth)
+            return _apply_pilot_tenant(user_from_easy_auth_header(easy_auth))
         except InvalidToken as e:
             raise HTTPException(status_code=401, detail=f"invalid principal: {e}") from e
     if authorization and authorization.lower().startswith("bearer "):
         try:
-            return await user_from_bearer(authorization.split(" ", 1)[1])
+            return _apply_pilot_tenant(await user_from_bearer(authorization.split(" ", 1)[1]))
         except InvalidToken as e:
             raise HTTPException(status_code=401, detail=f"invalid token: {e}") from e
     if get_settings().enable_debug_auth and debug_header:

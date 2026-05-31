@@ -56,16 +56,24 @@ def _validate_jwt(token: str, *, audience: str, tenant: str) -> dict:
 
 
 async def _expand_groups(user_id: str, tenant: str) -> set[str]:
-    """App-only Graph call: get transitive group memberships for user_id."""
-    cred = DefaultAzureCredential()
-    tok = (await cred.get_token("https://graph.microsoft.com/.default")).token
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        r = await client.get(
-            f"https://graph.microsoft.com/v1.0/users/{user_id}/transitiveMemberOf?$select=id",
-            headers={"Authorization": f"Bearer {tok}"},
-        )
-        r.raise_for_status()
-        return {item["id"] for item in r.json().get("value", []) if "id" in item}
+    """App-only Graph call: get transitive group memberships for user_id.
+
+    Fail-soft: if the managed identity lacks `Directory.Read.All` (or Graph is
+    unreachable), return an empty set rather than failing the request. Group-based
+    ACLs simply won't match for that user; user-id and tenant-wide ACLs still do.
+    """
+    try:
+        cred = DefaultAzureCredential()
+        tok = (await cred.get_token("https://graph.microsoft.com/.default")).token
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(
+                f"https://graph.microsoft.com/v1.0/users/{user_id}/transitiveMemberOf?$select=id",
+                headers={"Authorization": f"Bearer {tok}"},
+            )
+            r.raise_for_status()
+            return {item["id"] for item in r.json().get("value", []) if "id" in item}
+    except Exception:
+        return set()
 
 
 async def user_from_bearer(token: str) -> User:

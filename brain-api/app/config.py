@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     brain_tenant_id: str = "t-test"
     brain_log_level: str = "INFO"
     enable_debug_auth: bool = False
+    # Single-org pilot: map every authenticated real user (Easy Auth / Bearer)
+    # onto `brain_tenant_id` and grant the `<brain_tenant_id>:everyone` group, so
+    # the loaded corpus is reachable without per-user provisioning. Off in tests.
+    pilot_single_tenant: bool = False
     admin_api_key: str | None = None
     cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
