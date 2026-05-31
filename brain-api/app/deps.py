@@ -9,6 +9,7 @@ from app.ingest.pipeline import IngestPipeline
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
+from app.search.service import SearchService
 
 
 def get_embedder(request: Request) -> AzureOpenAIClient:
@@ -49,3 +50,7 @@ def get_history_store(request: Request) -> "HistoryStore | None":
 
 def get_discover_service(request: Request) -> "DiscoverService | None":
     return getattr(request.app.state, "discover_service", None)
+
+
+def get_search_service(request: Request) -> "SearchService | None":
+    return getattr(request.app.state, "search_service", None)

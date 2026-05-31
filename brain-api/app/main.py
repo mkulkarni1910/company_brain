@@ -13,6 +13,7 @@ from app.api.feedback import router as feedback_router
 from app.api.history import router as history_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
+from app.api.search import router as search_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
 from app.discover.service import DiscoverService
@@ -26,6 +27,7 @@ from app.people.proximity import PeopleProximity
 from app.ranking.personalized_ranker import PersonalizedRanker
 from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
+from app.search.service import SearchService
 
 
 @asynccontextmanager
@@ -67,6 +69,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         search=app.state.ai_search,
         cache=app.state.cache,
     )
+    app.state.search_service = SearchService(
+        embedder=app.state.embedder,
+        search=app.state.ai_search,
+        orchestrator=app.state.orchestrator,
+        people=app.state.people_graph,
+    )
     try:
         yield
     finally:
@@ -98,6 +106,7 @@ app.include_router(retrieve_router)
 app.include_router(feedback_router)
 app.include_router(history_router)
 app.include_router(discover_router)
+app.include_router(search_router)
 
 
 @app.get("/healthz")
