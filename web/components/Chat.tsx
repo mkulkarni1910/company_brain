@@ -72,15 +72,18 @@ function SearchView() {
   const [loading, setLoading] = useState(false);
   const [activeSources, setActiveSources] = useState<string[]>([]);
   const [timeIdx, setTimeIdx] = useState(0);
+  const reqId = useRef(0);
 
   async function run(query: string, sources: string[], days: number | null) {
     const text = query.trim();
     if (!text) return;
+    const id = ++reqId.current;
     setSubmitted(text); setLoading(true);
     const opts: { sources?: string[]; date_from?: string } = {};
     if (sources.length) opts.sources = sources;
     if (days != null) opts.date_from = new Date(Date.now() - days * 864e5).toISOString();
     const res = await postSearch(text, opts);
+    if (id !== reqId.current) return;  // a newer search superseded this one
     setData(res); setLoading(false);
   }
 
@@ -96,7 +99,7 @@ function SearchView() {
         <form className="searchbar" onSubmit={(e) => { e.preventDefault(); run(q, activeSources, TIME_FILTERS[timeIdx].days); }}>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
           <input placeholder="Search across SharePoint, Teams, and more…" value={q} onChange={(e) => setQ(e.target.value)} />
-          {q && <span className="clr" onClick={() => setQ("")}>✕</span>}
+          {q && <span className="clr" onClick={() => { setQ(""); setSubmitted(""); setData(null); }}>✕</span>}
         </form>
         <div className="filters">
           <div className="fchip" onClick={() => { const n = (timeIdx + 1) % TIME_FILTERS.length; setTimeIdx(n); if (submitted) run(submitted, activeSources, TIME_FILTERS[n].days); }}>
@@ -128,7 +131,7 @@ function SearchView() {
                       <div className="ricon">{sourceIcon(h.source)}</div>
                       <div className="rmain">
                         <a className="rtitle" href={h.source_url} target="_blank" rel="noopener noreferrer" onClick={() => logClick(h.doc_id, h.source)}>{h.title}</a>
-                        <div className="rmeta">{h.author_id ? `${h.author_id} · ` : ""}{relTime(h.modified_at)} · <span className="fold">📁 {h.source}</span></div>
+                        <div className="rmeta">{relTime(h.modified_at)} · <span className="fold">📁 {h.source}</span></div>
                         <div className="rsnip">{h.snippet}</div>
                       </div>
                     </div>
