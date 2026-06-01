@@ -288,13 +288,20 @@
   .dot.green{background:var(--green)}.dot.amber{background:var(--amber)}.dot.rose{background:var(--rose)}
   .where,.who-when,.status{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-faint)}
   .health .hn{display:flex;flex-direction:column}.health .hn span{font-size:11px;color:var(--ink-faint)}
-  .connect-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-  .connect-card{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 16px;cursor:pointer;text-align:left;transition:.16s;font:inherit;color:inherit}
-  .connect-card:hover{border-color:#cabd9f;box-shadow:var(--shadow)}
-  .connect-card.soon{opacity:.5;cursor:default}
-  .connect-card b{display:block;font-size:14px}.connect-card span{font-size:11.5px;color:var(--ink-faint)}
-  .ci{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--amber),#9a5e0e);flex:none}
-  .ci.sp{background:linear-gradient(135deg,#0f897e,#0a5f57)}
+  /* provider catalog (categorized connectors) */
+  .prov-cat{display:flex;flex-direction:column;gap:11px}
+  .cat-label{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);font-weight:500;margin:0 0 1px 2px}
+  .prov-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .prov-card{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;cursor:pointer;text-align:left;transition:.16s;font:inherit;color:inherit;width:100%}
+  .prov-card:not(.soon):hover{border-color:#cabd9f;box-shadow:var(--shadow);transform:translateY(-1px)}
+  .prov-card.soon{opacity:.62;cursor:default}
+  .pi{width:38px;height:38px;border-radius:10px;flex:none;display:grid;place-items:center;background:var(--surface-2);border:1px solid var(--line-soft);overflow:hidden}
+  .pi img{width:24px;height:24px;object-fit:contain;display:block}
+  .pi-tile{width:100%;height:100%;display:grid;place-items:center;color:#fff;font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:700;letter-spacing:.3px}
+  .pmeta{display:flex;flex-direction:column;min-width:0}
+  .pmeta b{font-size:13.5px;font-weight:600;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pmeta span{font-size:11px;color:var(--ink-faint)}
+  .prov-card:not(.soon) .pmeta span{color:var(--teal)}
   .conn-table{width:100%;border-collapse:collapse}
   .conn-table td{padding:12px 8px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:middle}
   .conn-table .sub2{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-faint)}
@@ -314,11 +321,14 @@
   .admin-modal-card h3{font-family:"Fraunces",serif;font-size:18px;margin:0 0 14px}
   .site-row{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;border:1px solid var(--line-soft);border-radius:11px;padding:11px 13px;margin-bottom:8px;background:var(--surface-2);cursor:pointer}
   .site-row:hover{border-color:#cabd9f}.site-row b{font-size:13.5px}.site-row span{font-size:11px;color:var(--ink-faint)}
-  .modal-close{margin-top:6px;background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:12.5px}
+  .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft)}
+  .modal-close{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;color:var(--ink-dim);cursor:pointer;font-size:13px;font-weight:600;padding:8px 18px;transition:.15s}
+  .modal-close:hover{border-color:#cabd9f;color:var(--ink);background:var(--surface)}
   .admin-gate{display:grid;place-items:center;height:100%}
   .admin-gate-card{display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:34px 38px;box-shadow:var(--shadow);width:min(360px,90vw)}
   .admin-gate-card h2{font-family:"Fraunces",serif;margin:6px 0 0}
   .admin-gate-card p{color:var(--ink-faint);font-size:13px;margin:0;text-align:center}
   .admin-gate-card input{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--paper)}
   .admin-gate-card button{width:100%;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--amber),#9a5e0e);color:#fff;font-weight:600;cursor:pointer}
-  @media(max-width:880px){.tiles{grid-template-columns:repeat(2,1fr)}.admin-cols,.connect-row{grid-template-columns:1fr}}
+  @media(max-width:1080px){.prov-grid{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:880px){.tiles{grid-template-columns:repeat(2,1fr)}.admin-cols{grid-template-columns:1fr}.prov-grid{grid-template-columns:repeat(2,1fr)}}
