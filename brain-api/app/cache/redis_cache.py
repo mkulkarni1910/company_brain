@@ -22,24 +22,36 @@ def _embed_key(text: str) -> str:
 class RedisCache:
     def __init__(self) -> None:
         s = get_settings()
+        # Caching is optional: with no host configured (e.g. the India deploy has no
+        # Redis), the cache becomes a no-op — callers already tolerate a miss.
+        if not s.azure_redis_host:
+            self._r = None
+            return
         self._r = redis.Redis(
             host=s.azure_redis_host,
             port=s.azure_redis_port,
             ssl=s.azure_redis_ssl,
             password=s.redis_key,
             decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
         )
 
     async def aclose(self) -> None:
-        await self._r.aclose()
+        if self._r is not None:
+            await self._r.aclose()
 
     async def set_json(self, key: str, value: dict, ttl_seconds: int) -> None:
+        if self._r is None:
+            return
         try:
             await self._r.set(name=key, value=json.dumps(value), ex=ttl_seconds)
         except _CACHE_ERRORS as e:
             logger.warning("Redis set_json failed (key=%s); skipping cache write: %s", key, e)
 
     async def get_json(self, key: str) -> dict | None:
+        if self._r is None:
+            return None
         try:
             v = await self._r.get(key)
         except _CACHE_ERRORS as e:

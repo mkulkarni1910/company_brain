@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     gemini_endpoint: str = "https://generativelanguage.googleapis.com/v1beta"
     gemini_timeout_s: float = 60.0
 
-    # Redis
-    azure_redis_host: str
+    # Redis (optional — caching degrades to a no-op when host is unset)
+    azure_redis_host: str | None = None
     azure_redis_port: int = 6380
     azure_redis_ssl: bool = True
     redis_key: str | None = None

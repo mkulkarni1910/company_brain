@@ -27,21 +27,30 @@ class HistoryStore:
     def __init__(self, client: redis.Redis | None = None) -> None:
         if client is not None:
             self._r = client
-        else:
-            s = get_settings()
-            self._r = redis.Redis(
-                host=s.azure_redis_host,
-                port=s.azure_redis_port,
-                ssl=s.azure_redis_ssl,
-                password=s.redis_key,
-                decode_responses=True,
-            )
+            return
+        s = get_settings()
+        if not s.azure_redis_host:  # optional — no Redis → no-op (history uses Cosmos now)
+            self._r = None
+            return
+        self._r = redis.Redis(
+            host=s.azure_redis_host,
+            port=s.azure_redis_port,
+            ssl=s.azure_redis_ssl,
+            password=s.redis_key,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
 
     async def aclose(self) -> None:
+        if self._r is None:
+            return
         with contextlib.suppress(Exception):
             await self._r.aclose()
 
     async def add(self, *, user: User, query: str, query_id: str) -> None:
+        if self._r is None:
+            return
         entry = HistoryEntry(query=query, query_id=query_id, ts=datetime.now(UTC))
         key = _key(user)
         try:
@@ -53,6 +62,8 @@ class HistoryStore:
             logger.warning("history add failed (key=%s): %s", key, e)
 
     async def recent(self, *, user: User, limit: int = _MAX) -> list[HistoryEntry]:
+        if self._r is None:
+            return []
         key = _key(user)
         try:
             raw = await self._r.lrange(key, 0, max(0, limit - 1))
