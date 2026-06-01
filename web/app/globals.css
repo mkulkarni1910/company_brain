@@ -192,6 +192,12 @@
 .empty-h{font-family:"Fraunces",serif;font-weight:500;font-size:26px;margin:6px 0 0}
 .empty-p{color:var(--ink-dim);max-width:420px;margin:0}
 .composer .send{font-size:18px;line-height:1}
+  .newchat{display:flex;align-items:center;gap:9px;width:100%;margin-top:10px;background:var(--amber-bg);
+    border:1px solid #e6d3a8;border-radius:10px;padding:9px 12px;font:inherit;font-size:13.5px;font-weight:600;
+    color:var(--ink);cursor:pointer}
+  .newchat:hover{filter:brightness(1.02)}
+  .newchat svg{width:15px;height:15px;color:var(--amber)}
+
   .panel-wrap{max-width:760px;margin:0 auto;padding:26px 0}
   .hist-row{display:flex;align-items:center;justify-content:space-between;width:100%;gap:14px;
     background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 16px;margin:0 0 9px;

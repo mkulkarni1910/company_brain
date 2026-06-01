@@ -2,8 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { postQuery, postFeedback, getHistory, logClick, postSearch,
-  Answer, Citation, HistoryEntry, SearchResponse } from "@/lib/api";
+import { postQuery, postFeedback, getConversations, getConversation, logClick, postSearch,
+  Answer, Citation, ConversationSummary, SearchResponse } from "@/lib/api";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
@@ -38,20 +38,20 @@ function sourceIcon(s: string): string {
   return ({ sharepoint: "📁", teams: "💬", uploaded: "📄", slack: "🟪", jira: "🟦", graph: "🌐" } as Record<string, string>)[s] ?? "📄";
 }
 
-function HistoryView({ onPick }: { onPick: (q: string) => void }) {
-  const [items, setItems] = useState<HistoryEntry[] | null>(null);
-  useEffect(() => { getHistory().then(setItems); }, []);
+function ConversationsView({ onOpen }: { onOpen: (id: string) => void }) {
+  const [items, setItems] = useState<ConversationSummary[] | null>(null);
+  useEffect(() => { getConversations().then(setItems); }, []);
   return (
     <main className="main">
       <header className="topbar"><div className="title">History</div></header>
       <div className="scroll">
         <div className="panel-wrap">
           {items === null && <div className="empty-p">Loading…</div>}
-          {items?.length === 0 && <div className="empty-p">No questions yet — ask something in Ask.</div>}
-          {items?.map((h) => (
-            <button className="hist-row" key={h.query_id} onClick={() => onPick(h.query)}>
-              <span className="hist-q">{h.query}</span>
-              <span className="hist-t">{relTime(h.ts)}</span>
+          {items?.length === 0 && <div className="empty-p">No conversations yet — ask something to start one.</div>}
+          {items?.map((c) => (
+            <button className="hist-row" key={c.id} onClick={() => onOpen(c.id)}>
+              <span className="hist-q">{c.title}</span>
+              <span className="hist-t">{c.turn_count} turn{c.turn_count === 1 ? "" : "s"} · {relTime(c.updated_at)}</span>
             </button>
           ))}
         </div>
@@ -238,7 +238,10 @@ export default function Chat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [view, setView] = useState<"ask" | "discover" | "history">("ask");
+  const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  function newChat() { setConversationId(crypto.randomUUID()); setTurns([]); setInput(""); setView("ask"); }
 
   // newest answer with debug drives the right rail
   const latest = [...turns].reverse().find((t) => t.answer);
@@ -254,7 +257,7 @@ export default function Chat() {
     setTurns((t) => [...t, { id, query, loading: true }]);
     setInput("");
     try {
-      const { answer, latencyMs } = await postQuery(query);
+      const { answer, latencyMs } = await postQuery(query, conversationId);
       setTurns((t) => t.map((x) => (x.id === id ? { ...x, answer, latencyMs, loading: false } : x)));
     } catch (e: any) {
       setTurns((t) => t.map((x) => (x.id === id ? { ...x, error: String(e?.message ?? e), loading: false } : x)));
@@ -282,6 +285,9 @@ export default function Chat() {
               <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>History
             </button>
           </nav>
+          <button className="newchat" onClick={newChat}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14" /></svg>New chat
+          </button>
         </div>
         <div>
           <h2>Connected sources</h2>
@@ -299,7 +305,13 @@ export default function Chat() {
       </aside>
 
       {/* HISTORY / DISCOVER / ASK views */}
-      {view === "history" && <HistoryView onPick={(q) => { setView("ask"); ask(q); }} />}
+      {view === "history" && <ConversationsView onOpen={async (id) => {
+        const conv = await getConversation(id);
+        if (!conv) return;
+        setConversationId(conv.id);
+        setTurns(conv.turns.map((t, i) => ({ id: `${conv.id}:${i}`, query: t.query, answer: t.answer, loading: false })));
+        setView("ask");
+      }} />}
       {view === "discover" && <SearchView />}
       {view === "ask" && (
       <main className="main">
