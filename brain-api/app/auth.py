@@ -37,12 +37,31 @@ def _jwks_url(tenant: str) -> str:
     return f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys"
 
 
+# Signing keys rotate rarely; fetching the JWKS on every request adds a network
+# round-trip (and blocks the loop). Cache per tenant and only refetch on a
+# kid-miss (key rotation).
+_JWKS_CACHE: dict[str, dict] = {}
+
+
+def _get_jwks(tenant: str, *, force: bool = False) -> dict:
+    if force or tenant not in _JWKS_CACHE:
+        _JWKS_CACHE[tenant] = httpx.get(_jwks_url(tenant), timeout=5.0).json()
+    return _JWKS_CACHE[tenant]
+
+
+def _find_key(jwks: dict, kid: str) -> dict | None:
+    return next((k for k in jwks.get("keys", []) if k.get("kid") == kid), None)
+
+
 def _validate_jwt(token: str, *, audience: str, tenant: str) -> dict:
     try:
-        jwks = httpx.get(_jwks_url(tenant), timeout=5.0).json()
         unverified_header = jwt.get_unverified_header(token)
-        key = next((k for k in jwks["keys"] if k["kid"] == unverified_header["kid"]), None)
-        if not key:
+        kid = unverified_header["kid"]
+        key = _find_key(_get_jwks(tenant), kid)
+        if key is None:
+            # unknown kid → keys may have rotated; refetch once before giving up.
+            key = _find_key(_get_jwks(tenant, force=True), kid)
+        if key is None:
             raise InvalidToken("kid not found in JWKS")
         return jwt.decode(
             token,
@@ -61,7 +80,13 @@ async def _expand_groups(user_id: str, tenant: str) -> set[str]:
     Fail-soft: if the managed identity lacks `Directory.Read.All` (or Graph is
     unreachable), return an empty set rather than failing the request. Group-based
     ACLs simply won't match for that user; user-id and tenant-wide ACLs still do.
+
+    Pilot mode: skip the Graph round-trip entirely — `_apply_pilot_tenant` grants a
+    tenant-wide `everyone` group downstream, so per-user group expansion is wasted
+    work (and adds ~hundreds of ms to every authenticated request).
     """
+    if get_settings().pilot_single_tenant:
+        return set()
     try:
         cred = DefaultAzureCredential()
         tok = (await cred.get_token("https://graph.microsoft.com/.default")).token
