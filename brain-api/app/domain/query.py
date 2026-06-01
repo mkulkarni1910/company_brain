@@ -10,6 +10,7 @@ SourceHit = Literal["vector", "bm25", "semantic", "live", "graph"]
 class QueryRequest(BaseModel):
     query: str
     session_id: str | None = None
+    conversation_id: str | None = None
     k: int = 5
     include_debug: bool = False
 
