@@ -106,6 +106,21 @@ class AISearchClient:
             out.setdefault(c.doc_id, c)
         return out
 
+    async def count_docs(self, *, tenant_id: str) -> int | None:
+        """Distinct-ish indexed chunk count for a tenant (chunk-level; honest approximation
+        of 'items indexed'). Returns None on any search error so the tile shows '—'."""
+        try:
+            safe = tenant_id.replace("'", "''")
+            results = await self._cli.search(
+                search_text="*",
+                filter=f"tenant_id eq '{safe}'",
+                top=0,
+                include_total_count=True,
+            )
+            return int(await results.get_count() or 0)
+        except Exception:  # noqa: BLE001 — degrade to unknown
+            return None
+
     async def search_page(
         self, *, query: str, user: User, vector: list[float], top: int = 10, skip: int = 0,
         sources: list[str] | None = None, date_from: datetime | None = None,
