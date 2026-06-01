@@ -26,16 +26,24 @@ class MetricsStore:
     def __init__(self, client: redis.Redis | None = None) -> None:
         if client is not None:
             self._r = client
-        else:
-            s = get_settings()
-            self._r = redis.Redis(host=s.azure_redis_host, port=s.azure_redis_port,
-                ssl=s.azure_redis_ssl, password=s.redis_key, decode_responses=True)
+            return
+        s = get_settings()
+        if not s.azure_redis_host:  # optional — no Redis → metrics no-op (e.g. the India deploy)
+            self._r = None
+            return
+        self._r = redis.Redis(host=s.azure_redis_host, port=s.azure_redis_port,
+            ssl=s.azure_redis_ssl, password=s.redis_key, decode_responses=True,
+            socket_connect_timeout=2, socket_timeout=2)
 
     async def aclose(self) -> None:
+        if self._r is None:
+            return
         with contextlib.suppress(Exception):
             await self._r.aclose()
 
     async def record_query(self, tenant: str, user_id: str) -> None:
+        if self._r is None:
+            return
         d = _days(1)[0]
         try:
             qk = f"metrics:queries:{tenant}:{d}"
@@ -48,6 +56,8 @@ class MetricsStore:
             logger.warning("record_query failed: %s", e)
 
     async def queries_last_7d(self, tenant: str) -> int | None:
+        if self._r is None:
+            return None
         keys = [f"metrics:queries:{tenant}:{d}" for d in _days(7)]
         try:
             vals = await self._r.mget(keys)
@@ -57,6 +67,8 @@ class MetricsStore:
         return sum(int(v) for v in vals if v)
 
     async def active_users_7d(self, tenant: str) -> int | None:
+        if self._r is None:
+            return None
         keys = [f"metrics:users:{tenant}:{d}" for d in _days(7)]
         try:
             return int(await self._r.pfcount(*keys))

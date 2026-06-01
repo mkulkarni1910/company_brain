@@ -26,16 +26,24 @@ class ConnectionStore:
     def __init__(self, client: redis.Redis | None = None) -> None:
         if client is not None:
             self._r = client
-        else:
-            s = get_settings()
-            self._r = redis.Redis(host=s.azure_redis_host, port=s.azure_redis_port,
-                ssl=s.azure_redis_ssl, password=s.redis_key, decode_responses=True)
+            return
+        s = get_settings()
+        if not s.azure_redis_host:  # optional — no Redis → no-op (e.g. the India deploy)
+            self._r = None
+            return
+        self._r = redis.Redis(host=s.azure_redis_host, port=s.azure_redis_port,
+            ssl=s.azure_redis_ssl, password=s.redis_key, decode_responses=True,
+            socket_connect_timeout=2, socket_timeout=2)
 
     async def aclose(self) -> None:
+        if self._r is None:
+            return
         with contextlib.suppress(Exception):
             await self._r.aclose()
 
     async def put_connection(self, c: Connection) -> None:
+        if self._r is None:
+            return
         try:
             await self._r.hset(_conn_key(c.tenant_id), c.connection_id, c.model_dump_json())
         except _ERRORS as e:
@@ -48,6 +56,8 @@ class ConnectionStore:
         return None
 
     async def list_connections(self, tenant: str) -> list[Connection]:
+        if self._r is None:
+            return []
         try:
             raw = await self._r.hgetall(_conn_key(tenant))
         except _ERRORS as e:
@@ -60,14 +70,20 @@ class ConnectionStore:
         return out
 
     async def delete_connection(self, tenant: str, connection_id: str) -> None:
+        if self._r is None:
+            return
         with contextlib.suppress(*_ERRORS):
             await self._r.hdel(_conn_key(tenant), connection_id)
 
     async def put_job(self, j: SyncJob) -> None:
+        if self._r is None:
+            return
         with contextlib.suppress(*_ERRORS):
             await self._r.set(_job_key(j.tenant_id, j.job_id), j.model_dump_json(), ex=_JOB_TTL)
 
     async def get_job(self, tenant: str, job_id: str) -> SyncJob | None:
+        if self._r is None:
+            return None
         try:
             v = await self._r.get(_job_key(tenant, job_id))
         except _ERRORS as e:
@@ -80,6 +96,8 @@ class ConnectionStore:
         return None
 
     async def log_activity(self, tenant: str, entry: ActivityEntry) -> None:
+        if self._r is None:
+            return
         key = _activity_key(tenant)
         try:
             async with self._r.pipeline(transaction=False) as pipe:
@@ -90,6 +108,8 @@ class ConnectionStore:
             logger.warning("log_activity failed: %s", e)
 
     async def recent_activity(self, tenant: str, limit: int = _ACTIVITY_MAX) -> list[ActivityEntry]:
+        if self._r is None:
+            return []
         try:
             raw = await self._r.lrange(_activity_key(tenant), 0, max(0, limit - 1))
         except _ERRORS as e:
