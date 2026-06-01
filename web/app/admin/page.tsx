@@ -15,7 +15,7 @@ export default function Overview() {
       {err && <div className="admin-note">Couldn&apos;t load stats. Check the admin key / API.</div>}
       <div className="tiles">
         <Tile label="Active users" value={fmt(s?.active_users ?? null)} hint="last 7d" />
-        <Tile label="Sources live" value={fmt(s?.sources_live ?? 0)} hint="connected" />
+        <Tile label="Sources live" value={fmt(s?.sources_live ?? null)} hint="connected" />
         <Tile label="Items indexed" value={fmt(s?.items_indexed ?? null)} hint="chunks" />
         <Tile label="Queries · 7d" value={fmt(s?.queries_7d ?? null)} hint="total" />
       </div>

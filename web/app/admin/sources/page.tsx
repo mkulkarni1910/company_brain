@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { getConnections, getSites, connectSite, resync, disconnect, getJob,
          Connection, SiteOption, SyncJob } from "@/lib/adminApi";
 
@@ -10,6 +10,10 @@ export default function DataSources() {
   const [job, setJob] = useState<SyncJob | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const aliveRef = useRef(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { aliveRef.current = false; if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
   const refresh = useCallback(() => { getConnections().then(setConns).catch(() => {}); }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -17,20 +21,29 @@ export default function DataSources() {
 
   const poll = useCallback((id: string) => {
     const tick = async () => {
+      if (!aliveRef.current) return;
       try {
-        const j = await getJob(id); setJob(j);
+        const j = await getJob(id);
+        if (!aliveRef.current) return;
+        setJob(j);
         if (["succeeded", "failed", "unknown"].includes(j.status)) { refresh(); setBusyId(null); return; }
       } catch { /* keep trying */ }
-      setTimeout(tick, 2000);
+      if (aliveRef.current) timerRef.current = setTimeout(tick, 2000);
     };
     tick();
   }, [refresh]);
 
   const onConnect = async (s: SiteOption) => {
     setPicking(false); setBusyId("new");
-    const r = await connectSite(s); refresh(); poll(r.connection_id);
+    try {
+      const r = await connectSite(s); refresh(); poll(r.connection_id);
+    } catch { setBusyId(null); }
   };
-  const onResync = async (id: string) => { setBusyId(id); await resync(id); poll(id); };
+  const onResync = async (id: string) => {
+    setBusyId(id);
+    try { await resync(id); poll(id); }
+    catch { setBusyId(null); }
+  };
   const onDisconnect = async (id: string) => { await disconnect(id); refresh(); };
 
   return (
