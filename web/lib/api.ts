@@ -73,12 +73,12 @@ async function authedFetch(url: string, init: RequestInit = {}): Promise<Respons
   return resp;
 }
 
-export async function postQuery(query: string): Promise<{ answer: Answer; latencyMs: number }> {
+export async function postQuery(query: string, conversationId?: string): Promise<{ answer: Answer; latencyMs: number }> {
   const t0 = performance.now();
   const resp = await authedFetch(`${API_BASE}/query`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, include_debug: true }),
+    body: JSON.stringify({ query, include_debug: true, ...(conversationId ? { conversation_id: conversationId } : {}) }),
   });
   if (!resp.ok) throw new Error(`brain-api ${resp.status}: ${await resp.text()}`);
   const answer = (await resp.json()) as Answer;
@@ -122,6 +122,26 @@ export async function logClick(doc_id: string, source: string, query_id?: string
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ doc_id, signal: "click", source, query_id }),
   }).catch(() => {/* best-effort */});
+}
+
+export type ConversationTurn = { query: string; answer: Answer; ts: string };
+export type ConversationSummary = { id: string; title: string; updated_at: string; turn_count: number };
+export type Conversation = { id: string; title: string; created_at: string | null; updated_at: string; turns: ConversationTurn[] };
+
+export async function getConversations(): Promise<ConversationSummary[]> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/conversations`);
+    if (!resp.ok) return [];
+    return (await resp.json()) as ConversationSummary[];
+  } catch { return []; }
+}
+
+export async function getConversation(id: string): Promise<Conversation | null> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/conversations/${encodeURIComponent(id)}`);
+    if (!resp.ok) return null;
+    return (await resp.json()) as Conversation;
+  } catch { return null; }
 }
 
 export type SearchHit = {
