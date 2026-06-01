@@ -73,7 +73,7 @@ class ConversationStore:
                     existing = json.loads(raw)
             turns = (existing + [turn])[-_MAX_TURNS:]
             await self._submit(
-                "g.V().has('conversation','conv_id', cid).has('tenant_id', tid).fold()"
+                "g.V().has('conversation','conv_id', cid).has('tenant_id', tid).has('user_id', uid).fold()"
                 ".coalesce(unfold(),"
                 " addV('conversation').property('conv_id', cid).property('tenant_id', tid)"
                 "  .property('user_id', uid).property('title', title).property('created_at', now))"
@@ -89,7 +89,7 @@ class ConversationStore:
         try:
             rows = await self._submit(
                 "g.V().has('conversation','tenant_id', tid).has('user_id', uid)"
-                ".order().by('updated_at', decr).limit(lim)"
+                ".order().by('updated_at', decr).limit(lim)"  # decr is Cosmos Gremlin token (not standard TinkerPop Order.desc); validated only against real cluster
                 ".project('id','title','updated_at','turn_count')"
                 ".by('conv_id').by('title').by('updated_at').by('turn_count')",
                 {"tid": user.tenant_id, "uid": user.user_id, "lim": limit},

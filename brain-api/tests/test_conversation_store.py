@@ -46,11 +46,25 @@ async def test_append_creates_and_caps() -> None:
     await store.append(user=_user(), conversation_id="c1", query="how much pto?", answer=_answer())
     upsert_query, b = g.calls[1]
     assert "coalesce(unfold()" in upsert_query and "addV('conversation')" in upsert_query
+    assert "has('user_id', uid)" in upsert_query
     turns = json.loads(b["tj"])
     assert turns[-1]["q"] == "how much pto?"
     assert turns[-1]["a"]["text"] == "20 days"
     assert turns[-1]["a"]["citations"][0]["doc_id"] == "d1"
     assert b["tc"] == 1 and b["title"] == "how much pto?"
+
+
+@pytest.mark.asyncio
+async def test_append_caps_at_50() -> None:
+    existing = [{"q": f"q{i}", "a": {"text": "x", "citations": []}, "ts": "t"} for i in range(55)]
+    g = FakeGremlin([[{"turns_json": [json.dumps(existing)]}], []])
+    store = ConversationStore(gremlin_client=g)
+    await store.append(user=_user(), conversation_id="c1", query="newest", answer=_answer())
+    _, b = g.calls[1]
+    turns = json.loads(b["tj"])
+    assert len(turns) == 50
+    assert turns[-1]["q"] == "newest"
+    assert b["tc"] == 50
 
 
 @pytest.mark.asyncio
