@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     # the loaded corpus is reachable without per-user provisioning. Off in tests.
     pilot_single_tenant: bool = False
     admin_api_key: str | None = None
+    # SharePoint connector: hard cap on files ingested per site sync (no silent truncation).
+    connector_max_items: int = 500
     cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # ACL store
