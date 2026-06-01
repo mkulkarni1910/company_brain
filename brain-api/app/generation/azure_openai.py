@@ -10,19 +10,28 @@ from app.config import get_settings
 class AzureOpenAIClient:
     def __init__(self) -> None:
         self._s = get_settings()
-        self._credential = DefaultAzureCredential()
-        token_provider = get_bearer_token_provider(
-            self._credential, "https://cognitiveservices.azure.com/.default"
-        )
-        self._cli = AsyncAzureOpenAI(
-            azure_endpoint=self._s.azure_openai_endpoint,
-            api_version=self._s.azure_openai_api_version,
-            azure_ad_token_provider=token_provider,
-        )
+        if self._s.azure_openai_key:
+            self._credential = None
+            self._cli = AsyncAzureOpenAI(
+                azure_endpoint=self._s.azure_openai_endpoint,
+                api_version=self._s.azure_openai_api_version,
+                api_key=self._s.azure_openai_key,
+            )
+        else:
+            self._credential = DefaultAzureCredential()
+            token_provider = get_bearer_token_provider(
+                self._credential, "https://cognitiveservices.azure.com/.default"
+            )
+            self._cli = AsyncAzureOpenAI(
+                azure_endpoint=self._s.azure_openai_endpoint,
+                api_version=self._s.azure_openai_api_version,
+                azure_ad_token_provider=token_provider,
+            )
 
     async def aclose(self) -> None:
         await self._cli.close()
-        await self._credential.close()
+        if self._credential is not None:
+            await self._credential.close()
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
     async def embed(self, text: str) -> list[float]:

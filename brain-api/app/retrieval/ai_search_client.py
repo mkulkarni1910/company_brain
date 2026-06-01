@@ -37,16 +37,24 @@ def _from_search_doc(d: dict) -> Chunk:
 class AISearchClient:
     def __init__(self) -> None:
         s = get_settings()
-        self._credential = DefaultAzureCredential()
+        if s.azure_ai_search_key:
+            from azure.core.credentials import AzureKeyCredential
+
+            self._credential = None
+            cred = AzureKeyCredential(s.azure_ai_search_key)
+        else:
+            self._credential = DefaultAzureCredential()
+            cred = self._credential
         self._cli = SearchClient(
             endpoint=s.azure_ai_search_endpoint,
             index_name=s.azure_ai_search_index,
-            credential=self._credential,
+            credential=cred,
         )
 
     async def aclose(self) -> None:
         await self._cli.close()
-        await self._credential.close()
+        if self._credential is not None:
+            await self._credential.close()
 
     async def upsert_chunks(self, chunks: list[Chunk]) -> None:
         if not chunks:

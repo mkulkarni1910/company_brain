@@ -85,7 +85,13 @@ def build_index(name: str) -> SearchIndex:
 
 def main() -> None:
     s = get_settings()
-    client = SearchIndexClient(endpoint=s.azure_ai_search_endpoint, credential=DefaultAzureCredential())
+    if s.azure_ai_search_key:
+        from azure.core.credentials import AzureKeyCredential
+
+        cred = AzureKeyCredential(s.azure_ai_search_key)
+    else:
+        cred = DefaultAzureCredential()
+    client = SearchIndexClient(endpoint=s.azure_ai_search_endpoint, credential=cred)
     idx = build_index(s.azure_ai_search_index)
     client.create_or_update_index(idx)
     print(f"OK: {idx.name} on {s.azure_ai_search_endpoint}")

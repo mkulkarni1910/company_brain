@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     # AI Search
     azure_ai_search_endpoint: str
     azure_ai_search_index: str
+    azure_ai_search_key: str | None = None  # admin key; else DefaultAzureCredential (MI)
 
     # Azure OpenAI (embeddings; chat deployments kept as fallback)
     azure_openai_endpoint: str
@@ -25,6 +26,7 @@ class Settings(BaseSettings):
     azure_openai_chat_deployment: str = "gpt-4o"
     azure_openai_plan_deployment: str = "gpt-4o"
     azure_openai_embed_deployment: str = "text-embedding-3-large"
+    azure_openai_key: str | None = None  # api key; else AAD token provider (MI)
 
     # Gemini (answer generation). API key from Key Vault (secret: gemini-api-key).
     gemini_api_key: str | None = None
