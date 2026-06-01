@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     cosmos_gremlin_key: str | None = None
     cosmos_gremlin_database: str = "brain"
     cosmos_gremlin_graph: str = "people"
+    cosmos_gremlin_conversations_graph: str = "conversations"
 
     # Azure Data Explorer (Activity pillar)
     adx_cluster_uri: str | None = None
