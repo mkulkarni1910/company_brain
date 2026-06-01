@@ -8,6 +8,7 @@ from app.acl.store import ACLStore
 from app.activity.signal import ActivitySignal
 from app.activity.store import ActivityStore
 from app.api.admin import router as admin_router
+from app.api.conversations import router as conversations_router
 from app.api.discover import router as discover_router
 from app.api.feedback import router as feedback_router
 from app.api.history import router as history_router
@@ -109,6 +110,7 @@ app.include_router(feedback_router)
 app.include_router(history_router)
 app.include_router(discover_router)
 app.include_router(search_router)
+app.include_router(conversations_router)
 
 
 @app.get("/healthz")
