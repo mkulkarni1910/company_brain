@@ -19,12 +19,18 @@ class Settings(BaseSettings):
     azure_ai_search_endpoint: str
     azure_ai_search_index: str
 
-    # Azure OpenAI
+    # Azure OpenAI (embeddings; chat deployments kept as fallback)
     azure_openai_endpoint: str
     azure_openai_api_version: str = "2024-10-21"
     azure_openai_chat_deployment: str = "gpt-4o"
     azure_openai_plan_deployment: str = "gpt-4o"
     azure_openai_embed_deployment: str = "text-embedding-3-large"
+
+    # Gemini (answer generation). API key from Key Vault (secret: gemini-api-key).
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-pro"
+    gemini_endpoint: str = "https://generativelanguage.googleapis.com/v1beta"
+    gemini_timeout_s: float = 60.0
 
     # Redis
     azure_redis_host: str
@@ -107,6 +113,7 @@ def load_secrets_from_keyvault(settings: "Settings", client=None) -> None:
     settings.azure_api_client_secret = (
         _get("azure-api-client-secret") or settings.azure_api_client_secret
     )
+    settings.gemini_api_key = _get("gemini-api-key") or settings.gemini_api_key
 
 
 @lru_cache(maxsize=1)

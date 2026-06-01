@@ -20,6 +20,7 @@ from app.config import get_settings, load_secrets_from_keyvault
 from app.conversations.store import ConversationStore
 from app.discover.service import DiscoverService
 from app.generation.azure_openai import AzureOpenAIClient
+from app.generation.gemini import GeminiClient
 from app.history.store import HistoryStore
 from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.orchestrator.kernel import SemanticKernelOrchestrator
@@ -35,7 +36,8 @@ from app.search.service import SearchService
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     load_secrets_from_keyvault(get_settings())
-    app.state.embedder = AzureOpenAIClient()
+    app.state.embedder = AzureOpenAIClient()  # embeddings (vector search)
+    app.state.llm = GeminiClient()            # answer generation (Gemini 2.5 Pro)
     app.state.ai_search = AISearchClient()
     app.state.cache = RedisCache()
     app.state.retriever = HybridRetriever(
@@ -53,10 +55,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.activity_store = ActivityStore()
     app.state.activity = ActivitySignal(store=app.state.activity_store)
     app.state.live_fetcher = MSGraphSearchFetcher()
-    app.state.planner = QueryPlanner(llm=app.state.embedder)
+    app.state.planner = QueryPlanner(llm=app.state.llm)
     app.state.orchestrator = SemanticKernelOrchestrator(
         retriever=app.state.retriever,
-        llm=app.state.embedder,
+        llm=app.state.llm,
         cache=app.state.cache,
         acl_store=app.state.acl_store,
         proximity=app.state.proximity,
@@ -89,6 +91,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.cache.aclose()
         await app.state.ai_search.aclose()
         await app.state.embedder.aclose()
+        await app.state.llm.aclose()
 
 
 app = FastAPI(title="brain-api", version="0.1.0", lifespan=lifespan)
