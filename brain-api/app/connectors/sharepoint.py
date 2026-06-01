@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections import deque
 from datetime import datetime
 
 import httpx
@@ -92,9 +93,9 @@ class SharePointConnector:
             if not drive_id:
                 return []
             files: list[RemoteFile] = []
-            queue = [f"{_GRAPH}/drives/{drive_id}/root/children"]
+            queue: deque[str] = deque([f"{_GRAPH}/drives/{drive_id}/root/children"])
             while queue and len(files) < cap:
-                data = await self._get_json(queue.pop(0))
+                data = await self._get_json(queue.popleft())
                 fs, folder_ids = _parse_drive_children(data, drive_id)
                 files.extend(f for f in fs if is_supported(f.name, f.mime))
                 for fid in folder_ids:

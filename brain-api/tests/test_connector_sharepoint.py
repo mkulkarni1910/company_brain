@@ -24,3 +24,17 @@ async def test_list_sites_degrades_on_error(monkeypatch):
     async def boom(*a, **k): raise RuntimeError("401")
     monkeypatch.setattr(c, "_get_json", boom)
     assert await c.list_sites()==[]
+
+@pytest.mark.asyncio
+async def test_list_files_degrades_on_error(monkeypatch):
+    c = SharePointConnector()
+    async def boom(*a, **k): raise RuntimeError("401")
+    monkeypatch.setattr(c, "_get_json", boom)
+    assert await c.list_files("site-1") == []
+
+@pytest.mark.asyncio
+async def test_fetch_content_degrades_on_error(monkeypatch):
+    c = SharePointConnector()
+    async def boom(*a, **k): raise RuntimeError("token failed")
+    monkeypatch.setattr(c, "_token", boom)
+    assert await c.fetch_content("d", "i") is None

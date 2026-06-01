@@ -50,3 +50,41 @@ async def test_sync_no_files_marks_live_zero():
     runner=SyncRunner(connector=conn, pipeline=pipe, store=store)
     job=await runner.run(connection=c, actor="admin")
     assert job.status=="succeeded" and job.total==0
+
+@pytest.mark.asyncio
+async def test_sync_counts_ingest_errors_and_continues():
+    files=[RemoteFile(drive_id="d",item_id="i1",name="a.md",web_url="https://x",size=5),
+           RemoteFile(drive_id="d",item_id="i2",name="b.md",web_url="https://x",size=5)]
+    conn=FakeConnector(files, {"i1": b"# A", "i2": b"# B"})
+    class BoomPipe:
+        def __init__(self): self.n=0
+        async def process(self, doc):
+            self.n+=1
+            if self.n==1: raise RuntimeError("ingest boom")
+            class R: chunks_indexed=1; doc_id=doc.doc_id
+            return R()
+    pipe=BoomPipe(); store=ConnectionStore(client=FakeRedis())
+    c=Connection(connection_id="c1",tenant_id="t",site_id="s",name="S",web_url="https://x")
+    runner=SyncRunner(connector=conn, pipeline=pipe, store=store)
+    job=await runner.run(connection=c, actor="admin")
+    # one file errored, the other succeeded; sync still completes
+    assert job.status=="succeeded" and job.errors==1 and job.processed==1
+
+@pytest.mark.asyncio
+async def test_sync_sets_truncated_at_cap(monkeypatch):
+    from app.config import get_settings
+    get_settings.cache_clear()
+    monkeypatch.setenv("CONNECTOR_MAX_ITEMS", "2")
+    files=[RemoteFile(drive_id="d",item_id=f"i{n}",name=f"f{n}.md",web_url="https://x",size=1)
+           for n in range(2)]
+    conn=FakeConnector(files, {"i0": b"a", "i1": b"b"})
+    class OkPipe:
+        async def process(self, doc):
+            class R: chunks_indexed=1; doc_id=doc.doc_id
+            return R()
+    store=ConnectionStore(client=FakeRedis())
+    c=Connection(connection_id="c1",tenant_id="t",site_id="s",name="S",web_url="https://x")
+    runner=SyncRunner(connector=conn, pipeline=OkPipe(), store=store)
+    job=await runner.run(connection=c, actor="admin")
+    get_settings.cache_clear()
+    assert job.total==2 and job.truncated is True
