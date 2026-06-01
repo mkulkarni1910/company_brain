@@ -10,7 +10,7 @@ from pathlib import Path
 import httpx
 
 CORPUS = Path(__file__).parent / "corpus"
-API = "http://localhost:8000"
+API = os.environ.get("BRAIN_API_URL", "http://localhost:8000")
 ADMIN_KEY = os.environ.get("ADMIN_API_KEY", "")
 EVAL_TENANT = os.environ.get("EVAL_TENANT", "t-eval")
 # Ingest embeds + indexes per doc; tolerate Azure OpenAI retry/backoff spikes.
