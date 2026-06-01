@@ -111,19 +111,29 @@ def _escape(v: str) -> str:
 
 class ActivityStore:
     def __init__(self) -> None:
-        self._db = get_settings().adx_database
-        self._client = KustoClient(_kcsb())
+        s = get_settings()
+        self._db = s.adx_database
+        # Activity (ADX) is optional: with no cluster configured the store no-ops,
+        # so the activity ranking signal simply contributes 0 (already handled).
+        self._client = KustoClient(_kcsb()) if s.adx_cluster_uri else None
 
     async def aclose(self) -> None:
+        if self._client is None:
+            return
+
         def _close() -> None:
             self._client.close()
 
         await asyncio.to_thread(_close)
 
     async def ensure_table(self) -> None:
+        if self._client is None:
+            return
         await asyncio.to_thread(self._client.execute_mgmt, self._db, _CREATE)
 
     async def ingest_event(self, e: ActivityEvent) -> None:
+        if self._client is None:
+            return
         # One CSV row matching the table column order.
         row = ",".join(
             _escape(str(x)) for x in [
@@ -144,7 +154,7 @@ class ActivityStore:
     async def engagement_scores(
         self, *, tenant_id: str, user_id: str, doc_ids: list[str]
     ) -> dict[str, float]:
-        if not doc_ids:
+        if self._client is None or not doc_ids:
             return {}
         crp = ClientRequestProperties()
         crp.set_parameter("tid", tenant_id)
@@ -164,6 +174,8 @@ class ActivityStore:
     async def trending(
         self, *, tenant_id: str, window_days: int = 14, limit: int = 8
     ) -> list[tuple[str, float]]:
+        if self._client is None:
+            return []
         crp = ClientRequestProperties()
         crp.set_parameter("tid", tenant_id)
         query = _trending_query(window_days, limit)
@@ -181,7 +193,7 @@ class ActivityStore:
     async def source_breakdown(
         self, *, tenant_id: str, doc_ids: list[str], window_days: int = 14
     ) -> list[tuple[str, int, float]]:
-        if not doc_ids:
+        if self._client is None or not doc_ids:
             return []
         crp = ClientRequestProperties()
         crp.set_parameter("tid", tenant_id)
