@@ -17,12 +17,15 @@ from app.api.retrieve import router as retrieve_router
 from app.api.search import router as search_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
+from app.connectors.sharepoint import SharePointConnector
+from app.connectors.store import ConnectionStore
 from app.conversations.store import ConversationStore
 from app.discover.service import DiscoverService
 from app.generation.azure_openai import AzureOpenAIClient
 from app.generation.gemini import GeminiClient
 from app.history.store import HistoryStore
 from app.live_fetch.graph_search import MSGraphSearchFetcher
+from app.metrics.store import MetricsStore
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.orchestrator.planner import QueryPlanner
 from app.people.graph_client import PeopleGraphClient
@@ -79,6 +82,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         search=app.state.ai_search,
         people=app.state.people_graph,
     )
+    app.state.connection_store = ConnectionStore()
+    app.state.metrics_store = MetricsStore()
+    app.state.sharepoint = SharePointConnector()
     try:
         yield
     finally:
@@ -92,6 +98,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.ai_search.aclose()
         await app.state.embedder.aclose()
         await app.state.llm.aclose()
+        await app.state.connection_store.aclose()
+        await app.state.metrics_store.aclose()
 
 
 app = FastAPI(title="brain-api", version="0.1.0", lifespan=lifespan)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 
 from app.api._auth_resolve import resolve_user
 from app.deps import get_conversation_store, get_orchestrator
@@ -12,6 +12,7 @@ router = APIRouter(tags=["query"])
 
 @router.post("/query", response_model=Answer)
 async def query(
+    request: Request,
     body: QueryRequest,
     orchestrator: SemanticKernelOrchestrator = Depends(get_orchestrator),
     conversation_store=Depends(get_conversation_store),
@@ -30,6 +31,11 @@ async def query(
         else None
     )
     answer = await orchestrator.answer(body, user=user, user_token=tok)
+    metrics = getattr(request.app.state, "metrics_store", None)
+    if metrics is not None:
+        import contextlib
+        with contextlib.suppress(Exception):
+            await metrics.record_query(user.tenant_id, user.user_id)
     # Persist the turn only when the client supplies a conversation_id — the Ask chat
     # does; the search AI-Overview call does not, so overviews aren't logged.
     if body.conversation_id and conversation_store is not None:

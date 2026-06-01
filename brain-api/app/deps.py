@@ -59,3 +59,15 @@ def get_search_service(request: Request) -> "SearchService | None":
 
 def get_conversation_store(request: Request) -> "ConversationStore | None":
     return getattr(request.app.state, "conversation_store", None)
+
+
+def get_connection_store(request: Request):
+    return request.app.state.connection_store
+
+
+def get_metrics_store(request: Request):
+    return request.app.state.metrics_store
+
+
+def get_sharepoint(request: Request):
+    return request.app.state.sharepoint

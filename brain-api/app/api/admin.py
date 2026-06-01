@@ -1,12 +1,23 @@
 import os
+import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 from app.activity.store import ActivityStore
 from app.config import get_settings
-from app.deps import get_ingest_pipeline
+from app.connectors.models import Connection
+from app.connectors.sharepoint import SharePointConnector
+from app.connectors.store import ConnectionStore
+from app.connectors.sync import SyncRunner
+from app.deps import (
+    get_ai_search,
+    get_connection_store,
+    get_ingest_pipeline,
+    get_metrics_store,
+    get_sharepoint,
+)
 from app.domain.activity import ActivityEvent
 from app.domain.chunk import SourceDoc
 from app.ingest.pipeline import IngestPipeline, IngestResult
@@ -50,6 +61,12 @@ async def seed_people(users_limit: int = 50, groups_limit: int = 50) -> dict:
         await gc.aclose()
 
 
+class ConnectRequest(BaseModel):
+    site_id: str
+    name: str | None = None
+    web_url: str | None = None
+
+
 class SeedActivityRequest(BaseModel):
     doc_ids: list[str] = []
     events_per_doc: int = 6
@@ -84,3 +101,111 @@ async def seed_activity(body: SeedActivityRequest) -> dict:
         return {"tenant_id": tenant, "events_written": written, "docs": len(ids)}
     finally:
         await store.aclose()
+
+
+@router.get("/stats")
+async def stats(
+    store: ConnectionStore = Depends(get_connection_store),
+    metrics=Depends(get_metrics_store),
+    ai_search=Depends(get_ai_search),
+) -> dict:
+    tenant = get_settings().brain_tenant_id
+    conns = await store.list_connections(tenant)
+    items = await ai_search.count_docs(tenant_id=tenant)
+    activity = await store.recent_activity(tenant, limit=10)
+    sources_live = sum(1 for c in conns if c.status == "live")
+    needs: list[dict] = []
+    if not conns:
+        needs.append({"text": "No data sources connected yet", "where": "Data Sources"})
+    for c in conns:
+        if c.status == "syncing":
+            needs.append({"text": f"{c.name} is still indexing", "where": "Data Sources"})
+        if c.status == "error":
+            needs.append({"text": f"{c.name} sync failed: {c.error or 'unknown'}", "where": "Data Sources"})
+    return {
+        "active_users": await metrics.active_users_7d(tenant),
+        "queries_7d": await metrics.queries_last_7d(tenant),
+        "items_indexed": items,
+        "sources_live": sources_live,
+        "source_health": [
+            {"name": c.name, "type": c.type, "status": c.status, "items": c.item_count}
+            for c in conns
+        ],
+        "recent_activity": [a.model_dump(mode="json") for a in activity],
+        "needs_attention": needs,
+    }
+
+
+@router.get("/connections")
+async def list_connections(
+    store: ConnectionStore = Depends(get_connection_store),
+) -> list[dict]:
+    tenant = get_settings().brain_tenant_id
+    return [c.model_dump(mode="json") for c in await store.list_connections(tenant)]
+
+
+@router.get("/sharepoint/sites")
+async def sharepoint_sites(
+    sp: SharePointConnector = Depends(get_sharepoint),
+) -> list[dict]:
+    return await sp.list_sites()
+
+
+@router.post("/connections")
+async def create_connection(
+    body: ConnectRequest,
+    bg: BackgroundTasks,
+    store: ConnectionStore = Depends(get_connection_store),
+    sp: SharePointConnector = Depends(get_sharepoint),
+    pipeline=Depends(get_ingest_pipeline),
+) -> dict:
+    tenant = get_settings().brain_tenant_id
+    conn = Connection(
+        connection_id=uuid.uuid4().hex, tenant_id=tenant, type="sharepoint",
+        site_id=body.site_id, name=body.name or body.site_id,
+        web_url=body.web_url or "", status="syncing",
+    )
+    await store.put_connection(conn)
+    runner = SyncRunner(connector=sp, pipeline=pipeline, store=store)
+    bg.add_task(runner.run, connection=conn, actor="admin")
+    return {"connection_id": conn.connection_id, "status": "syncing"}
+
+
+@router.post("/connections/{connection_id}/sync")
+async def resync(
+    connection_id: str,
+    bg: BackgroundTasks,
+    store: ConnectionStore = Depends(get_connection_store),
+    sp: SharePointConnector = Depends(get_sharepoint),
+    pipeline=Depends(get_ingest_pipeline),
+) -> dict:
+    tenant = get_settings().brain_tenant_id
+    conn = await store.get_connection(tenant, connection_id)
+    if not conn:
+        raise HTTPException(status_code=404, detail="connection not found")
+    runner = SyncRunner(connector=sp, pipeline=pipeline, store=store)
+    bg.add_task(runner.run, connection=conn, actor="admin")
+    return {"connection_id": connection_id, "status": "syncing"}
+
+
+@router.delete("/connections/{connection_id}")
+async def disconnect(
+    connection_id: str,
+    store: ConnectionStore = Depends(get_connection_store),
+) -> dict:
+    tenant = get_settings().brain_tenant_id
+    await store.delete_connection(tenant, connection_id)
+    return {"connection_id": connection_id, "deleted": True}
+
+
+@router.get("/connections/{connection_id}/job")
+async def connection_job(
+    connection_id: str,
+    store: ConnectionStore = Depends(get_connection_store),
+) -> dict:
+    tenant = get_settings().brain_tenant_id
+    conn = await store.get_connection(tenant, connection_id)
+    if not conn or not conn.last_job_id:
+        return {"status": "unknown"}
+    job = await store.get_job(tenant, conn.last_job_id)
+    return job.model_dump(mode="json") if job else {"status": "unknown"}
