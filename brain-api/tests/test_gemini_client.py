@@ -19,6 +19,8 @@ def _client(post):
     c = GeminiClient.__new__(GeminiClient)
     c._key = "k"
     c._model = "gemini-2.5-pro"
+    c._plan_model = "gemini-2.5-flash"
+    c._thinking_budget = 256
     c._base = "https://x/v1beta"
 
     class _Http:
@@ -55,11 +57,30 @@ async def test_complete_parses_text_and_sends_body() -> None:
         max_tokens=200,
     )
     assert out == "20 days"
+    # no deployment → answer path → pro model + capped thinking budget
     assert captured["url"].endswith("/models/gemini-2.5-pro:generateContent")
     assert captured["params"] == {"key": "k"}
     assert captured["json"]["systemInstruction"]["parts"][0]["text"] == "s"
-    # plan step asks for 200, but the floor keeps room for Gemini 2.5 thinking
-    assert captured["json"]["generationConfig"]["maxOutputTokens"] >= 2048
+    gen = captured["json"]["generationConfig"]
+    assert gen["thinkingConfig"]["thinkingBudget"] == 256
+    assert gen["maxOutputTokens"] == 200 + 256 + 64
+
+
+@pytest.mark.asyncio
+async def test_plan_step_uses_flash_with_no_thinking() -> None:
+    captured = {}
+
+    def post(url, params, json):
+        captured["url"] = url
+        captured["json"] = json
+        return _Resp({"candidates": [{"content": {"parts": [{"text": "{}"}]}}]})
+
+    await _client(post).complete(
+        messages=[{"role": "user", "content": "classify"}],
+        deployment="plan", max_tokens=200,
+    )
+    assert captured["url"].endswith("/models/gemini-2.5-flash:generateContent")
+    assert captured["json"]["generationConfig"]["thinkingConfig"]["thinkingBudget"] == 0
 
 
 @pytest.mark.asyncio

@@ -30,7 +30,9 @@ class Settings(BaseSettings):
 
     # Gemini (answer generation). API key from Key Vault (secret: gemini-api-key).
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-pro"
+    gemini_model: str = "gemini-2.5-pro"          # answer generation
+    gemini_plan_model: str = "gemini-2.5-flash"   # fast model for the plan-step classifier
+    gemini_thinking_budget: int = 256             # cap "thinking" tokens on the answer model (latency)
     gemini_endpoint: str = "https://generativelanguage.googleapis.com/v1beta"
     gemini_timeout_s: float = 60.0
 

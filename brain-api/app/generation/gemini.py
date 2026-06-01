@@ -17,10 +17,9 @@ from tenacity import (
 
 from app.config import get_settings
 
-# Gemini 2.5 Pro is a "thinking" model: thinking tokens count against maxOutputTokens.
-# Give the budget headroom so short callers (e.g. the 200-token plan step) still leave
-# room for visible output after thinking.
-_MIN_OUTPUT_TOKENS = 2048
+# Gemini 2.5 is a "thinking" model: thinking tokens count against maxOutputTokens AND
+# dominate latency (a default Pro call can spend ~1300 thinking tokens / ~13s for a
+# 40-token answer). We cap the budget per call and route the plan step to flash.
 
 
 def _translate(messages: list[dict[str, str]]) -> tuple[str | None, list[dict]]:
@@ -44,6 +43,8 @@ class GeminiClient:
         s = get_settings()
         self._key = s.gemini_api_key
         self._model = s.gemini_model
+        self._plan_model = s.gemini_plan_model
+        self._thinking_budget = s.gemini_thinking_budget
         self._base = s.gemini_endpoint.rstrip("/")
         self._http = httpx.AsyncClient(timeout=s.gemini_timeout_s)
 
@@ -65,18 +66,26 @@ class GeminiClient:
     ) -> str:
         if not self._key:
             raise RuntimeError("GEMINI_API_KEY not configured")
+        # The plan step (callers pass a `deployment`) is a quick classifier → use the
+        # fast model with thinking off. Answers use the configured model with a capped
+        # thinking budget. Thinking tokens count against maxOutputTokens, so size the
+        # cap to fit both the thinking budget and the visible answer.
+        is_plan = deployment is not None
+        model = self._plan_model if is_plan else self._model
+        thinking = 0 if is_plan else self._thinking_budget
         system, contents = _translate(messages)
         body: dict = {
             "contents": contents,
             "generationConfig": {
                 "temperature": temperature,
-                "maxOutputTokens": max(max_tokens, _MIN_OUTPUT_TOKENS),
+                "maxOutputTokens": max_tokens + thinking + 64,
+                "thinkingConfig": {"thinkingBudget": thinking},
             },
         }
         if system:
             body["systemInstruction"] = {"parts": [{"text": system}]}
         resp = await self._http.post(
-            f"{self._base}/models/{self._model}:generateContent",
+            f"{self._base}/models/{model}:generateContent",
             params={"key": self._key},
             json=body,
         )
