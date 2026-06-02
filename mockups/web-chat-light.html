@@ -204,8 +204,9 @@
   .m-body .lead{font-size:14px;color:var(--ink-dim);margin:0 0 16px;font-family:"Archivo",sans-serif;font-weight:400}
   .lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin:18px 0 8px}
   .lbl:first-child{margin-top:0}
-  .code{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:#fbf8f1;border:1px solid var(--line-soft);border-radius:10px;padding:12px 14px;color:var(--ink);white-space:pre;overflow:auto;position:relative}
-  .code .cp{position:absolute;top:8px;right:8px;font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 7px;cursor:pointer}
+  .code{position:relative;background:#fbf8f1;border:1px solid var(--line-soft);border-radius:10px;color:var(--ink);overflow:hidden}
+  .code-pre{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:12px 14px;color:var(--ink);white-space:pre;overflow-x:auto}
+  .code .cp{position:absolute;top:8px;right:8px;z-index:1;font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 7px;cursor:pointer}
   .code .cp:hover{color:var(--ink);border-color:var(--amber)}
   .endpoint{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line-soft);font-size:13.5px}
   .endpoint:last-child{border-bottom:none}
@@ -395,7 +396,7 @@
       <p class="lead">Call the Context API to pull ranked, ACL-scoped company context into your own LLM — or get a fully grounded answer with citations.</p>
 
       <div class="lbl">Base URL</div>
-      <div class="code"><span class="cp" data-copy>copy</span>https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io</div>
+      <div class="code"><span class="cp" data-copy>copy</span><div class="code-pre">https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io</div></div>
 
       <div class="lbl">Endpoints</div>
       <div class="endpoint"><span class="verb">POST</span><code>/context</code><span class="desc">ranked context chunks for a query</span></div>
@@ -429,10 +430,10 @@
       <button class="btn" id="tokOpen" style="margin-top:6px">＋ Create token</button>
 
       <div class="lbl">Example — pull context with curl</div>
-      <div class="code"><span class="cp" data-copy>copy</span>curl -s https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io/context \
+      <div class="code"><span class="cp" data-copy>copy</span><div class="code-pre">curl -s https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io/context \
   -H "Authorization: Bearer $SUBSTRATE_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"query":"what is our PTO policy?","top":6}'</div>
+  -d '{"query":"what is our PTO policy?","top":6}'</div></div>
     </div>
   </div>
 
@@ -447,17 +448,17 @@
       <p class="lead">SubStrateOS speaks the Model Context Protocol over a hosted HTTP endpoint. Paste the config below into your MCP client (Claude Desktop, Cursor, …) and it can search &amp; ask the company brain — scoped to your access.</p>
 
       <div class="lbl">MCP server URL</div>
-      <div class="code"><span class="cp" data-copy>copy</span>https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io/mcp</div>
+      <div class="code"><span class="cp" data-copy>copy</span><div class="code-pre">https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io/mcp</div></div>
 
       <div class="lbl">Config (mcp.json)</div>
-      <div class="code"><span class="cp" data-copy>copy</span>{
+      <div class="code"><span class="cp" data-copy>copy</span><div class="code-pre">{
   "mcpServers": {
     "substrateos": {
       "url": "https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io/mcp",
       "headers": { "Authorization": "Bearer sbx_live_…" }
     }
   }
-}</div>
+}</div></div>
       <button class="btn ghost" style="margin-top:10px">＋ Create token</button>
 
       <div class="lbl">Tools your assistant gets</div>
