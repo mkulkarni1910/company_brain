@@ -57,7 +57,7 @@ intelligence layer.
 
 ### Infra
 - Add Graph application permission **`ChannelMessage.Read.All`** to app `19487212-…` + consent (direct appRoleAssignment, like Sites/Files).
-- **Hard blocker:** this is a Microsoft **protected API** — app-only channel-message read 403s until approved via Microsoft's request form (metered `model=B`). Until then, Teams connects + goes "live" with 0 items (graceful). Wire it fully; lights up on approval.
+- **Hard blocker:** this is a Microsoft **protected API**. App-only channel-message read 403s until the tenant is approved via Microsoft's protected-APIs request (support ticket / form) AND, for export at scale, a metered payment model is configured (see "Export content with the Microsoft Teams Export APIs": https://learn.microsoft.com/en-us/microsoftteams/export-teams-content). Approval is per-tenant. Until then, Teams connects + goes "live" with 0 items (graceful). Wire it fully; lights up on approval.
 
 ### Frontend
 - Teams becomes a **connectable** provider (not "Coming soon"). Its Enable Sync toggle →
