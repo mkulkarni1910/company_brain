@@ -200,3 +200,70 @@ class SubscriptionStore:
             return
         with contextlib.suppress(*_ERRORS):
             await self._r.set(_delta_key(tenant, conn, user, res), link)
+
+
+class CosmosSubscriptionStore:
+    """Cosmos (Gremlin) subscription records + delta tokens, for deployments without
+    Redis (e.g. India). Mirrors SubscriptionStore's interface over the shared people
+    graph (label-separated vertices, JSON `data`, tenant partition). Never raises.
+    The Gremlin client is shared/owned elsewhere — not closed here."""
+
+    _SUB = "cbrain_subscription"
+    _DELTA = "cbrain_delta"
+
+    def __init__(self, graph) -> None:
+        self._g = graph  # async submit(query, bindings) -> list (PeopleGraphClient)
+
+    async def aclose(self) -> None:
+        return
+
+    async def _upsert(self, label: str, keyprop: str, keyval: str, tenant: str, data: str) -> None:
+        try:
+            await self._g.submit(
+                f"g.V().has('{label}','{keyprop}', k).has('tenant_id', tid).fold()"
+                f".coalesce(unfold(),"
+                f" addV('{label}').property('{keyprop}', k).property('tenant_id', tid))"
+                f".property('data', d)",
+                {"k": keyval, "tid": tenant, "d": data},
+            )
+        except Exception as e:  # noqa: BLE001 — best-effort
+            logger.warning("cosmos sub upsert %s failed: %s", label, e)
+
+    async def put(self, rec: SubscriptionRecord) -> None:
+        await self._upsert(self._SUB, "sid", rec.subscription_id, rec.tenant_id, rec.model_dump_json())
+
+    async def list(self, tenant: str) -> list[SubscriptionRecord]:
+        try:
+            rows = await self._g.submit(
+                f"g.V().has('{self._SUB}','tenant_id', tid).values('data')", {"tid": tenant})
+        except Exception as e:  # noqa: BLE001
+            logger.warning("cosmos sub list failed: %s", e)
+            return []
+        out: list[SubscriptionRecord] = []
+        for data in rows:
+            with contextlib.suppress(Exception):
+                out.append(SubscriptionRecord.model_validate_json(data))
+        return out
+
+    async def delete(self, tenant: str, subscription_id: str) -> None:
+        with contextlib.suppress(Exception):
+            await self._g.submit(
+                f"g.V().has('{self._SUB}','sid', k).has('tenant_id', tid).drop()",
+                {"k": subscription_id, "tid": tenant})
+
+    async def list_expiring(self, tenant: str, before: datetime) -> list[SubscriptionRecord]:
+        return [s for s in await self.list(tenant) if s.expiration <= before]
+
+    async def get_delta(self, tenant: str, conn: str, user: str, res: str) -> str | None:
+        dk = f"{conn}:{user}:{res}"
+        try:
+            rows = await self._g.submit(
+                f"g.V().has('{self._DELTA}','dk', k).has('tenant_id', tid).values('data')",
+                {"k": dk, "tid": tenant})
+        except Exception as e:  # noqa: BLE001
+            logger.warning("cosmos get_delta failed: %s", e)
+            return None
+        return rows[0] if rows else None
+
+    async def set_delta(self, tenant: str, conn: str, user: str, res: str, link: str) -> None:
+        await self._upsert(self._DELTA, "dk", f"{conn}:{user}:{res}", tenant, link)

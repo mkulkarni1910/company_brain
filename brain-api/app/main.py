@@ -23,7 +23,7 @@ from app.config import get_settings, load_secrets_from_keyvault
 from app.connectors.cosmos_store import CosmosConnectionStore
 from app.connectors.sharepoint import SharePointConnector
 from app.connectors.store import ConnectionStore
-from app.connectors.subscriptions import SubscriptionStore
+from app.connectors.subscriptions import CosmosSubscriptionStore, SubscriptionStore
 from app.conversations.store import ConversationStore
 from app.discover.service import DiscoverService
 from app.generation.azure_openai import AzureOpenAIClient
@@ -103,7 +103,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         app.state.token_store = NullTokenStore()
     app.state.metrics_store = MetricsStore()
-    app.state.subscription_store = SubscriptionStore()  # Outlook realtime subs + delta tokens
+    # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
+    # configured (e.g. India has no Redis), else Redis (no-op without a host).
+    if _s.cosmos_gremlin_endpoint and _s.cosmos_gremlin_key:
+        app.state.subscription_store = CosmosSubscriptionStore(graph=app.state.people_graph)
+    else:
+        app.state.subscription_store = SubscriptionStore()
     app.state.sharepoint = SharePointConnector()
     mcp_bind(
         orchestrator=app.state.orchestrator,
