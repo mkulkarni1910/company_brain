@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getAdminKey, setAdminKey } from "@/lib/adminApi";
+import { getAdminKey, setAdminKey, getConnections } from "@/lib/adminApi";
 
 const NAV = [
   {
@@ -78,15 +78,35 @@ const NAV = [
 
 function Gate({ onUnlock, error }: { onUnlock: () => void; error?: boolean }) {
   const [val, setVal] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [localErr, setLocalErr] = useState(false);
+
+  // Validate the key against the API BEFORE unlocking, so the content never
+  // flashes for a wrong key. getConnections() throws (and clears the key) on 403.
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!val || busy) return;
+    setBusy(true); setLocalErr(false);
+    setAdminKey(val);
+    try {
+      await getConnections();
+      onUnlock();
+    } catch {
+      setLocalErr(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="admin-gate">
-      <form className="admin-gate-card" onSubmit={(e) => { e.preventDefault(); if (val) { setAdminKey(val); onUnlock(); } }}>
+      <form className="admin-gate-card" onSubmit={submit}>
         <div className="glyph" />
         <h2>Admin access</h2>
         <p>Enter the admin key to manage data sources.</p>
-        {error && <p className="gate-err">That key was rejected. Check the admin key and try again.</p>}
-        <input type="password" value={val} onChange={(e) => setVal(e.target.value)} placeholder="Admin key" autoFocus />
-        <button type="submit">Unlock</button>
+        {(error || localErr) && <p className="gate-err">That key was rejected. Check the admin key and try again.</p>}
+        <input type="password" value={val} onChange={(e) => setVal(e.target.value)} placeholder="Admin key" autoFocus disabled={busy} />
+        <button type="submit" disabled={busy}>{busy ? "Checking…" : "Unlock"}</button>
       </form>
     </div>
   );
@@ -94,10 +114,12 @@ function Gate({ onUnlock, error }: { onUnlock: () => void; error?: boolean }) {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const [checked, setChecked] = useState(false); // true once we've read sessionStorage (avoids gate flash)
   const [unlocked, setUnlocked] = useState(false);
   const [authErr, setAuthErr] = useState(false);
   useEffect(() => {
     setUnlocked(!!getAdminKey());
+    setChecked(true);
     // A 403 from any /admin call clears the key and fires this — bounce back to the gate.
     const onAuthErr = () => { setUnlocked(false); setAuthErr(true); };
     window.addEventListener("admin-auth-error", onAuthErr);
@@ -130,7 +152,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="foot"><div className="avatar">A</div>
           <div className="who">Admin<span>t-eval</span></div></div>
       </aside>
-      <main className="main">{unlocked ? children : <Gate error={authErr} onUnlock={() => { setAuthErr(false); setUnlocked(true); }} />}</main>
+      <main className="main">{!checked ? null : unlocked ? children : <Gate error={authErr} onUnlock={() => { setAuthErr(false); setUnlocked(true); }} />}</main>
     </div>
   );
 }
