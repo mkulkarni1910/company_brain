@@ -598,7 +598,7 @@ export default function Chat() {
             <span className="t">Why this ranked</span>
           </div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", margin: "6px 0 14px" }}>
-            {latest?.answer ? `personalized for ${USER_NAME} · ${USER_ROLE}` : "ask a question to see ranking"}
+            {latest?.answer ? `personalized for ${USER_NAME} · ${USER_ROLE}` : "Ask a question to see ranking"}
           </div>
           <div className="bars">
             {SIGNAL_META.map((m) => {
@@ -630,8 +630,8 @@ export default function Chat() {
             </div>
           ))}
           {!latest?.answer?.debug?.related_people?.length && (
-            <div style={{ fontSize: 11.5, color: "var(--ink-faint)", padding: "6px 10px" }}>
-              {latest?.answer ? "No people linked to these sources." : "ask a question to see related people"}
+            <div style={{ fontSize: 11, color: "var(--ink-faint)", margin: "6px 0 0" }}>
+              {latest?.answer ? "No people linked to these sources." : "Ask a question to see related people"}
             </div>
           )}
         </div>

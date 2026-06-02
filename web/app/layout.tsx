@@ -1,17 +1,19 @@
 import "./globals.css";
 import type { ReactNode } from "react";
+import { Archivo, Fraunces, JetBrains_Mono } from "next/font/google";
 import { Providers } from "./providers";
+
+// Self-hosted via next/font so the fonts always render identically to the design
+// (no Google-CDN/CSP/timing dependency, no fallback-metric "everything looks bigger").
+const archivo = Archivo({ subsets: ["latin"], variable: "--font-archivo", display: "swap" });
+const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata = { title: "SubStrateOS — Ask" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="en" className={`${archivo.variable} ${fraunces.variable} ${mono.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>
