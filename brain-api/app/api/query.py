@@ -36,6 +36,21 @@ async def query(
     # A PAT is not an OBO token — don't forward it to Live Fetch.
     tok = bearer if bearer and not bearer.startswith(get_settings().token_prefix) else None
     answer = await orchestrator.answer(body, user=user, user_token=tok)
+    # Resolve the authors of the cited documents to display names for the right-rail
+    # "Related people" panel. Best-effort: empty when the people graph has no matching
+    # person vertices (e.g. before people are seeded).
+    if answer.debug and answer.debug.get("related_author_ids"):
+        people_graph = getattr(request.app.state, "people_graph", None)
+        if people_graph is not None:
+            try:
+                people = await people_graph.resolve_people(
+                    answer.debug["related_author_ids"], user.tenant_id
+                )
+                answer.debug["related_people"] = [
+                    {"user_id": p.user_id, "display_name": p.display_name} for p in people
+                ]
+            except Exception:  # noqa: BLE001 — related-people panel is best-effort
+                pass
     metrics = getattr(request.app.state, "metrics_store", None)
     if metrics is not None:
         import contextlib

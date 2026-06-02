@@ -7,8 +7,10 @@ export type Citation = {
   doc_id: string; chunk_id: string; source_url: string; title: string; snippet: string;
 };
 export type Signals = { content: number; people: number; activity: number; recency: number };
+export type RelatedPerson = { user_id: string; display_name: string };
 export type AnswerDebug = {
   signals: Signals; final_score: number; candidates_ranked: number; live_used: boolean;
+  related_people?: RelatedPerson[];
 };
 export type Answer = {
   query_id: string; text: string; citations: Citation[]; debug?: AnswerDebug | null;

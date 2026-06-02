@@ -154,10 +154,11 @@
   .bars{display:flex;flex-direction:column;gap:11px}
   .bar-row{display:grid;grid-template-columns:84px 1fr 40px;align-items:center;gap:13px}
   .bar-row .k{font-size:12px;color:var(--ink-dim);display:flex;align-items:center;gap:8px}
-  .bar-row .k .sw{width:8px;height:8px;border-radius:2px;flex:none}
-  /* the admin toggle-switch `.sw` (unscoped) leaks an 18px white ::after circle —
-     neutralize it on the ranking-signal swatches */
-  .bar-row .k .sw::after{content:none}
+  /* The admin toggle-switch `.sw` is unscoped (40x23 pill + an 18px white ::after).
+     Pin the ranking swatch with high specificity + kill the leaked pseudo so it
+     renders as the design's tiny 8px square. */
+  .rail--right .bar-row .k .sw{width:8px;height:8px;border-radius:2px;flex:none;display:inline-block;vertical-align:middle}
+  .rail--right .bar-row .k .sw::after{content:none;display:none}
   .track{height:7px;border-radius:99px;background:#efe9db;overflow:hidden;border:1px solid var(--line-soft)}
   .fill{height:100%;border-radius:99px;width:0;animation:grow 1s cubic-bezier(.2,.8,.2,1) forwards}
   .bar-row .v{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-dim);text-align:right}

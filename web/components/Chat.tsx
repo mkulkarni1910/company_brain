@@ -593,7 +593,10 @@ export default function Chat() {
       {view === "ask" && (
       <aside className="rail--right">
         <div>
-          <div className="ctx-head"><span className="t">Why this ranked</span></div>
+          <div className="ctx-head">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.8"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2z" /><path d="M9 21h6" /></svg>
+            <span className="t">Why this ranked</span>
+          </div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", margin: "6px 0 14px" }}>
             {latest?.answer ? `personalized for ${USER_NAME} · ${USER_ROLE}` : "ask a question to see ranking"}
           </div>
@@ -615,7 +618,22 @@ export default function Chat() {
           <div className="stat"><span>Sources cited</span><span className="v">{latest?.answer?.citations.length ?? "—"}</span></div>
           <div className="stat"><span>Candidates ranked</span><span className="v">{latest?.answer?.debug?.candidates_ranked ?? "—"}</span></div>
           <div className="stat"><span>Latency</span><span className="v">{latest?.latencyMs ? `${latest.latencyMs} ms` : "—"}</span></div>
+          <div className="stat"><span>Cache</span><span className="v">{latest?.answer?.debug ? "miss" : "—"}</span></div>
           <div className="stat"><span>Live fetch</span><span className="v">{latest?.answer?.debug?.live_used ? "yes" : "—"}</span></div>
+        </div>
+        <div>
+          <h2>Related people</h2>
+          {(latest?.answer?.debug?.related_people ?? []).map((p) => (
+            <div className="rel" key={p.user_id}>
+              <div className="av">{initials(p.display_name)}</div>
+              <div className="nm">{p.display_name}<span>cited author</span></div>
+            </div>
+          ))}
+          {!latest?.answer?.debug?.related_people?.length && (
+            <div style={{ fontSize: 11.5, color: "var(--ink-faint)", padding: "6px 10px" }}>
+              {latest?.answer ? "No people linked to these sources." : "ask a question to see related people"}
+            </div>
+          )}
         </div>
       </aside>
       )}

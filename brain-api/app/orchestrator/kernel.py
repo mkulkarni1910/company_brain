@@ -158,11 +158,15 @@ class SemanticKernelOrchestrator:
         debug = None
         if request.include_debug:
             top = ranked[0]
+            cited_author_ids = list(dict.fromkeys(
+                r.candidate.chunk.author_id for r in ranked[:5] if r.candidate.chunk.author_id
+            ))
             debug = {
                 "signals": top.signal_breakdown,
                 "final_score": top.final_score,
                 "candidates_ranked": len(ranked),
                 "live_used": any("live" in r.candidate.sources_hit for r in ranked),
+                "related_author_ids": cited_author_ids,
             }
         answer = Answer(text=text, citations=citations, query_id=query_id, debug=debug)
 
