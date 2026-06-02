@@ -21,6 +21,7 @@ class Connection(BaseModel):
     last_sync: datetime | None = None
     last_job_id: str | None = None
     error: str | None = None
+    connected_tenant_id: str | None = None  # the org's Entra tenant (admin-consent OAuth)
 
 
 class SyncJob(BaseModel):

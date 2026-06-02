@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.acl.store import ACLStore
 from app.activity.signal import ActivitySignal
 from app.activity.store import ActivityStore
+from app.api.admin import callback_router as admin_callback_router
 from app.api.admin import router as admin_router
 from app.api.context import router as context_router
 from app.api.conversations import router as conversations_router
@@ -142,6 +143,7 @@ app.add_middleware(
 )
 
 app.include_router(admin_router)
+app.include_router(admin_callback_router)
 app.include_router(query_router)
 app.include_router(retrieve_router)
 app.include_router(feedback_router)

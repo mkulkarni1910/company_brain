@@ -120,3 +120,20 @@ class ConnectionStore:
             with contextlib.suppress(Exception):
                 out.append(ActivityEntry.model_validate_json(item))
         return out
+
+    # ---- OAuth CSRF state (one-shot, TTL'd) ----
+    async def put_oauth_state(self, state: str, tenant: str) -> None:
+        if self._r is None:
+            return
+        with contextlib.suppress(*_ERRORS):
+            await self._r.set(f"oauth:state:{state}", tenant,
+                              ex=get_settings().oauth_state_ttl_seconds)
+
+    async def consume_oauth_state(self, state: str) -> str | None:
+        if self._r is None:
+            return None
+        try:
+            return await self._r.getdel(f"oauth:state:{state}")
+        except _ERRORS as e:
+            logger.warning("consume_oauth_state failed: %s", e)
+            return None

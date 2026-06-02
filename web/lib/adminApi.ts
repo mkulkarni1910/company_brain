@@ -70,4 +70,7 @@ export const resync = (id: string) =>
   call<{ status: string }>(`/admin/connections/${id}/sync`, { method: "POST" });
 export const disconnect = (id: string) =>
   call<{ deleted: boolean }>(`/admin/connections/${id}`, { method: "DELETE" });
+// SharePoint admin-consent OAuth: returns the Microsoft consent URL to redirect to.
+export const connectSharePoint = () =>
+  call<{ auth_url: string }>("/admin/connections/sharepoint/connect", { method: "POST" });
 export const getJob = (id: string) => call<SyncJob>(`/admin/connections/${id}/job`);

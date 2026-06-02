@@ -11,9 +11,12 @@ this store opens no new connection and must NOT close it.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
+import time
 
+from app.config import get_settings
 from app.connectors.models import ActivityEntry, Connection, SyncJob
 
 logger = logging.getLogger(__name__)
@@ -21,6 +24,7 @@ logger = logging.getLogger(__name__)
 _CONN = "cbrain_connection"
 _JOB = "cbrain_syncjob"
 _ACT = "cbrain_connactivity"
+_OAUTH = "cbrain_oauthstate"
 _ACTIVITY_MAX = 50
 
 
@@ -121,3 +125,27 @@ class CosmosConnectionStore:
         except Exception:  # noqa: BLE001
             return []
         return out[:limit]
+
+    # ---- OAuth CSRF state (one-shot, TTL'd; state is globally unique) ----
+    async def put_oauth_state(self, state: str, tenant: str) -> None:
+        await self._upsert(_OAUTH, "st", state, tenant,
+                           json.dumps({"tenant": tenant, "ts": int(time.time())}))
+
+    async def consume_oauth_state(self, state: str) -> str | None:
+        try:
+            rows = await self._g.submit(
+                f"g.V().has('{_OAUTH}','st', k).values('data')", {"k": state})
+        except Exception as e:  # noqa: BLE001
+            logger.warning("cosmos oauth-state read failed: %s", e)
+            return None
+        if not rows:
+            return None
+        try:
+            d = json.loads(rows[0])
+        except Exception:  # noqa: BLE001
+            return None
+        with contextlib.suppress(Exception):  # one-shot: drop regardless of validity
+            await self._g.submit(f"g.V().has('{_OAUTH}','st', k).drop()", {"k": state})
+        if int(time.time()) - int(d.get("ts", 0)) > get_settings().oauth_state_ttl_seconds:
+            return None
+        return d.get("tenant")

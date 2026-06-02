@@ -1,9 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import {
-  getConnections, getSites, connectSite, disconnect, getJob,
-  Connection, SiteOption, SyncJob,
-} from "@/lib/adminApi";
+import { getConnections, disconnect, connectSharePoint, Connection } from "@/lib/adminApi";
 
 // ── Catalog ─────────────────────────────────────────────────────────────────
 
@@ -276,15 +273,12 @@ function CategoryTable({ category, spConn, searchTerm, catFilter, statusFilter, 
 
 export default function DataSources() {
   const [conns, setConns] = useState<Connection[]>([]);
-  const [picking, setPicking] = useState(false);
-  const [sites, setSites] = useState<SiteOption[] | null>(null);
-  const [job, setJob] = useState<SyncJob | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
 
   // toolbar state
   const [searchTerm, setSearchTerm] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [banner, setBanner] = useState<string | null>(null);
 
   const aliveRef = useRef(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -301,40 +295,36 @@ export default function DataSources() {
   // The active SharePoint connection (first one with type === "sharepoint")
   const spConn = conns.find((c) => c.type === "sharepoint") ?? null;
 
-  const openPicker = () => {
-    setPicking(true);
-    setSites(null);
-    getSites().then(setSites).catch(() => setSites([]));
-  };
-
-  const poll = useCallback((id: string) => {
+  // Poll connections for ~30s while a freshly-connected source crawls (syncing → live/error).
+  const pollUntilSettled = useCallback((rounds = 10) => {
+    let n = 0;
     const tick = async () => {
       if (!aliveRef.current) return;
       try {
-        const j = await getJob(id);
-        if (!aliveRef.current) return;
-        setJob(j);
-        if (["succeeded", "failed", "unknown"].includes(j.status)) {
-          refresh();
-          setBusyId(null);
-          return;
-        }
+        const cs = await getConnections();
+        setConns(cs);
+        const sp = cs.find((c) => c.type === "sharepoint");
+        if (sp && sp.status !== "syncing") return;
       } catch { /* keep trying */ }
-      if (aliveRef.current) timerRef.current = setTimeout(tick, 2000);
+      if (++n < rounds && aliveRef.current) timerRef.current = setTimeout(tick, 3000);
     };
     tick();
-  }, [refresh]);
+  }, []);
 
-  const onConnect = async (s: SiteOption) => {
-    setPicking(false);
-    setBusyId("new");
+  // Handle the return from Microsoft admin-consent.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("connected") === "sharepoint") { setBanner("SharePoint connected — syncing now…"); pollUntilSettled(); }
+    else if (p.get("error") === "oauth") setBanner("SharePoint connection was cancelled or failed.");
+    if (p.get("connected") || p.get("error")) window.history.replaceState({}, "", "/admin/sources");
+  }, [pollUntilSettled]);
+
+  // Enabling SharePoint redirects to the Microsoft admin-consent screen.
+  const onEnableSharePoint = async () => {
     try {
-      const r = await connectSite(s);
-      refresh();
-      poll(r.connection_id);
-    } catch {
-      setBusyId(null);
-    }
+      const { auth_url } = await connectSharePoint();
+      window.location.href = auth_url;
+    } catch { /* 403 → the layout gate re-prompts via admin-auth-error */ }
   };
 
   const onDisable = async (id: string) => {
@@ -370,6 +360,8 @@ export default function DataSources() {
           <p>Connect sources to bring their content into the intelligence layer.</p>
         </div>
 
+        {banner && <div className="admin-note" style={{ marginTop: 16 }}>{banner}</div>}
+
         {/* Toolbar */}
         <div className="toolbar">
           <label className="search">
@@ -399,18 +391,6 @@ export default function DataSources() {
           </div>
         </div>
 
-        {/* Sync progress banner */}
-        {busyId && job && (
-          <div className="card sync-status" style={{ marginTop: 16 }}>
-            <b>Syncing…</b> {job.processed}/{job.total} indexed · {job.skipped} skipped
-            {job.errors ? ` · ${job.errors} errors` : ""}
-            {job.truncated ? " · truncated" : ""}
-            <div className="bar">
-              <span style={{ width: `${job.total ? (100 * (job.processed + job.skipped)) / job.total : 0}%` }} />
-            </div>
-          </div>
-        )}
-
         {/* Category tables */}
         <div id="cats">
           {CATALOG.map((cat) => (
@@ -421,7 +401,7 @@ export default function DataSources() {
               searchTerm={searchTerm}
               catFilter={catFilter}
               statusFilter={statusFilter}
-              onEnable={openPicker}
+              onEnable={onEnableSharePoint}
               onDisable={onDisable}
             />
           ))}
@@ -431,30 +411,6 @@ export default function DataSources() {
           <div className="ds-empty show">No sources match your search.</div>
         )}
       </div>
-
-      {/* Site picker modal */}
-      {picking && (
-        <div className="admin-modal" onClick={() => setPicking(false)}>
-          <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3>Connect a SharePoint site</h3>
-            {sites === null && <p className="muted">Loading sites…</p>}
-            {sites !== null && sites.length === 0 && (
-              <p className="muted">
-                No sites available. Connecting is blocked until the
-                <b> Sites.Read.All</b> Graph permission is consented on the SubStrateOS app.
-              </p>
-            )}
-            {(sites ?? []).map((s) => (
-              <button key={s.site_id} className="site-row" onClick={() => onConnect(s)}>
-                <b>{s.name}</b><span>{s.web_url}</span>
-              </button>
-            ))}
-            <div className="modal-foot">
-              <button className="modal-close" onClick={() => setPicking(false)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

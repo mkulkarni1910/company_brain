@@ -57,10 +57,26 @@ def _parse_drive_children(data: dict, drive_id: str) -> tuple[list[RemoteFile], 
 
 
 class SharePointConnector:
-    """MS Graph SharePoint reader. Single-identity (DefaultAzureCredential .default).
-    Returns 401-empty until Sites.Read.All/Files.Read.All are consented. Never raises."""
+    """MS Graph SharePoint reader. When `tenant_id` is set, authenticates app-only
+    via client-credentials against that (admin-consented) tenant; otherwise falls
+    back to DefaultAzureCredential (home tenant / legacy). Never raises."""
+
+    def __init__(self, tenant_id: str | None = None) -> None:
+        self._tenant_id = tenant_id
 
     async def _token(self) -> str:
+        s = get_settings()
+        if self._tenant_id and s.azure_client_id and s.azure_client_secret:
+            from app.connectors.oauth import token_url
+            async with httpx.AsyncClient(timeout=15.0) as http:
+                r = await http.post(token_url(self._tenant_id), data={
+                    "client_id": s.azure_client_id,
+                    "client_secret": s.azure_client_secret,
+                    "scope": _SCOPE,
+                    "grant_type": "client_credentials",
+                })
+                r.raise_for_status()
+                return r.json()["access_token"]
         cred = DefaultAzureCredential()
         try:
             tok = await cred.get_token(_SCOPE)

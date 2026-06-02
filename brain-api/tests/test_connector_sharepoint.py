@@ -38,3 +38,29 @@ async def test_fetch_content_degrades_on_error(monkeypatch):
     async def boom(*a, **k): raise RuntimeError("token failed")
     monkeypatch.setattr(c, "_token", boom)
     assert await c.fetch_content("d", "i") is None
+
+
+@pytest.mark.asyncio
+async def test_token_uses_connected_tenant(monkeypatch):
+    import app.connectors.sharepoint as sp
+    from app.config import get_settings
+    monkeypatch.setenv("AZURE_CLIENT_ID", "cid")
+    monkeypatch.setenv("AZURE_CLIENT_SECRET", "sec")
+    get_settings.cache_clear()
+    captured = {}
+
+    class FakeResp:
+        def raise_for_status(self): pass
+        def json(self): return {"access_token": "tok"}
+
+    class FakeClient:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def post(self, url, data=None): captured["url"] = url; return FakeResp()
+
+    monkeypatch.setattr(sp.httpx, "AsyncClient", FakeClient)
+    c = sp.SharePointConnector(tenant_id="tenantX")
+    tok = await c._token()
+    get_settings.cache_clear()
+    assert tok == "tok" and captured["url"].endswith("/tenantX/oauth2/v2.0/token")

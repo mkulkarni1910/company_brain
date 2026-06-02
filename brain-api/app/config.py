@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     # Azure identity
     azure_tenant_id: str
     azure_client_id: str
+    # Client-credentials secret for the connector app (env AZURE_CLIENT_SECRET) —
+    # used app-only against an admin-consented tenant for the SharePoint connector.
+    azure_client_secret: str | None = None
     azure_api_client_id: str | None = None
     azure_api_scope: str | None = None
     # OBO (on-behalf-of) confidential-client secret for the API app registration.
@@ -71,6 +74,10 @@ class Settings(BaseSettings):
     admin_api_key: str | None = None
     # SharePoint connector: hard cap on files ingested per site sync (no silent truncation).
     connector_max_items: int = 500
+    # SharePoint admin-consent OAuth
+    web_base_url: str = "http://localhost:3000"        # post-callback redirect (env WEB_BASE_URL)
+    brain_api_base_url: str = "http://localhost:8000"  # our public base, for the OAuth redirect_uri (env BRAIN_API_BASE_URL)
+    oauth_state_ttl_seconds: int = 600
     cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # Programmatic access (Context API + MCP)
