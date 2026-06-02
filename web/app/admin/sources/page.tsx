@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { getConnections, disconnect, connectSharePoint, Connection } from "@/lib/adminApi";
+import { getConnections, disconnect, connectProvider, Connection } from "@/lib/adminApi";
 
 // ── Catalog ─────────────────────────────────────────────────────────────────
 
@@ -11,6 +11,7 @@ type Provider = {
   logo?: string;
   tile?: { bg: string; text: string };
   connectable?: boolean;
+  connType?: "sharepoint" | "teams"; // backend Connection.type + OAuth provider slug
 };
 type Category = { label: string; providers: Provider[] };
 
@@ -18,7 +19,7 @@ const CATALOG: Category[] = [
   {
     label: "Document Repository",
     providers: [
-      { key: "sharepoint", name: "SharePoint", desc: "Sites & document libraries", logo: "sharepoint.svg", connectable: true },
+      { key: "sharepoint", name: "SharePoint", desc: "Sites & document libraries", logo: "sharepoint.svg", connectable: true, connType: "sharepoint" },
       { key: "google-drive", name: "Google Drive", desc: "Files & shared drives", logo: "google-drive.svg" },
       { key: "box", name: "Box", desc: "Cloud content", logo: "box.svg" },
       { key: "dropbox", name: "Dropbox", desc: "Files & folders", logo: "dropbox.svg" },
@@ -27,7 +28,7 @@ const CATALOG: Category[] = [
   {
     label: "Messaging",
     providers: [
-      { key: "teams-msg", name: "Microsoft Teams", desc: "Channels & chats", logo: "teams.svg" },
+      { key: "teams-msg", name: "Microsoft Teams", desc: "Channel messages", logo: "teams.svg", connectable: true, connType: "teams" },
       { key: "slack", name: "Slack", desc: "Channels & DMs", logo: "slack.svg" },
       { key: "google-chat", name: "Google Chat", desc: "Spaces & messages", logo: "google-chat.svg" },
     ],
@@ -207,22 +208,26 @@ function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, on
 
 type CatTableProps = {
   category: Category;
-  spConn: Connection | null;
+  connByType: Record<string, Connection>;
   searchTerm: string;
   catFilter: string;
   statusFilter: string;
-  onEnable: () => void;
+  onEnable: (provider: string) => void;
   onDisable: (id: string) => void;
 };
 
-function CategoryTable({ category, spConn, searchTerm, catFilter, statusFilter, onEnable, onDisable }: CatTableProps) {
+function connOf(p: Provider, connByType: Record<string, Connection>): Connection | null {
+  return p.connectable && p.connType ? (connByType[p.connType] ?? null) : null;
+}
+
+function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilter, onEnable, onDisable }: CatTableProps) {
   // hide entire category when catFilter doesn't match
   if (catFilter !== "all" && catFilter !== category.label) return null;
 
   // count visible rows
   const visibleCount = category.providers.filter((p) => {
     const nameMatch = !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const conn = p.connectable ? spConn : null;
+    const conn = connOf(p, connByType);
     const effectiveStatus = p.connectable
       ? (conn ? conn.status : "disconnected")
       : "soon";
@@ -255,10 +260,10 @@ function CategoryTable({ category, spConn, searchTerm, catFilter, statusFilter, 
               <ProviderRow
                 key={p.key}
                 provider={p}
-                conn={p.connectable ? spConn : null}
+                conn={connOf(p, connByType)}
                 searchTerm={searchTerm}
                 statusFilter={statusFilter}
-                onEnable={onEnable}
+                onEnable={() => onEnable(p.connType ?? "")}
                 onDisable={onDisable}
               />
             ))}
@@ -292,8 +297,9 @@ export default function DataSources() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
 
-  // The active SharePoint connection (first one with type === "sharepoint")
-  const spConn = conns.find((c) => c.type === "sharepoint") ?? null;
+  // Connections keyed by backend type (sharepoint / teams), first wins.
+  const connByType: Record<string, Connection> = {};
+  for (const c of conns) if (!connByType[c.type]) connByType[c.type] = c;
 
   // Poll connections for ~30s while a freshly-connected source crawls (syncing → live/error).
   const pollUntilSettled = useCallback((rounds = 10) => {
@@ -303,8 +309,7 @@ export default function DataSources() {
       try {
         const cs = await getConnections();
         setConns(cs);
-        const sp = cs.find((c) => c.type === "sharepoint");
-        if (sp && sp.status !== "syncing") return;
+        if (!cs.some((c) => c.status === "syncing")) return;
       } catch { /* keep trying */ }
       if (++n < rounds && aliveRef.current) timerRef.current = setTimeout(tick, 3000);
     };
@@ -314,15 +319,17 @@ export default function DataSources() {
   // Handle the return from Microsoft admin-consent.
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    if (p.get("connected") === "sharepoint") { setBanner("SharePoint connected — syncing now…"); pollUntilSettled(); }
-    else if (p.get("error") === "oauth") setBanner("SharePoint connection was cancelled or failed.");
-    if (p.get("connected") || p.get("error")) window.history.replaceState({}, "", "/admin/sources");
+    const connected = p.get("connected");
+    if (connected) { setBanner(`${connected[0].toUpperCase()}${connected.slice(1)} connected — syncing now…`); pollUntilSettled(); }
+    else if (p.get("error") === "oauth") setBanner("Connection was cancelled or failed.");
+    if (connected || p.get("error")) window.history.replaceState({}, "", "/admin/sources");
   }, [pollUntilSettled]);
 
-  // Enabling SharePoint redirects to the Microsoft admin-consent screen.
-  const onEnableSharePoint = async () => {
+  // Enabling a provider redirects to the Microsoft admin-consent screen.
+  const onEnable = async (provider: string) => {
+    if (!provider) return;
     try {
-      const { auth_url } = await connectSharePoint();
+      const { auth_url } = await connectProvider(provider);
       window.location.href = auth_url;
     } catch { /* 403 → the layout gate re-prompts via admin-auth-error */ }
   };
@@ -339,7 +346,7 @@ export default function DataSources() {
     if (catFilter !== "all" && catFilter !== cat.label) return false;
     return cat.providers.some((p) => {
       const nameMatch = !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const conn = p.connectable ? spConn : null;
+      const conn = connOf(p, connByType);
       const effectiveStatus = p.connectable
         ? (conn ? conn.status : "disconnected")
         : "soon";
@@ -397,11 +404,11 @@ export default function DataSources() {
             <CategoryTable
               key={cat.label}
               category={cat}
-              spConn={spConn}
+              connByType={connByType}
               searchTerm={searchTerm}
               catFilter={catFilter}
               statusFilter={statusFilter}
-              onEnable={onEnableSharePoint}
+              onEnable={onEnable}
               onDisable={onDisable}
             />
           ))}

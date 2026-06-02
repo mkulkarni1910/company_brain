@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 from azure.identity.aio import DefaultAzureCredential
 
 from app.config import get_settings
-from app.connectors.extract import is_supported
+from app.connectors.extract import extract_text, is_supported
 from app.connectors.models import RemoteFile
 
 logger = logging.getLogger(__name__)
@@ -132,3 +132,55 @@ class SharePointConnector:
         except Exception as e:  # noqa: BLE001
             logger.warning("fetch_content failed for %s: %s", item_id, e)
             return None
+
+    async def collect_documents(self, cap: int):  # -> CollectResult
+        """Enumerate all sites, list files, fetch and extract text, build SourceDocs.
+        Returns CollectResult. Degrades gracefully on any error (never raises)."""
+        from app.connectors.sync import CollectResult
+        from app.domain.chunk import SourceDoc
+
+        brain_tenant = get_settings().brain_tenant_id
+        docs: list[SourceDoc] = []
+        skipped = 0
+        truncated = False
+
+        try:
+            sites = await self.list_sites()
+            remaining = cap
+            all_files: list[tuple[str, RemoteFile]] = []  # (site_id, file)
+            for site in sites:
+                if remaining <= 0:
+                    break
+                site_files = await self.list_files(site["site_id"], max_items=remaining)
+                for f in site_files:
+                    all_files.append((site["site_id"], f))
+                remaining -= len(site_files)
+
+            truncated = len(all_files) >= cap
+
+            for site_id, f in all_files:
+                data = await self.fetch_content(f.drive_id, f.item_id)
+                text = extract_text(data, f.mime, f.name) if data is not None else None
+                if not text:
+                    skipped += 1
+                    continue
+                now = datetime.now(UTC)
+                doc = SourceDoc(
+                    doc_id=f"sp:{site_id}:{f.item_id}",
+                    tenant_id=brain_tenant,
+                    source="sharepoint",
+                    source_url=f.web_url,
+                    title=f.name,
+                    body=text,
+                    author_id=f.author_id,
+                    acl_principals=[f"{brain_tenant}:everyone"],
+                    created_at=f.created_at or now,
+                    modified_at=f.modified_at or now,
+                    mime=f.mime or "text/plain",
+                )
+                docs.append(doc)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("sharepoint collect_documents failed: %s", e)
+            return CollectResult(docs=docs, skipped=skipped, truncated=truncated)
+
+        return CollectResult(docs=docs, skipped=skipped, truncated=truncated)

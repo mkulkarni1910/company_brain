@@ -12,7 +12,7 @@ JobStatus = Literal["queued", "running", "succeeded", "failed"]
 class Connection(BaseModel):
     connection_id: str
     tenant_id: str
-    type: Literal["sharepoint"] = "sharepoint"
+    type: Literal["sharepoint", "teams"] = "sharepoint"
     site_id: str
     name: str
     web_url: str

@@ -127,11 +127,11 @@ class CosmosConnectionStore:
         return out[:limit]
 
     # ---- OAuth CSRF state (one-shot, TTL'd; state is globally unique) ----
-    async def put_oauth_state(self, state: str, tenant: str) -> None:
+    async def put_oauth_state(self, state: str, tenant: str, provider: str = "sharepoint") -> None:
         await self._upsert(_OAUTH, "st", state, tenant,
-                           json.dumps({"tenant": tenant, "ts": int(time.time())}))
+                           json.dumps({"tenant": tenant, "provider": provider, "ts": int(time.time())}))
 
-    async def consume_oauth_state(self, state: str) -> str | None:
+    async def consume_oauth_state(self, state: str) -> tuple[str, str] | None:
         try:
             rows = await self._g.submit(
                 f"g.V().has('{_OAUTH}','st', k).values('data')", {"k": state})
@@ -148,4 +148,4 @@ class CosmosConnectionStore:
             await self._g.submit(f"g.V().has('{_OAUTH}','st', k).drop()", {"k": state})
         if int(time.time()) - int(d.get("ts", 0)) > get_settings().oauth_state_ttl_seconds:
             return None
-        return d.get("tenant")
+        return (d.get("tenant"), d.get("provider", "sharepoint"))

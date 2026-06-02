@@ -1,4 +1,4 @@
-"""OAuth CSRF state store — one-shot + TTL — on Cosmos (fake graph) and Redis (fake)."""
+"""OAuth CSRF state store — one-shot + TTL + provider — on Cosmos (fake graph) and Redis (fake)."""
 import re
 
 import pytest
@@ -31,10 +31,20 @@ class FakeGraph:
 
 
 @pytest.mark.asyncio
+async def test_cosmos_state_provider_roundtrip():
+    st = CosmosConnectionStore(graph=FakeGraph())
+    await st.put_oauth_state("s1", "t-eval", "teams")
+    result = await st.consume_oauth_state("s1")
+    assert result == ("t-eval", "teams")
+    assert await st.consume_oauth_state("s1") is None   # one-shot
+    assert await st.consume_oauth_state("missing") is None
+
+
+@pytest.mark.asyncio
 async def test_cosmos_state_one_shot():
     st = CosmosConnectionStore(graph=FakeGraph())
-    await st.put_oauth_state("s1", "t-eval")
-    assert await st.consume_oauth_state("s1") == "t-eval"
+    await st.put_oauth_state("s1", "t-eval", "sharepoint")
+    assert await st.consume_oauth_state("s1") == ("t-eval", "sharepoint")
     assert await st.consume_oauth_state("s1") is None     # one-shot
     assert await st.consume_oauth_state("missing") is None
 
@@ -43,7 +53,7 @@ async def test_cosmos_state_one_shot():
 async def test_cosmos_state_expired(monkeypatch):
     import app.connectors.cosmos_store as cs
     st = CosmosConnectionStore(graph=FakeGraph())
-    await st.put_oauth_state("s2", "t-eval")
+    await st.put_oauth_state("s2", "t-eval", "sharepoint")
     # jump time past the TTL
     real = cs.time.time()
     monkeypatch.setattr(cs.time, "time", lambda: real + 10_000)
@@ -57,8 +67,17 @@ class FakeRedis:
 
 
 @pytest.mark.asyncio
+async def test_redis_state_provider_roundtrip():
+    st = ConnectionStore(client=FakeRedis())
+    await st.put_oauth_state("s1", "t-eval", "teams")
+    result = await st.consume_oauth_state("s1")
+    assert result == ("t-eval", "teams")
+    assert await st.consume_oauth_state("s1") is None
+
+
+@pytest.mark.asyncio
 async def test_redis_state_one_shot():
     st = ConnectionStore(client=FakeRedis())
-    await st.put_oauth_state("s1", "t-eval")
-    assert await st.consume_oauth_state("s1") == "t-eval"
+    await st.put_oauth_state("s1", "t-eval", "sharepoint")
+    assert await st.consume_oauth_state("s1") == ("t-eval", "sharepoint")
     assert await st.consume_oauth_state("s1") is None

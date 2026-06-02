@@ -122,18 +122,25 @@ class ConnectionStore:
         return out
 
     # ---- OAuth CSRF state (one-shot, TTL'd) ----
-    async def put_oauth_state(self, state: str, tenant: str) -> None:
+    async def put_oauth_state(self, state: str, tenant: str, provider: str = "sharepoint") -> None:
         if self._r is None:
             return
         with contextlib.suppress(*_ERRORS):
-            await self._r.set(f"oauth:state:{state}", tenant,
+            await self._r.set(f"oauth:state:{state}", f"{tenant}|{provider}",
                               ex=get_settings().oauth_state_ttl_seconds)
 
-    async def consume_oauth_state(self, state: str) -> str | None:
+    async def consume_oauth_state(self, state: str) -> tuple[str, str] | None:
         if self._r is None:
             return None
         try:
-            return await self._r.getdel(f"oauth:state:{state}")
+            val = await self._r.getdel(f"oauth:state:{state}")
         except _ERRORS as e:
             logger.warning("consume_oauth_state failed: %s", e)
             return None
+        if val is None:
+            return None
+        if "|" in val:
+            tenant, provider = val.split("|", 1)
+        else:
+            tenant, provider = val, "sharepoint"
+        return (tenant, provider)

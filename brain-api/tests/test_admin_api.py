@@ -9,7 +9,7 @@ from tests.test_connector_store import FakeRedis
 
 
 class StateRedis(FakeRedis):
-    """FakeRedis + getdel, for the OAuth state one-shot."""
+    """FakeRedis + getdel that returns the stored value (tenant|provider format)."""
     async def getdel(self, name):
         return self.kv.pop(name, None) if hasattr(self, "kv") else None
 
@@ -96,7 +96,7 @@ async def test_sharepoint_callback_valid_and_invalid(monkeypatch):
     app.dependency_overrides = {}
     from app.deps import get_ingest_pipeline
     app.dependency_overrides[get_ingest_pipeline] = lambda: object()
-    await store.put_oauth_state("good", "t-eval")
+    await store.put_oauth_state("good", "t-eval", "sharepoint")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
         # invalid state → error redirect, no connection
         r = await c.get("/admin/connections/sharepoint/callback",
@@ -109,3 +109,69 @@ async def test_sharepoint_callback_valid_and_invalid(monkeypatch):
         assert r.status_code == 302 and "connected=sharepoint" in r.headers["location"]
         conns = await store.list_connections("t-eval")
         assert len(conns) == 1 and conns[0].connected_tenant_id == "tenantX"
+
+
+@pytest.mark.asyncio
+async def test_generic_oauth_connect_teams_returns_auth_url(monkeypatch):
+    monkeypatch.setenv("AZURE_CLIENT_ID", "cid")
+    app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/connections/oauth/connect",
+                         params={"provider": "teams"},
+                         headers={"x-admin-key": "k"})
+        assert r.status_code == 200
+        body = r.json()
+        assert "adminconsent" in body["auth_url"]
+        assert "client_id=cid" in body["auth_url"]
+
+
+@pytest.mark.asyncio
+async def test_generic_oauth_connect_bad_provider_returns_400(monkeypatch):
+    app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/connections/oauth/connect",
+                         params={"provider": "bogus"},
+                         headers={"x-admin-key": "k"})
+        assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_generic_oauth_callback_teams_creates_teams_connection(monkeypatch):
+    async def _noop(self, **kw):
+        return None
+    monkeypatch.setattr("app.connectors.sync.SyncRunner.run", _noop)
+    store = ConnectionStore(client=StateRedis())
+    app = _build_app(monkeypatch, connection_store=store)
+    app.dependency_overrides = {}
+    from app.deps import get_ingest_pipeline
+    app.dependency_overrides[get_ingest_pipeline] = lambda: object()
+    # Pre-store a state for the teams provider
+    await store.put_oauth_state("teams-state", "t-eval", "teams")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.get("/admin/connections/oauth/callback",
+                        params={"state": "teams-state", "tenant": "tenantY",
+                                "admin_consent": "true"})
+        assert r.status_code == 302
+        assert "connected=teams" in r.headers["location"]
+    conns = await store.list_connections("t-eval")
+    assert len(conns) == 1
+    assert conns[0].type == "teams"
+    assert conns[0].connected_tenant_id == "tenantY"
+
+
+@pytest.mark.asyncio
+async def test_generic_oauth_callback_bad_state_redirects_error(monkeypatch):
+    async def _noop(self, **kw):
+        return None
+    monkeypatch.setattr("app.connectors.sync.SyncRunner.run", _noop)
+    store = ConnectionStore(client=StateRedis())
+    app = _build_app(monkeypatch, connection_store=store)
+    app.dependency_overrides = {}
+    from app.deps import get_ingest_pipeline
+    app.dependency_overrides[get_ingest_pipeline] = lambda: object()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.get("/admin/connections/oauth/callback",
+                        params={"state": "no-such-state", "tenant": "T",
+                                "admin_consent": "true"})
+        assert r.status_code == 302
+        assert "error=oauth" in r.headers["location"]

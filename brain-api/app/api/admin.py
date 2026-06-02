@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from app.activity.store import ActivityStore
 from app.config import get_settings
+from app.connectors.factory import connector_for
 from app.connectors.models import Connection
 from app.connectors.oauth import admin_consent_url
 from app.connectors.sharepoint import SharePointConnector
@@ -46,12 +47,61 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 callback_router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-@router.post("/connections/sharepoint/connect")
-async def sharepoint_connect(store: ConnectionStore = Depends(get_connection_store)) -> dict:
-    """Start admin-consent: store a one-shot state, return the Microsoft consent URL."""
+@router.post("/connections/oauth/connect")
+async def oauth_connect(
+    provider: str = "sharepoint",
+    store: ConnectionStore = Depends(get_connection_store),
+) -> dict:
+    """Generic admin-consent start: supports provider ∈ {sharepoint, teams}."""
+    if provider not in {"sharepoint", "teams"}:
+        raise HTTPException(status_code=400, detail=f"unknown provider: {provider!r}")
     s = get_settings()
     state = secrets.token_urlsafe(24)
-    await store.put_oauth_state(state, s.brain_tenant_id)
+    await store.put_oauth_state(state, s.brain_tenant_id, provider)
+    redirect_uri = f"{s.brain_api_base_url.rstrip('/')}/admin/connections/oauth/callback"
+    return {"auth_url": admin_consent_url(
+        client_id=s.azure_client_id or "", redirect_uri=redirect_uri, state=state)}
+
+
+@callback_router.get("/connections/oauth/callback")
+async def oauth_callback(
+    state: str = "",
+    tenant: str = "",
+    admin_consent: str = "",
+    error: str = "",
+    store: ConnectionStore = Depends(get_connection_store),
+    pipeline: IngestPipeline = Depends(get_ingest_pipeline),
+) -> RedirectResponse:
+    s = get_settings()
+    web = s.web_base_url.rstrip("/")
+    state_result = await store.consume_oauth_state(state) if state else None
+    if state_result is None:
+        brain_tenant, provider = None, None
+    else:
+        brain_tenant, provider = state_result
+    ok = admin_consent.lower() == "true" and bool(tenant) and brain_tenant is not None and not error
+    if not ok:
+        return RedirectResponse(url=f"{web}/admin/sources?error=oauth", status_code=302)
+    display = "SharePoint" if provider == "sharepoint" else "Teams"
+    conn = Connection(
+        connection_id=uuid.uuid4().hex, tenant_id=brain_tenant, type=provider,
+        site_id=tenant, name=f"{display} · {tenant[:8]}", web_url="",
+        connected_tenant_id=tenant, status="syncing",
+    )
+    await store.put_connection(conn)
+    runner = SyncRunner(connector=connector_for(conn), pipeline=pipeline, store=store)
+    asyncio.create_task(runner.run(connection=conn, actor="admin"))  # detached; we 302 now
+    return RedirectResponse(url=f"{web}/admin/sources?connected={provider}", status_code=302)
+
+
+# ---- Back-compat: /sharepoint/connect + /sharepoint/callback (old redirect URI registered in Entra) ----
+
+@router.post("/connections/sharepoint/connect")
+async def sharepoint_connect(store: ConnectionStore = Depends(get_connection_store)) -> dict:
+    """Back-compat: same as /oauth/connect?provider=sharepoint but uses the old redirect_uri."""
+    s = get_settings()
+    state = secrets.token_urlsafe(24)
+    await store.put_oauth_state(state, s.brain_tenant_id, "sharepoint")
     redirect_uri = f"{s.brain_api_base_url.rstrip('/')}/admin/connections/sharepoint/callback"
     return {"auth_url": admin_consent_url(
         client_id=s.azure_client_id or "", redirect_uri=redirect_uri, state=state)}
@@ -66,21 +116,27 @@ async def sharepoint_callback(
     store: ConnectionStore = Depends(get_connection_store),
     pipeline: IngestPipeline = Depends(get_ingest_pipeline),
 ) -> RedirectResponse:
+    """Back-compat: delegate to the same logic as the generic callback."""
     s = get_settings()
     web = s.web_base_url.rstrip("/")
-    brain_tenant = await store.consume_oauth_state(state) if state else None
+    state_result = await store.consume_oauth_state(state) if state else None
+    if state_result is None:
+        brain_tenant, provider = None, "sharepoint"
+    else:
+        brain_tenant, provider = state_result
     ok = admin_consent.lower() == "true" and bool(tenant) and brain_tenant is not None and not error
     if not ok:
         return RedirectResponse(url=f"{web}/admin/sources?error=oauth", status_code=302)
+    display = "SharePoint" if provider == "sharepoint" else "Teams"
     conn = Connection(
-        connection_id=uuid.uuid4().hex, tenant_id=brain_tenant, type="sharepoint",
-        site_id=tenant, name=f"SharePoint · {tenant[:8]}", web_url="",
+        connection_id=uuid.uuid4().hex, tenant_id=brain_tenant, type=provider,
+        site_id=tenant, name=f"{display} · {tenant[:8]}", web_url="",
         connected_tenant_id=tenant, status="syncing",
     )
     await store.put_connection(conn)
-    runner = SyncRunner(connector=SharePointConnector(tenant_id=tenant), pipeline=pipeline, store=store)
+    runner = SyncRunner(connector=connector_for(conn), pipeline=pipeline, store=store)
     asyncio.create_task(runner.run(connection=conn, actor="admin"))  # detached; we 302 now
-    return RedirectResponse(url=f"{web}/admin/sources?connected=sharepoint", status_code=302)
+    return RedirectResponse(url=f"{web}/admin/sources?connected={provider}", status_code=302)
 
 
 @router.post("/ingest", response_model=None)
