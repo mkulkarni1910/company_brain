@@ -172,3 +172,54 @@ export async function postSearch(query: string, opts: SearchOpts = {}): Promise<
     return empty;
   }
 }
+
+export type TokenMeta = {
+  token_id: string;
+  name: string;
+  masked: string;
+  created_at: string;
+  last_used_at: string | null;
+};
+export type TokenCreated = { token: string; meta: TokenMeta };
+
+// The brain-api base URL — surfaced in copy-paste snippets in the Connect panels.
+export function apiBaseUrl(): string {
+  return API_BASE;
+}
+
+export async function listTokens(): Promise<TokenMeta[]> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/tokens`);
+    if (!resp.ok) return [];
+    return (await resp.json()) as TokenMeta[];
+  } catch {
+    return [];
+  }
+}
+
+export async function createToken(name: string): Promise<TokenCreated | null> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/tokens`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!resp.ok) return null;
+    return (await resp.json()) as TokenCreated;
+  } catch {
+    return null;
+  }
+}
+
+export async function revokeToken(tokenId: string): Promise<boolean> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/tokens/${encodeURIComponent(tokenId)}`, {
+      method: "DELETE",
+    });
+    if (!resp.ok) return false;
+    const body = (await resp.json()) as { revoked: boolean };
+    return body.revoked;
+  } catch {
+    return false;
+  }
+}
