@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel
 
 from app.api._auth_resolve import resolve_user
-from app.deps import get_search_service
+from app.deps import get_search_service, get_token_store
 from app.domain.search import SearchResponse
 
 router = APIRouter(tags=["search"])
@@ -25,13 +25,14 @@ class SearchRequest(BaseModel):
 async def search(
     body: SearchRequest,
     service=Depends(get_search_service),
+    token_store=Depends(get_token_store),
     authorization: str | None = Header(default=None),
     x_debug_bypass_auth: str | None = Header(default=None),
     x_ms_client_principal: str | None = Header(default=None),
 ) -> SearchResponse:
     user = await resolve_user(
         easy_auth=x_ms_client_principal, authorization=authorization,
-        debug_header=x_debug_bypass_auth,
+        debug_header=x_debug_bypass_auth, token_store=token_store,
     )
     if service is None:
         return SearchResponse(query=body.query, results=[], facets=[], people=[], total=0)

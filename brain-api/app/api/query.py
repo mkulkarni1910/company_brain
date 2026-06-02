@@ -3,7 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Header, Request
 
 from app.api._auth_resolve import resolve_user
-from app.deps import get_conversation_store, get_orchestrator
+from app.config import get_settings
+from app.deps import get_conversation_store, get_orchestrator, get_token_store
 from app.domain.query import Answer, QueryRequest
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 
@@ -16,6 +17,7 @@ async def query(
     body: QueryRequest,
     orchestrator: SemanticKernelOrchestrator = Depends(get_orchestrator),
     conversation_store=Depends(get_conversation_store),
+    token_store=Depends(get_token_store),
     authorization: str | None = Header(default=None),
     x_debug_bypass_auth: str | None = Header(default=None),
     x_ms_client_principal: str | None = Header(default=None),
@@ -24,12 +26,15 @@ async def query(
         easy_auth=x_ms_client_principal,
         authorization=authorization,
         debug_header=x_debug_bypass_auth,
+        token_store=token_store,
     )
-    tok = (
+    bearer = (
         authorization.split(" ", 1)[1]
         if authorization and authorization.lower().startswith("bearer ")
         else None
     )
+    # A PAT is not an OBO token — don't forward it to Live Fetch.
+    tok = bearer if bearer and not bearer.startswith(get_settings().token_prefix) else None
     answer = await orchestrator.answer(body, user=user, user_token=tok)
     metrics = getattr(request.app.state, "metrics_store", None)
     if metrics is not None:
