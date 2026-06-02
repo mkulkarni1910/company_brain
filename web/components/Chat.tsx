@@ -3,7 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { postQuery, postFeedback, getConversations, getConversation, logClick, postSearch,
-  Answer, Citation, ConversationSummary, SearchResponse } from "@/lib/api";
+  listTokens, createToken, revokeToken, apiBaseUrl,
+  Answer, Citation, ConversationSummary, SearchResponse, TokenMeta } from "@/lib/api";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
@@ -234,11 +235,151 @@ function AnswerText({ text, citations }: { text: string; citations: Citation[] }
   );
 }
 
+type Surface = "Web" | "Teams" | "Slack" | "API" | "MCP";
+
+function CodeBlock({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="code">
+      <button
+        className="copy"
+        onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1200); }}
+      >{copied ? "Copied" : "Copy"}</button>
+      {text}
+    </div>
+  );
+}
+
+function TokenManager({ onNewToken }: { onNewToken: (plaintext: string) => void }) {
+  const [tokens, setTokens] = useState<TokenMeta[]>([]);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { listTokens().then(setTokens); }, []);
+
+  async function create() {
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    const created = await createToken(name.trim());
+    setBusy(false);
+    if (created) {
+      onNewToken(created.token);
+      setTokens((t) => [created.meta, ...t]);
+      setName("");
+    }
+  }
+  async function revoke(id: string) {
+    if (await revokeToken(id)) setTokens((t) => t.filter((x) => x.token_id !== id));
+  }
+
+  return (
+    <>
+      <h4>Your tokens</h4>
+      {tokens.length === 0 && <div className="m-soon" style={{ padding: "12px 0" }}>No tokens yet.</div>}
+      {tokens.map((t) => (
+        <div className="tok-row" key={t.token_id}>
+          <span className="tok-name">{t.name}</span>
+          <span className="tok-mask">{t.masked}</span>
+          <button className="tok-rev" onClick={() => revoke(t.token_id)}>Revoke</button>
+        </div>
+      ))}
+      <div className="tok-new">
+        <input placeholder="Token name (e.g. my-laptop)" value={name}
+          onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && create()} />
+        <button onClick={create} disabled={busy}>{busy ? "Creating…" : "Create token"}</button>
+      </div>
+    </>
+  );
+}
+
+function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => void }) {
+  const [tab, setTab] = useState<Surface>(surface);
+  const [newToken, setNewToken] = useState<string | null>(null);
+  const base = apiBaseUrl();
+  const tabs: Surface[] = ["Web", "Teams", "Slack", "API", "MCP"];
+
+  const curl = `curl -X POST ${base}/context \\
+  -H "Authorization: Bearer sbx_live_…" \\
+  -H "Content-Type: application/json" \\
+  -d '{"query": "What is our travel policy?", "top": 5}'`;
+
+  const mcpJson = `{
+  "mcpServers": {
+    "substrateos": {
+      "type": "http",
+      "url": "${base}/mcp",
+      "headers": { "Authorization": "Bearer sbx_live_…" }
+    }
+  }
+}`;
+
+  return (
+    <div className="cmodal-backdrop" onClick={onClose}>
+      <div className="cmodal" onClick={(e) => e.stopPropagation()}>
+        <div className="cmodal-head">
+          <h3>Connect to SubStrateOS</h3>
+          <button className="cmodal-x" onClick={onClose}>×</button>
+        </div>
+        <div className="m-tabs">
+          {tabs.map((s) => (
+            <button key={s} className={`m-tab ${tab === s ? "on" : ""}`} onClick={() => setTab(s)}>{s}</button>
+          ))}
+        </div>
+        <div className="m-body">
+          {newToken && (
+            <div className="tok-warn">
+              Copy your new token now — it won&apos;t be shown again.
+              <CodeBlock text={newToken} />
+            </div>
+          )}
+
+          {tab === "API" && (
+            <>
+              <h4>Base URL</h4>
+              <CodeBlock text={base} />
+              <h4>Endpoints</h4>
+              <div className="endpoint"><span className="verb">POST</span> /context — ranked, ACL-scoped context</div>
+              <div className="endpoint"><span className="verb">POST</span> /query — a grounded answer with citations</div>
+              <div className="endpoint"><span className="verb">POST</span> /search — faceted document search</div>
+              <h4>Example</h4>
+              <CodeBlock text={curl} />
+              <TokenManager onNewToken={setNewToken} />
+            </>
+          )}
+
+          {tab === "MCP" && (
+            <>
+              <h4>Remote MCP endpoint</h4>
+              <CodeBlock text={`${base}/mcp`} />
+              <h4>Add to your MCP client (mcp.json)</h4>
+              <CodeBlock text={mcpJson} />
+              <h4>Tools</h4>
+              <div className="tool"><code>ask_company_brain(query)</code> — a grounded answer, scoped to you.</div>
+              <div className="tool"><code>search_company_brain(query)</code> — matching documents.</div>
+              <TokenManager onNewToken={setNewToken} />
+            </>
+          )}
+
+          {(tab === "Web" || tab === "Teams" || tab === "Slack") && (
+            <div className="m-soon">
+              {tab === "Web"
+                ? "You're using the web app right now."
+                : `${tab} integration is coming soon.`}
+              {tab !== "Web" && <div><button className="m-btn" disabled>Notify me</button></div>}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Chat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [view, setView] = useState<"ask" | "discover" | "history">("ask");
   const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
+  const [connectSurface, setConnectSurface] = useState<Surface | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   function newChat() { setConversationId(crypto.randomUUID()); setTurns([]); setInput(""); setView("ask"); }
@@ -319,9 +460,11 @@ export default function Chat() {
           <div className="title">Ask the brain</div>
           <span className="tenant">tenant · contoso</span>
           <div className="surfaces">
-            <span className="chip on"><span className="d" />Web</span>
-            <span className="chip">Teams</span><span className="chip">Slack</span>
-            <span className="chip">API</span><span className="chip">MCP</span>
+            <button className="chip on" onClick={() => setConnectSurface("Web")}><span className="d" />Web</button>
+            <button className="chip" onClick={() => setConnectSurface("Teams")}>Teams</button>
+            <button className="chip" onClick={() => setConnectSurface("Slack")}>Slack</button>
+            <button className="chip" onClick={() => setConnectSurface("API")}>API</button>
+            <button className="chip" onClick={() => setConnectSurface("MCP")}>MCP</button>
           </div>
         </header>
 
@@ -432,6 +575,10 @@ export default function Chat() {
           <div className="stat"><span>Live fetch</span><span className="v">{latest?.answer?.debug?.live_used ? "yes" : "—"}</span></div>
         </div>
       </aside>
+      )}
+
+      {connectSurface && (
+        <ConnectModal surface={connectSurface} onClose={() => setConnectSurface(null)} />
       )}
     </div>
   );
