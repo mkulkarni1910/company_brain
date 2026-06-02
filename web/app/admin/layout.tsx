@@ -5,12 +5,75 @@ import { useEffect, useState } from "react";
 import { getAdminKey, setAdminKey } from "@/lib/adminApi";
 
 const NAV = [
-  { group: "Workspace", items: [{ href: "/admin", label: "Overview" }] },
-  { group: "Connect", items: [
-    { href: "/admin/sources", label: "Data Sources" },
-    { href: "/admin/surfaces", label: "Surfaces" },
-    { href: "/admin/permissions", label: "Permissions" }] },
-  { group: "Build", items: [{ href: "/admin/developer", label: "Developer" }] },
+  {
+    group: "Workspace",
+    items: [
+      {
+        href: "/admin",
+        label: "Overview",
+        icon: (
+          <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    group: "Connect",
+    items: [
+      {
+        href: "/admin/sources",
+        label: "Data Sources",
+        icon: (
+          <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <ellipse cx="12" cy="5" rx="8" ry="3"/>
+            <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/>
+            <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/>
+          </svg>
+        ),
+      },
+      {
+        href: "/admin/surfaces",
+        label: "Surfaces",
+        icon: (
+          <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3 3 8l9 5 9-5-9-5Z"/>
+            <path d="m3 13 9 5 9-5"/>
+          </svg>
+        ),
+      },
+      {
+        href: "/admin/permissions",
+        label: "Permissions",
+        icon: (
+          <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3 5 6v5c0 4 3 6.7 7 8 4-1.3 7-4 7-8V6l-7-3Z"/>
+            <path d="m9.5 12 1.8 1.8 3.2-3.4"/>
+          </svg>
+        ),
+      },
+    ],
+  },
+  {
+    group: "Build",
+    items: [
+      {
+        href: "/admin/developer",
+        label: "Developer",
+        icon: (
+          <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m8 9-3 3 3 3"/>
+            <path d="m16 9 3 3-3 3"/>
+            <path d="m13.5 7-3 10"/>
+          </svg>
+        ),
+      },
+    ],
+  },
 ];
 
 function Gate({ onUnlock }: { onUnlock: () => void }) {
@@ -37,8 +100,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside className="rail">
         <div className="brand">
           <div className="glyph" />
-          <div><h1>SubStrate<span style={{ color: "var(--amber)" }}>OS</span></h1>
-            <div className="sub">Admin</div></div>
+          <div>
+            <h1>SubStrate<span style={{ color: "var(--amber)" }}>OS</span></h1>
+            <div className="sub">Admin</div>
+          </div>
         </div>
         {NAV.map((g) => (
           <div key={g.group}>
@@ -46,7 +111,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <nav className="nav">
               {g.items.map((it) => (
                 <Link key={it.href} href={it.href}
-                  className={path === it.href ? "active" : ""}>{it.label}</Link>
+                  className={path === it.href ? "active" : ""}>
+                  {it.icon}
+                  {it.label}
+                </Link>
               ))}
             </nav>
           </div>
