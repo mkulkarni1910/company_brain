@@ -33,7 +33,11 @@ async function headers(): Promise<Record<string, string>> {
 async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const resp = await fetch(`${API_BASE}${path}`,
     { ...init, headers: { ...(init.headers ?? {}), ...(await headers()) } });
-  if (resp.status === 403) { clearAdminKey(); throw new AdminAuthError("admin key rejected"); }
+  if (resp.status === 403) {
+    clearAdminKey();
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("admin-auth-error"));
+    throw new AdminAuthError("admin key rejected");
+  }
   if (!resp.ok) throw new Error(`admin-api ${resp.status}: ${await resp.text()}`);
   return (await resp.json()) as T;
 }

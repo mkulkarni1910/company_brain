@@ -76,7 +76,7 @@ const NAV = [
   },
 ];
 
-function Gate({ onUnlock }: { onUnlock: () => void }) {
+function Gate({ onUnlock, error }: { onUnlock: () => void; error?: boolean }) {
   const [val, setVal] = useState("");
   return (
     <div className="admin-gate">
@@ -84,6 +84,7 @@ function Gate({ onUnlock }: { onUnlock: () => void }) {
         <div className="glyph" />
         <h2>Admin access</h2>
         <p>Enter the admin key to manage data sources.</p>
+        {error && <p className="gate-err">That key was rejected. Check the admin key and try again.</p>}
         <input type="password" value={val} onChange={(e) => setVal(e.target.value)} placeholder="Admin key" autoFocus />
         <button type="submit">Unlock</button>
       </form>
@@ -94,7 +95,14 @@ function Gate({ onUnlock }: { onUnlock: () => void }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const [unlocked, setUnlocked] = useState(false);
-  useEffect(() => { setUnlocked(!!getAdminKey()); }, []);
+  const [authErr, setAuthErr] = useState(false);
+  useEffect(() => {
+    setUnlocked(!!getAdminKey());
+    // A 403 from any /admin call clears the key and fires this — bounce back to the gate.
+    const onAuthErr = () => { setUnlocked(false); setAuthErr(true); };
+    window.addEventListener("admin-auth-error", onAuthErr);
+    return () => window.removeEventListener("admin-auth-error", onAuthErr);
+  }, []);
   return (
     <div className="app app--norail admin">
       <aside className="rail">
@@ -122,7 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="foot"><div className="avatar">A</div>
           <div className="who">Admin<span>t-eval</span></div></div>
       </aside>
-      <main className="main">{unlocked ? children : <Gate onUnlock={() => setUnlocked(true)} />}</main>
+      <main className="main">{unlocked ? children : <Gate error={authErr} onUnlock={() => { setAuthErr(false); setUnlocked(true); }} />}</main>
     </div>
   );
 }

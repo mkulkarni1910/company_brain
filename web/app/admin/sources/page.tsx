@@ -98,7 +98,7 @@ function relTime(iso: string | null): string {
 // ── Status cell ───────────────────────────────────────────────────────────────
 
 function StatusCell({ conn }: { conn: Connection | null }) {
-  if (!conn) return <span className="dash">—</span>;
+  if (!conn) return <span className="st disabled"><span className="d" />Disabled</span>;
   if (conn.status === "live") {
     return <span className="st live"><span className="d" />Live</span>;
   }
