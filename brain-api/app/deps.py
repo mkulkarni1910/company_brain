@@ -69,6 +69,14 @@ def get_connection_store(request: Request):
     return request.app.state.connection_store
 
 
+def get_subscription_store(request: Request):
+    return getattr(request.app.state, "subscription_store", None)
+
+
+def get_acl_store(request: Request):
+    return getattr(request.app.state, "acl_store", None)
+
+
 def get_metrics_store(request: Request):
     return request.app.state.metrics_store
 

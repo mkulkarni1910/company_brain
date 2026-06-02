@@ -1,11 +1,12 @@
 import asyncio
+import contextlib
 import os
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
+from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 from app.activity.store import ActivityStore
@@ -13,21 +14,37 @@ from app.config import get_settings
 from app.connectors.factory import connector_for
 from app.connectors.models import Connection
 from app.connectors.oauth import admin_consent_url
+from app.connectors.realtime import (
+    bootstrap_subscriptions,
+    ingest_notifications,
+    run_maintenance,
+)
 from app.connectors.sharepoint import SharePointConnector
 from app.connectors.store import ConnectionStore
+from app.connectors.subscriptions import SubscriptionStore
 from app.connectors.sync import SyncRunner
 from app.deps import (
+    get_acl_store,
     get_ai_search,
     get_connection_store,
     get_ingest_pipeline,
     get_metrics_store,
     get_sharepoint,
+    get_subscription_store,
 )
 from app.domain.activity import ActivityEvent
 from app.domain.chunk import SourceDoc
 from app.ingest.pipeline import IngestPipeline, IngestResult
 from app.people.graph_client import PeopleGraphClient
 from app.people.seeder import PeopleSeeder
+
+# Admin-consent connectors that can be connected via the generic OAuth flow.
+_PROVIDERS = {"sharepoint", "teams", "outlook_mail", "outlook_calendar"}
+_DISPLAY = {
+    "sharepoint": "SharePoint", "teams": "Teams",
+    "outlook_mail": "Outlook Mail", "outlook_calendar": "Outlook Calendar",
+}
+_OUTLOOK = {"outlook_mail", "outlook_calendar"}
 
 
 def require_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
@@ -52,8 +69,9 @@ async def oauth_connect(
     provider: str = "sharepoint",
     store: ConnectionStore = Depends(get_connection_store),
 ) -> dict:
-    """Generic admin-consent start: supports provider ∈ {sharepoint, teams}."""
-    if provider not in {"sharepoint", "teams"}:
+    """Generic admin-consent start: supports provider ∈ {sharepoint, teams,
+    outlook_mail, outlook_calendar}."""
+    if provider not in _PROVIDERS:
         raise HTTPException(status_code=400, detail=f"unknown provider: {provider!r}")
     s = get_settings()
     state = secrets.token_urlsafe(24)
@@ -71,6 +89,7 @@ async def oauth_callback(
     error: str = "",
     store: ConnectionStore = Depends(get_connection_store),
     pipeline: IngestPipeline = Depends(get_ingest_pipeline),
+    sub_store: SubscriptionStore = Depends(get_subscription_store),
 ) -> RedirectResponse:
     s = get_settings()
     web = s.web_base_url.rstrip("/")
@@ -82,7 +101,7 @@ async def oauth_callback(
     ok = admin_consent.lower() == "true" and bool(tenant) and brain_tenant is not None and not error
     if not ok:
         return RedirectResponse(url=f"{web}/admin/sources?error=oauth", status_code=302)
-    display = "SharePoint" if provider == "sharepoint" else "Teams"
+    display = _DISPLAY.get(provider, provider or "Source")
     conn = Connection(
         connection_id=uuid.uuid4().hex, tenant_id=brain_tenant, type=provider,
         site_id=tenant, name=f"{display} · {tenant[:8]}", web_url="",
@@ -90,8 +109,53 @@ async def oauth_callback(
     )
     await store.put_connection(conn)
     runner = SyncRunner(connector=connector_for(conn), pipeline=pipeline, store=store)
-    asyncio.create_task(runner.run(connection=conn, actor="admin"))  # detached; we 302 now
+    asyncio.create_task(_backfill_then_subscribe(runner, conn, sub_store))  # detached; we 302 now
     return RedirectResponse(url=f"{web}/admin/sources?connected={provider}", status_code=302)
+
+
+async def _backfill_then_subscribe(
+    runner: SyncRunner, conn: Connection, sub_store: SubscriptionStore
+) -> None:
+    """Run the backfill, then (for Outlook) create realtime subscriptions."""
+    await runner.run(connection=conn, actor="admin")
+    if conn.type in _OUTLOOK and sub_store is not None:
+        # backfill already succeeded; subscription creation is best-effort
+        with contextlib.suppress(Exception):
+            await bootstrap_subscriptions(conn=conn, sub_store=sub_store)
+
+
+@callback_router.api_route("/connections/webhook", methods=["GET", "POST"])
+async def graph_webhook(
+    request: Request,
+    validationToken: str = "",
+    store: ConnectionStore = Depends(get_connection_store),
+    pipeline: IngestPipeline = Depends(get_ingest_pipeline),
+    acl_store=Depends(get_acl_store),
+) -> Response:
+    """Microsoft Graph change-notification receiver. Echoes the validation token on
+    subscription creation; otherwise ingests the batch out-of-band and 202s fast."""
+    if validationToken:
+        return PlainTextResponse(validationToken)
+    try:
+        payload = await request.json()
+    except Exception:  # noqa: BLE001
+        return Response(status_code=202)
+    asyncio.create_task(ingest_notifications(
+        payload=payload, conn_store=store, pipeline=pipeline, acl_store=acl_store))
+    return Response(status_code=202)
+
+
+@router.post("/connections/maintain")
+async def maintain(
+    store: ConnectionStore = Depends(get_connection_store),
+    sub_store: SubscriptionStore = Depends(get_subscription_store),
+    pipeline: IngestPipeline = Depends(get_ingest_pipeline),
+    acl_store=Depends(get_acl_store),
+) -> dict:
+    """Cron-triggered maintenance: renew Outlook subscriptions, reconcile
+    joiners/leavers, and run the delta sweep. Admin-key protected."""
+    return await run_maintenance(
+        conn_store=store, sub_store=sub_store, pipeline=pipeline, acl_store=acl_store)
 
 
 # ---- Back-compat: /sharepoint/connect + /sharepoint/callback (old redirect URI registered in Entra) ----
@@ -127,7 +191,7 @@ async def sharepoint_callback(
     ok = admin_consent.lower() == "true" and bool(tenant) and brain_tenant is not None and not error
     if not ok:
         return RedirectResponse(url=f"{web}/admin/sources?error=oauth", status_code=302)
-    display = "SharePoint" if provider == "sharepoint" else "Teams"
+    display = _DISPLAY.get(provider, provider or "Source")
     conn = Connection(
         connection_id=uuid.uuid4().hex, tenant_id=brain_tenant, type=provider,
         site_id=tenant, name=f"{display} · {tenant[:8]}", web_url="",

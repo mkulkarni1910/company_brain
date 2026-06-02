@@ -5,14 +5,11 @@ import re
 from datetime import UTC, datetime
 from html import unescape
 
-import httpx
-from azure.identity.aio import DefaultAzureCredential
-
 from app.config import get_settings
+from app.connectors.graph import graph_get_json, graph_token
 
 logger = logging.getLogger(__name__)
 _GRAPH = "https://graph.microsoft.com/v1.0"
-_SCOPE = "https://graph.microsoft.com/.default"
 _PAGE_LIMIT = 50  # max @odata.nextLink pages for messages
 
 
@@ -111,31 +108,10 @@ class TeamsConnector:
         self._tenant_id = tenant_id
 
     async def _token(self) -> str:
-        s = get_settings()
-        if self._tenant_id and s.azure_client_id and s.azure_client_secret:
-            from app.connectors.oauth import token_url
-            async with httpx.AsyncClient(timeout=15.0) as http:
-                r = await http.post(token_url(self._tenant_id), data={
-                    "client_id": s.azure_client_id,
-                    "client_secret": s.azure_client_secret,
-                    "scope": _SCOPE,
-                    "grant_type": "client_credentials",
-                })
-                r.raise_for_status()
-                return r.json()["access_token"]
-        cred = DefaultAzureCredential()
-        try:
-            tok = await cred.get_token(_SCOPE)
-            return tok.token
-        finally:
-            await cred.close()
+        return await graph_token(self._tenant_id)
 
     async def _get_json(self, url: str) -> dict:
-        token = await self._token()
-        async with httpx.AsyncClient(timeout=15.0) as http:
-            r = await http.get(url, headers={"Authorization": f"Bearer {token}"})
-            r.raise_for_status()
-            return r.json()
+        return await graph_get_json(await self._token(), url)
 
     async def list_teams(self) -> list[dict]:
         """List all teams in the tenant. Returns [] on any error."""

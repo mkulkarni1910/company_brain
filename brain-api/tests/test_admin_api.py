@@ -175,3 +175,95 @@ async def test_generic_oauth_callback_bad_state_redirects_error(monkeypatch):
                                 "admin_consent": "true"})
         assert r.status_code == 302
         assert "error=oauth" in r.headers["location"]
+
+
+# ---------------------------------------------------------------------------
+# New Outlook provider tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_oauth_connect_outlook_mail_returns_auth_url(monkeypatch):
+    monkeypatch.setenv("AZURE_CLIENT_ID", "cid")
+    app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/connections/oauth/connect",
+                         params={"provider": "outlook_mail"},
+                         headers={"x-admin-key": "k"})
+        assert r.status_code == 200
+        body = r.json()
+        assert "adminconsent" in body["auth_url"]
+        assert "client_id=cid" in body["auth_url"]
+
+
+@pytest.mark.asyncio
+async def test_oauth_connect_outlook_calendar_returns_auth_url(monkeypatch):
+    monkeypatch.setenv("AZURE_CLIENT_ID", "cid")
+    app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/connections/oauth/connect",
+                         params={"provider": "outlook_calendar"},
+                         headers={"x-admin-key": "k"})
+        assert r.status_code == 200
+        body = r.json()
+        assert "adminconsent" in body["auth_url"]
+
+
+@pytest.mark.asyncio
+async def test_oauth_connect_bogus_provider_returns_400(monkeypatch):
+    app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/connections/oauth/connect",
+                         params={"provider": "bogus"},
+                         headers={"x-admin-key": "k"})
+        assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_webhook_validation_handshake_echoes_token(monkeypatch):
+    """GET /admin/connections/webhook?validationToken=abc → 200, body == 'abc'."""
+    from app.deps import get_ingest_pipeline, get_subscription_store
+
+    app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
+    app.dependency_overrides = {}
+    app.dependency_overrides[get_ingest_pipeline] = lambda: object()
+    app.dependency_overrides[get_subscription_store] = lambda: None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.get("/admin/connections/webhook",
+                        params={"validationToken": "abc"})
+        assert r.status_code == 200
+        assert r.text == "abc"
+
+
+@pytest.mark.asyncio
+async def test_webhook_notification_post_no_body_returns_202(monkeypatch):
+    """POST /admin/connections/webhook with empty/invalid body → 202."""
+    from app.deps import get_ingest_pipeline, get_subscription_store
+
+    app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
+    app.dependency_overrides = {}
+    app.dependency_overrides[get_ingest_pipeline] = lambda: object()
+    app.dependency_overrides[get_subscription_store] = lambda: None
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/connections/webhook", content=b"")
+        assert r.status_code == 202
+
+
+@pytest.mark.asyncio
+async def test_webhook_notification_post_with_payload_returns_202(monkeypatch):
+    """POST /admin/connections/webhook with JSON body → 202 (ingest is detached)."""
+    from app.deps import get_ingest_pipeline, get_subscription_store
+    monkeypatch.setenv("GRAPH_WEBHOOK_CLIENT_STATE", "s")
+
+    app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
+    app.dependency_overrides = {}
+    app.dependency_overrides[get_ingest_pipeline] = lambda: object()
+    app.dependency_overrides[get_subscription_store] = lambda: None
+
+    payload = {"value": [{"clientState": "s", "resource": "users/u1/messages/m1",
+                          "changeType": "created"}]}
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/connections/webhook", json=payload)
+        assert r.status_code == 202

@@ -12,7 +12,7 @@ JobStatus = Literal["queued", "running", "succeeded", "failed"]
 class Connection(BaseModel):
     connection_id: str
     tenant_id: str
-    type: Literal["sharepoint", "teams"] = "sharepoint"
+    type: Literal["sharepoint", "teams", "outlook_mail", "outlook_calendar"] = "sharepoint"
     site_id: str
     name: str
     web_url: str
@@ -49,6 +49,18 @@ class RemoteFile(BaseModel):
     created_at: datetime | None = None
     modified_at: datetime | None = None
     author_id: str | None = None
+
+
+class SubscriptionRecord(BaseModel):
+    """A live Microsoft Graph change-notification subscription for one user resource
+    (mailbox messages or calendar events) belonging to an Outlook connection."""
+    subscription_id: str
+    tenant_id: str
+    connection_id: str
+    provider: Literal["outlook_mail", "outlook_calendar"]
+    user_id: str
+    resource: str
+    expiration: datetime
 
 
 class ActivityEntry(BaseModel):

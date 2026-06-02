@@ -11,7 +11,7 @@ type Provider = {
   logo?: string;
   tile?: { bg: string; text: string };
   connectable?: boolean;
-  connType?: "sharepoint" | "teams"; // backend Connection.type + OAuth provider slug
+  connType?: "sharepoint" | "teams" | "outlook_mail" | "outlook_calendar"; // backend Connection.type + OAuth provider slug
 };
 type Category = { label: string; providers: Provider[] };
 
@@ -68,7 +68,7 @@ const CATALOG: Category[] = [
   {
     label: "Email",
     providers: [
-      { key: "outlook", name: "Outlook", desc: "Mail & threads", logo: "outlook.svg" },
+      { key: "outlook", name: "Outlook", desc: "Mail & threads", logo: "outlook.svg", connectable: true, connType: "outlook_mail" },
       { key: "gmail", name: "Gmail", desc: "Mail & threads", logo: "gmail.svg" },
     ],
   },
@@ -76,7 +76,7 @@ const CATALOG: Category[] = [
     label: "Calendar",
     providers: [
       { key: "gcal", name: "Google Calendar", desc: "Events", logo: "google-calendar.svg" },
-      { key: "outlook-cal", name: "Outlook", desc: "Events", logo: "outlook.svg" },
+      { key: "outlook-cal", name: "Outlook", desc: "Events", logo: "outlook.svg", connectable: true, connType: "outlook_calendar" },
     ],
   },
 ];

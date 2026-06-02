@@ -80,6 +80,15 @@ class Settings(BaseSettings):
     oauth_state_ttl_seconds: int = 600
     cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # Outlook (mail + calendar) connectors
+    outlook_max_per_user: int = 200          # cap on messages/events crawled per user
+    outlook_calendar_past_days: int = 90     # calendarView window, backwards from now
+    outlook_calendar_future_days: int = 365  # calendarView window, forwards from now
+    # Graph change-notification (webhook) subscriptions for realtime mail/calendar.
+    graph_webhook_client_state: str = "change-me"     # shared secret echoed in notifications
+    subscription_ttl_minutes: int = 4230              # ~Graph max for mail/event resources
+    subscription_renew_threshold_minutes: int = 720   # renew when within this of expiry
+
     # Programmatic access (Context API + MCP)
     token_prefix: str = "sbx_live_"
     mcp_enabled: bool = True

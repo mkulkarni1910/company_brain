@@ -23,6 +23,7 @@ from app.config import get_settings, load_secrets_from_keyvault
 from app.connectors.cosmos_store import CosmosConnectionStore
 from app.connectors.sharepoint import SharePointConnector
 from app.connectors.store import ConnectionStore
+from app.connectors.subscriptions import SubscriptionStore
 from app.conversations.store import ConversationStore
 from app.discover.service import DiscoverService
 from app.generation.azure_openai import AzureOpenAIClient
@@ -102,6 +103,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         app.state.token_store = NullTokenStore()
     app.state.metrics_store = MetricsStore()
+    app.state.subscription_store = SubscriptionStore()  # Outlook realtime subs + delta tokens
     app.state.sharepoint = SharePointConnector()
     mcp_bind(
         orchestrator=app.state.orchestrator,
@@ -126,6 +128,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.embedder.aclose()
         await app.state.llm.aclose()
         await app.state.connection_store.aclose()
+        await app.state.subscription_store.aclose()
         await app.state.metrics_store.aclose()
         await app.state.token_store.aclose()
 

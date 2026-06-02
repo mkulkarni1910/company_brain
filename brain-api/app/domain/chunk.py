@@ -3,7 +3,10 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Source = Literal["sharepoint", "teams", "uploaded", "slack", "jira", "graph"]
+Source = Literal[
+    "sharepoint", "teams", "uploaded", "slack", "jira", "graph",
+    "outlook_mail", "outlook_calendar",
+]
 
 
 class SourceDoc(BaseModel):
