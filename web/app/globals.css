@@ -379,67 +379,67 @@
   .admin-gate-card .gate-err{color:var(--rose);font-size:12.5px;margin:0;text-align:center}
   @media(max-width:880px){.tiles{grid-template-columns:repeat(2,1fr)}.admin-cols{grid-template-columns:1fr}}
 
-/* ---- Connect panels (API / MCP / coming-soon surfaces) ---- */
-.surfaces .chip { cursor: pointer; background: none; border: 1px solid var(--line); font: inherit; }
-.surfaces .chip:hover { border-color: var(--violet); }
-.cmodal-backdrop {
-  position: fixed; inset: 0; background: rgba(10, 12, 20, 0.55);
-  display: flex; align-items: center; justify-content: center; z-index: 50;
-}
-.cmodal {
-  width: min(720px, 92vw); max-height: 86vh; overflow: auto;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35); padding: 0;
-}
-.cmodal-head {
-  display: flex; align-items: center; gap: 12px;
-  padding: 16px 20px; border-bottom: 1px solid var(--line);
-}
-.cmodal-head h3 { margin: 0; font-size: 16px; }
-.cmodal-x {
-  margin-left: auto; cursor: pointer; background: none; border: none;
-  font-size: 20px; color: var(--muted); line-height: 1;
-}
-.m-tabs { display: flex; gap: 6px; padding: 12px 20px 0; flex-wrap: wrap; }
-.m-tab {
-  cursor: pointer; padding: 6px 12px; border-radius: 8px; font-size: 13px;
-  border: 1px solid var(--line); background: none; color: var(--muted);
-}
-.m-tab.on { color: var(--ink); border-color: var(--violet); background: var(--violet-weak, rgba(124,92,255,.08)); }
-.m-body { padding: 16px 20px 22px; }
-.m-body h4 { margin: 16px 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-.endpoint { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0; }
-.endpoint .verb { font-weight: 700; color: var(--violet); min-width: 52px; }
-.code {
-  position: relative; background: var(--code-bg, #0d1019); color: #e6e8ef;
-  border-radius: 10px; padding: 12px 14px; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-  white-space: pre-wrap; word-break: break-all; margin: 6px 0;
-}
-.code .copy {
-  position: absolute; top: 8px; right: 8px; cursor: pointer; font-size: 11px;
-  border: 1px solid rgba(255,255,255,.18); border-radius: 6px; padding: 2px 8px;
-  background: rgba(255,255,255,.06); color: #e6e8ef;
-}
-.tok-row {
-  display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line);
-  font-size: 13px;
-}
-.tok-row .tok-name { font-weight: 600; }
-.tok-row .tok-mask { color: var(--muted); font-family: ui-monospace, monospace; }
-.tok-row .tok-rev { margin-left: auto; cursor: pointer; color: var(--rose); background: none; border: none; font-size: 12px; }
-.tok-new {
-  display: flex; gap: 8px; margin-top: 10px;
-}
-.tok-new input { flex: 1; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
-.tok-new button, .m-btn {
-  cursor: pointer; padding: 7px 14px; border-radius: 8px; border: none;
-  background: var(--violet); color: #fff; font: inherit; font-weight: 600;
-}
-.tok-warn {
-  background: rgba(255, 196, 0, .12); border: 1px solid rgba(255,196,0,.4);
-  border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin: 8px 0;
-}
-.tool { font-size: 13px; padding: 6px 0; }
-.tool code { background: var(--code-bg, #0d1019); color: #e6e8ef; padding: 1px 6px; border-radius: 5px; }
-.m-soon { text-align: center; color: var(--muted); padding: 28px 0; }
-.m-soon .m-btn { opacity: .5; cursor: not-allowed; margin-top: 10px; }
+/* ---- Connect panels (API / MCP / Slack / Teams) — matches mockups/web-chat-light.html ---- */
+.surfaces .chip { background: none; font: inherit; cursor: pointer; }
+.surfaces .chip.sel { background: var(--amber-bg); border-color: #e6d3a8; color: var(--ink); }
+
+.cx-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 30px;
+  background: rgba(30,24,14,.34); backdrop-filter: blur(3px); overflow: auto; }
+.modal { width: 680px; max-width: 100%; max-height: calc(100vh - 60px); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden;
+  animation: rise .3s cubic-bezier(.2,.7,.2,1) both; display: flex; flex-direction: column; }
+.modal.narrow { width: 520px; }
+.m-head { flex: none; display: flex; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line-soft); }
+.m-icon { width: 34px; height: 34px; border-radius: 9px; flex: none; display: grid; place-items: center;
+  background: var(--panel,#f5f1e8); border: 1px solid var(--line-soft); font-size: 17px; }
+.m-title { font-family: "Fraunces", serif; font-size: 18px; font-weight: 500; }
+.m-sub { font-size: 12.5px; color: var(--ink-faint); }
+.m-x { margin-left: auto; color: var(--ink-faint); cursor: pointer; font-size: 18px; line-height: 1; background: none; border: none; }
+.m-x:hover { color: var(--ink); }
+.m-body { padding: 18px 22px 22px; overflow-y: auto; flex: 1 1 auto; }
+.m-body .lead { font-size: 14px; color: var(--ink-dim); margin: 0 0 16px; font-weight: 400; }
+.lbl { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin: 18px 0 8px; }
+.lbl:first-child { margin-top: 0; }
+.code { position: relative; background: #fbf8f1; border: 1px solid var(--line-soft); border-radius: 10px; color: var(--ink); overflow: hidden; }
+.code-pre { font-family: "JetBrains Mono", monospace; font-size: 12.5px; padding: 12px 14px; color: var(--ink); white-space: pre; overflow-x: auto; margin: 0; }
+.code .cp { position: absolute; top: 8px; right: 8px; z-index: 1; font-size: 9px; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--ink-faint); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 3px 7px; cursor: pointer; }
+.code .cp:hover { color: var(--ink); border-color: var(--amber); }
+.endpoint { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--line-soft); font-size: 13.5px; }
+.endpoint:last-child { border-bottom: none; }
+.verb { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 500; color: var(--teal); background: var(--teal-bg);
+  border: 1px solid rgba(15,137,126,.3); border-radius: 5px; padding: 2px 7px; }
+.endpoint code { font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--ink); }
+.endpoint .desc { margin-left: auto; color: var(--ink-faint); font-size: 12px; }
+.tok-row { display: flex; align-items: center; gap: 14px; background: var(--panel,#f5f1e8); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; margin-bottom: 8px; }
+.tok-id { min-width: 0; }
+.tok-name { font-weight: 600; font-size: 13.5px; }
+.tok-meta { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-faint); margin-top: 2px; }
+.tok-val { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--ink-dim);
+  background: var(--surface); border: 1px solid var(--line-soft); border-radius: 7px; padding: 5px 10px; white-space: nowrap; flex: none; }
+.revoke { font-size: 12px; color: var(--rose); background: none; border: 1px solid rgba(200,84,106,.3); border-radius: 7px; padding: 5px 12px; cursor: pointer; flex: none; }
+.revoke:hover { background: rgba(200,84,106,.08); }
+.btn { display: inline-flex; align-items: center; gap: 7px; background: var(--amber); color: #fff; border: none; border-radius: 9px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.newtok { background: linear-gradient(180deg,#fff8ea,#fffdf8); border: 1px solid #ecd9ad; border-radius: 11px; padding: 13px 15px; margin-bottom: 8px; }
+.newtok-head { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 9px; }
+.newtok-head b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+.newtok-top { display: flex; align-items: center; gap: 12px; }
+.newtok-val { font-family: "JetBrains Mono", monospace; font-size: 13.5px; font-weight: 600; color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copybtn { flex: none; font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-faint); background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 5px 11px; cursor: pointer; transition: .15s; }
+.copybtn:hover { color: var(--ink); border-color: var(--amber); }
+.newtok .warn { font-size: 11.5px; color: var(--amber); margin-top: 10px; }
+.tok-create { background: var(--surface); border: 1px solid var(--line); border-radius: 11px; padding: 13px 15px; margin-bottom: 8px; }
+.tok-create-lbl { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 8px; }
+.tok-create-row { display: flex; align-items: center; gap: 8px; }
+.tok-input { flex: 1; min-width: 0; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; font: inherit; font-size: 13.5px; color: var(--ink); outline: none; transition: .15s; }
+.tok-input:focus { border-color: #cabd9f; box-shadow: 0 0 0 3px rgba(196,122,22,.1); }
+.pill-soon { font-family: "JetBrains Mono", monospace; font-size: 9px; letter-spacing: .5px; text-transform: uppercase; color: var(--ink-faint); background: var(--panel,#f5f1e8); border: 1px solid var(--line); border-radius: 99px; padding: 3px 9px; margin-left: auto; }
+.toollist { display: flex; flex-direction: column; gap: 8px; }
+.tool { display: flex; gap: 10px; align-items: flex-start; background: var(--panel,#f5f1e8); border: 1px solid var(--line-soft); border-radius: 10px; padding: 11px 13px; }
+.tool .tn { font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--teal); }
+.tool .td { font-size: 12.5px; color: var(--ink-dim); }
+.soon-wrap { text-align: center; padding: 26px 10px; color: var(--ink-faint); }
+.soon-wrap .big { font-family: "Fraunces", serif; font-size: 18px; color: var(--ink); margin-bottom: 6px; }
+.soon-wrap code { font-family: "JetBrains Mono", monospace; font-size: 12px; background: var(--panel,#f5f1e8); border: 1px solid var(--line-soft); border-radius: 5px; padding: 1px 6px; }

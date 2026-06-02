@@ -237,135 +237,180 @@ function AnswerText({ text, citations }: { text: string; citations: Citation[] }
 
 type Surface = "Web" | "Teams" | "Slack" | "API" | "MCP";
 
+function relAge(iso: string | null | undefined): string {
+  return iso ? relTime(iso) : "never";
+}
+
 function CodeBlock({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="code">
-      <button
-        className="copy"
-        onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1200); }}
-      >{copied ? "Copied" : "Copy"}</button>
-      {text}
+      <span className="cp" onClick={() => { navigator.clipboard?.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>
+        {copied ? "copied" : "copy"}
+      </span>
+      <pre className="code-pre">{text}</pre>
     </div>
   );
 }
 
-function TokenManager({ onNewToken }: { onNewToken: (plaintext: string) => void }) {
-  const [tokens, setTokens] = useState<TokenMeta[]>([]);
+// Token manager matching web-chat-light.html: rich rows (name · created/last-used ·
+// masked value), a "＋ Create token" → name form → one-time reveal flow. Wired to
+// the real /tokens API (created_at + last_used_at come straight from TokenMeta).
+function TokenManager({ ghost }: { ghost?: boolean }) {
+  const [tokens, setTokens] = useState<TokenMeta[] | null>(null);
+  const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [fresh, setFresh] = useState<{ name: string; token: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => { listTokens().then(setTokens); }, []);
 
   async function create() {
-    if (!name.trim() || busy) return;
+    if (busy) return;
+    const nm = name.trim() || "new-token";
     setBusy(true);
-    const created = await createToken(name.trim());
+    const created = await createToken(nm);
     setBusy(false);
     if (created) {
-      onNewToken(created.token);
-      setTokens((t) => [created.meta, ...t]);
-      setName("");
+      setFresh({ name: nm, token: created.token });
+      setTokens((t) => [created.meta, ...(t ?? [])]);
+      setCreating(false); setName("");
     }
   }
   async function revoke(id: string) {
-    if (await revokeToken(id)) setTokens((t) => t.filter((x) => x.token_id !== id));
+    if (await revokeToken(id)) setTokens((t) => (t ?? []).filter((x) => x.token_id !== id));
   }
 
   return (
     <>
-      <h4>Your tokens</h4>
-      {tokens.length === 0 && <div className="m-soon" style={{ padding: "12px 0" }}>No tokens yet.</div>}
-      {tokens.map((t) => (
+      <div className="lbl">Personal access tokens</div>
+      {tokens === null && <div className="m-sub">Loading…</div>}
+      {tokens?.length === 0 && !fresh && <div className="m-sub">No tokens yet — create one below.</div>}
+      {tokens?.map((t) => (
         <div className="tok-row" key={t.token_id}>
-          <span className="tok-name">{t.name}</span>
-          <span className="tok-mask">{t.masked}</span>
-          <button className="tok-rev" onClick={() => revoke(t.token_id)}>Revoke</button>
+          <div className="tok-id">
+            <div className="tok-name">{t.name}</div>
+            <div className="tok-meta">created {relAge(t.created_at)} · last used {relAge(t.last_used_at)}</div>
+          </div>
+          <code className="tok-val">{t.masked}</code>
+          <button className="revoke" onClick={() => revoke(t.token_id)}>Revoke</button>
         </div>
       ))}
-      <div className="tok-new">
-        <input placeholder="Token name (e.g. my-laptop)" value={name}
-          onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && create()} />
-        <button onClick={create} disabled={busy}>{busy ? "Creating…" : "Create token"}</button>
-      </div>
+
+      {fresh && (
+        <div className="newtok">
+          <div className="newtok-head">New token · <b>{fresh.name}</b></div>
+          <div className="newtok-top">
+            <code className="newtok-val">{fresh.token}</code>
+            <button className="copybtn" onClick={() => { navigator.clipboard?.writeText(fresh.token); setCopied(true); setTimeout(() => setCopied(false), 1200); }}>
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <div className="warn">⚠ Copy this now — you won&apos;t be able to see it again.</div>
+        </div>
+      )}
+
+      {creating && (
+        <div className="tok-create">
+          <div className="tok-create-lbl">Token name</div>
+          <div className="tok-create-row">
+            <input className="tok-input" autoFocus placeholder="e.g. my-laptop, ci-pipeline" value={name}
+              onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && create()} />
+            <button className="btn" onClick={create} disabled={busy}>{busy ? "Creating…" : "Create"}</button>
+            <button className="btn ghost" onClick={() => setCreating(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {!creating && (
+        <button className={"btn" + (ghost ? " ghost" : "")} style={{ marginTop: 6 }} onClick={() => { setCreating(true); setFresh(null); }}>
+          ＋ Create token
+        </button>
+      )}
     </>
   );
 }
 
-function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => void }) {
-  const [tab, setTab] = useState<Surface>(surface);
-  const [newToken, setNewToken] = useState<string | null>(null);
-  const base = apiBaseUrl();
-  const tabs: Surface[] = ["Web", "Teams", "Slack", "API", "MCP"];
+const SURFACE_META: Record<Surface, { icon: string; title: string; sub: string }> = {
+  Web:   { icon: "🌐", title: "Use SubStrateOS on the web", sub: "You're using it right now" },
+  API:   { icon: "🔌", title: "Use SubStrateOS via API", sub: "Grounded company context for your own apps & agents" },
+  MCP:   { icon: "🧩", title: "Use SubStrateOS via MCP", sub: "Connect your AI assistant to the company brain" },
+  Slack: { icon: "💬", title: "Use SubStrateOS in Slack", sub: "Ask the brain without leaving your channels" },
+  Teams: { icon: "💬", title: "Use SubStrateOS in Teams", sub: "Ask the brain without leaving your channels" },
+};
 
-  const curl = `curl -X POST ${base}/context \\
-  -H "Authorization: Bearer sbx_live_…" \\
+function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => void }) {
+  const base = apiBaseUrl();
+  const meta = SURFACE_META[surface];
+  const soon = surface === "Slack" || surface === "Teams";
+
+  const curl = `curl -s ${base}/context \\
+  -H "Authorization: Bearer $SUBSTRATE_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"query": "What is our travel policy?", "top": 5}'`;
+  -d '{"query":"what is our PTO policy?","top":6}'`;
 
   const mcpJson = `{
   "mcpServers": {
     "substrateos": {
-      "type": "http",
       "url": "${base}/mcp",
       "headers": { "Authorization": "Bearer sbx_live_…" }
     }
   }
 }`;
 
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
   return (
-    <div className="cmodal-backdrop" onClick={onClose}>
-      <div className="cmodal" onClick={(e) => e.stopPropagation()}>
-        <div className="cmodal-head">
-          <h3>Connect to SubStrateOS</h3>
-          <button className="cmodal-x" onClick={onClose}>×</button>
-        </div>
-        <div className="m-tabs">
-          {tabs.map((s) => (
-            <button key={s} className={`m-tab ${tab === s ? "on" : ""}`} onClick={() => setTab(s)}>{s}</button>
-          ))}
+    <div className="cx-backdrop" onClick={onClose}>
+      <div className={"modal" + (soon ? " narrow" : "")} onClick={(e) => e.stopPropagation()}>
+        <div className="m-head">
+          <div className="m-icon">{meta.icon}</div>
+          <div><div className="m-title">{meta.title}</div><div className="m-sub">{meta.sub}</div></div>
+          {soon && <span className="pill-soon">soon</span>}
+          <button className="m-x" onClick={onClose} style={soon ? { marginLeft: 12 } : undefined}>✕</button>
         </div>
         <div className="m-body">
-          {newToken && (
-            <div className="tok-warn">
-              Copy your new token now — it won&apos;t be shown again.
-              <CodeBlock text={newToken} />
-            </div>
-          )}
-
-          {tab === "API" && (
+          {surface === "API" && (
             <>
-              <h4>Base URL</h4>
+              <p className="lead">Call the Context API to pull ranked, ACL-scoped company context into your own LLM — or get a fully grounded answer with citations.</p>
+              <div className="lbl">Base URL</div>
               <CodeBlock text={base} />
-              <h4>Endpoints</h4>
-              <div className="endpoint"><span className="verb">POST</span> /context — ranked, ACL-scoped context</div>
-              <div className="endpoint"><span className="verb">POST</span> /query — a grounded answer with citations</div>
-              <div className="endpoint"><span className="verb">POST</span> /search — faceted document search</div>
-              <h4>Example</h4>
+              <div className="lbl">Endpoints</div>
+              <div className="endpoint"><span className="verb">POST</span><code>/context</code><span className="desc">ranked context chunks for a query</span></div>
+              <div className="endpoint"><span className="verb">POST</span><code>/query</code><span className="desc">grounded answer + citations</span></div>
+              <div className="endpoint"><span className="verb">POST</span><code>/search</code><span className="desc">enterprise search results + facets</span></div>
+              <TokenManager />
+              <div className="lbl">Example — pull context with curl</div>
               <CodeBlock text={curl} />
-              <TokenManager onNewToken={setNewToken} />
             </>
           )}
 
-          {tab === "MCP" && (
+          {surface === "MCP" && (
             <>
-              <h4>Remote MCP endpoint</h4>
+              <p className="lead">SubStrateOS speaks the Model Context Protocol over a hosted HTTP endpoint. Paste the config below into your MCP client (Claude Desktop, Cursor, …) and it can search &amp; ask the company brain — scoped to your access.</p>
+              <div className="lbl">MCP server URL</div>
               <CodeBlock text={`${base}/mcp`} />
-              <h4>Add to your MCP client (mcp.json)</h4>
+              <div className="lbl">Config (mcp.json)</div>
               <CodeBlock text={mcpJson} />
-              <h4>Tools</h4>
-              <div className="tool"><code>ask_company_brain(query)</code> — a grounded answer, scoped to you.</div>
-              <div className="tool"><code>search_company_brain(query)</code> — matching documents.</div>
-              <TokenManager onNewToken={setNewToken} />
+              <div className="lbl">Tools your assistant gets</div>
+              <div className="toollist">
+                <div className="tool"><span className="tn">ask_company_brain</span><span className="td">— grounded answer with citations for a question</span></div>
+                <div className="tool"><span className="tn">search_company_brain</span><span className="td">— ranked context/results across connected sources</span></div>
+              </div>
+              <TokenManager ghost />
             </>
           )}
 
-          {(tab === "Web" || tab === "Teams" || tab === "Slack") && (
-            <div className="m-soon">
-              {tab === "Web"
-                ? "You're using the web app right now."
-                : `${tab} integration is coming soon.`}
-              {tab !== "Web" && <div><button className="m-btn" disabled>Notify me</button></div>}
+          {soon && (
+            <div className="soon-wrap">
+              <div className="big">{surface} app — coming soon</div>
+              <div>You&apos;ll add the SubStrateOS {surface} app, then <code>/ask</code> the brain or @mention it in any channel. Answers stay scoped to each user&apos;s access.</div>
+              <button className="btn ghost" style={{ marginTop: 16 }} disabled>Notify me</button>
             </div>
           )}
         </div>
@@ -460,11 +505,10 @@ export default function Chat() {
           <div className="title">Ask the brain</div>
           <span className="tenant">tenant · contoso</span>
           <div className="surfaces">
-            <button className="chip on" onClick={() => setConnectSurface("Web")}><span className="d" />Web</button>
-            <button className="chip" onClick={() => setConnectSurface("Teams")}>Teams</button>
-            <button className="chip" onClick={() => setConnectSurface("Slack")}>Slack</button>
-            <button className="chip" onClick={() => setConnectSurface("API")}>API</button>
-            <button className="chip" onClick={() => setConnectSurface("MCP")}>MCP</button>
+            <button className="chip on" onClick={() => setConnectSurface(null)}><span className="d" />Web</button>
+            {(["Teams", "Slack", "API", "MCP"] as Surface[]).map((s) => (
+              <button key={s} className={"chip" + (connectSurface === s ? " sel" : "")} onClick={() => setConnectSurface(s)}>{s}</button>
+            ))}
           </div>
         </header>
 
