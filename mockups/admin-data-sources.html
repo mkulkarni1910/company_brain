@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SubStrateOS Admin — Data Sources (table)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fefdfb; --paper-2:#f6f3ec; --surface:#fffefb; --surface-2:#ffffff;
+    --line:#d6cdb9; --line-soft:#e2dac9; --ink:#1a1611; --ink-dim:#4f4839; --ink-faint:#827a67;
+    --amber:#b06e0d; --amber-bg:#f6e7c8; --teal:#0f897e; --teal-bg:#d8efea;
+    --violet:#6a5acd; --rose:#c8546a; --green:#3f8f5e;
+    --radius:16px; --shadow:0 1px 2px rgba(60,50,30,.04), 0 18px 40px -26px rgba(80,60,25,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:
+      radial-gradient(900px 460px at 88% -16%, rgba(196,122,22,.05), transparent 60%),
+      radial-gradient(800px 600px at -8% 116%, rgba(15,137,126,.04), transparent 55%),
+      var(--paper);
+    color:var(--ink);font-family:"Archivo",-apple-system,sans-serif;
+    font-size:15px;line-height:1.6;letter-spacing:.05px;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:268px 1fr;height:100vh;overflow:hidden}
+
+  /* rail */
+  .rail{background:linear-gradient(180deg,#fbf9f4,#f4f1ea);border-right:1px solid var(--line-soft);
+    padding:22px 20px;display:flex;flex-direction:column;gap:26px;height:100vh}
+  .brand{display:flex;align-items:center;gap:11px}
+  .glyph{width:34px;height:34px;border-radius:10px;flex:none;position:relative;
+    background:radial-gradient(circle at 30% 25%,#ffcf7e,var(--amber) 60%,#9a5e0e);
+    box-shadow:0 0 0 1px rgba(196,122,22,.3),0 8px 18px -8px rgba(196,122,22,.6)}
+  .glyph::before{content:"";position:absolute;inset:7px;border-radius:50%;
+    background:conic-gradient(from 210deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0))}
+  .brand h1{font-family:"Fraunces",serif;font-weight:600;font-size:19px;margin:0}
+  .brand h1 span{color:var(--amber)}
+  .brand .sub{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;letter-spacing:2.2px;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);border-radius:7px;padding:2px 9px;margin-top:0}
+  .rail h2{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin:0 0 11px 2px;font-weight:500}
+  .nav{display:flex;flex-direction:column;gap:3px}
+  .nav a{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--ink-dim);text-decoration:none;font-size:13.5px;font-weight:500;transition:.18s}
+  .nav a .ic{width:16px;height:16px;opacity:.85;flex:none}
+  .nav a:hover{background:var(--surface);color:var(--ink)}
+  .nav a.active{background:linear-gradient(90deg,var(--amber-bg),transparent);color:var(--ink);box-shadow:inset 2px 0 0 var(--amber)}
+  .nav a.active .ic{opacity:1;color:var(--amber)}
+  .rail .foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid var(--line-soft)}
+  .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#e7dcc3,#cdbf9e);display:grid;place-items:center;font-size:12px;font-weight:700;color:#4a4334;flex:none}
+  .who{font-size:12.5px;font-weight:600;line-height:1.25}
+  .who span{display:block;font-size:10.5px;color:var(--ink-faint);font-weight:400;font-family:"JetBrains Mono",monospace}
+
+  /* main */
+  .main{height:100vh;overflow:auto}
+  .wrap{max-width:1120px;margin:0 auto;padding:34px 40px 70px}
+  .head h1{font-family:"Fraunces",serif;font-size:30px;font-weight:600;margin:0}
+  .head p{color:var(--ink-faint);margin:4px 0 0}
+
+  /* search + filters toolbar */
+  .toolbar{display:flex;align-items:center;gap:10px;margin-top:20px;flex-wrap:wrap}
+  .search{flex:1;min-width:240px;display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+  .search svg{width:15px;height:15px;color:var(--ink-faint);flex:none}
+  .search input{border:none;background:none;outline:none;font:inherit;font-size:13.5px;width:100%;color:var(--ink)}
+  .search input::placeholder{color:var(--ink-faint)}
+  .filter{position:relative}
+  .filter select{appearance:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+    padding:10px 34px 10px 14px;font:inherit;font-size:13px;color:var(--ink-dim);cursor:pointer;outline:none}
+  .filter::after{content:"▾";position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--ink-faint);font-size:11px;pointer-events:none}
+  .filter select:hover{border-color:#cabd9f}
+
+  .cat{margin-top:26px}
+  .cat-label{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);font-weight:500;margin:0 0 11px 2px}
+  .ds-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:500;text-align:left;padding:11px 20px;border-bottom:1px solid var(--line-soft);background:rgba(246,243,236,.5)}
+  tbody td{padding:13px 20px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:middle}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:rgba(255,255,255,.6)}
+  th.c-status,td.c-status{width:150px}
+  th.c-items,td.c-items{width:90px}
+  th.c-sync,td.c-sync{width:120px}
+  th.c-enable,td.c-enable{width:120px;text-align:right}
+  .empty{display:none;padding:48px 20px;text-align:center;color:var(--ink-faint);font-size:14px}
+  .empty.show{display:block}
+
+  .src-cell{display:flex;align-items:center;gap:13px}
+  .src-logo{width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line-soft);display:grid;place-items:center;flex:none;overflow:hidden}
+  .src-logo img{width:22px;height:22px;object-fit:contain;display:block}
+  .src-logo .tile{width:100%;height:100%;display:grid;place-items:center;color:#fff;font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:700;background:linear-gradient(135deg,#0a4c8b,#002050)}
+  .src-name b{font-size:13.5px;font-weight:600;display:block;line-height:1.25}
+  .src-name span{font-size:11.5px;color:var(--ink-faint)}
+
+  /* status: live/syncing show a dot; coming-soon is a quiet tag, no emblem */
+  .st{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-dim)}
+  .st .d{width:8px;height:8px;border-radius:50%;flex:none}
+  .st.live{color:var(--green)} .st.live .d{background:var(--green);box-shadow:0 0 7px rgba(63,143,94,.6)}
+  .st.syncing{color:var(--amber)} .st.syncing .d{background:var(--amber);animation:pulse 1.6s infinite}
+  .st.soon{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;
+    color:var(--ink-faint);border:1px solid var(--line-soft);background:var(--surface-2);border-radius:99px;padding:3px 10px}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  .items-v{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink)}
+  .sync-v{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-dim)}
+  .dash{color:var(--ink-faint)}
+
+  /* toggle switch (no text label) */
+  .sw{width:40px;height:23px;border-radius:99px;background:var(--line);position:relative;display:inline-block;
+    transition:.18s;cursor:pointer;border:none;flex:none;vertical-align:middle}
+  .sw::after{content:"";position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.18s}
+  .sw.on{background:var(--green)}
+  .sw.on::after{left:19.5px}
+  .sw.locked{opacity:.38;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- left rail -->
+  <aside class="rail">
+    <div class="brand">
+      <div class="glyph"></div>
+      <div><h1>SubStrate<span>OS</span></h1><div class="sub">Admin</div></div>
+    </div>
+    <div><h2>Workspace</h2><nav class="nav">
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</a>
+    </nav></div>
+    <div><h2>Connect</h2><nav class="nav">
+      <a href="#" class="active"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>Data Sources</a>
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5-9-5Z"/><path d="m3 13 9 5 9-5"/></svg>Surfaces</a>
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4 3 6.7 7 8 4-1.3 7-4 7-8V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.2-3.4"/></svg>Permissions</a>
+    </nav></div>
+    <div><h2>Build</h2><nav class="nav">
+      <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/><path d="m13.5 7-3 10"/></svg>Developer</a>
+    </nav></div>
+    <div class="foot"><div class="avatar">A</div><div class="who">Admin<span>t-eval</span></div></div>
+  </aside>
+
+  <!-- main -->
+  <main class="main">
+    <div class="wrap">
+      <div class="head">
+        <h1>Data Sources</h1>
+        <p>Connect sources to bring their content into the intelligence layer.</p>
+      </div>
+
+      <div class="toolbar">
+        <label class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="q" type="text" placeholder="Search sources…">
+        </label>
+        <div class="filter"><select id="fcat">
+          <option value="all">All categories</option>
+          <option>Document Repository</option><option>Messaging</option>
+          <option>Wiki / Knowledge</option><option>CRM</option>
+          <option>Tickets / Issues</option><option>Meetings</option>
+          <option>Email</option><option>Calendar</option>
+        </select></div>
+        <div class="filter"><select id="fstatus">
+          <option value="all">All statuses</option>
+          <option value="live">Live</option>
+          <option value="syncing">Syncing</option>
+          <option value="soon">Coming soon</option>
+        </select></div>
+      </div>
+
+      <div id="cats">
+        <!-- DOCUMENT REPOSITORY -->
+        <section class="cat" data-cat="Document Repository">
+          <div class="cat-label">Document Repository</div>
+          <div class="ds-card">
+            <table>
+              <thead><tr><th class="c-source">Source</th><th class="c-status">Status</th><th class="c-items">Items</th><th class="c-sync">Last Sync</th><th class="c-enable">Enable Sync</th></tr></thead>
+              <tbody>
+                <tr data-name="sharepoint" data-status="live">
+                  <td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/sharepoint.svg" alt=""></span><span class="src-name"><b>SharePoint</b><span>Sites &amp; document libraries</span></span></div></td>
+                  <td class="c-status"><span class="st live"><span class="d"></span>Live</span></td>
+                  <td class="c-items"><span class="items-v">1,204</span></td>
+                  <td class="c-sync"><span class="sync-v">2m ago</span></td>
+                  <td class="c-enable"><button class="sw on" aria-label="toggle"></button></td>
+                </tr>
+                <tr data-name="google drive" data-status="soon">
+                  <td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/google-drive.svg" alt=""></span><span class="src-name"><b>Google Drive</b><span>Files &amp; shared drives</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td>
+                  <td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td>
+                  <td class="c-enable"><button class="sw locked" title="Coming soon"></button></td>
+                </tr>
+                <tr data-name="box" data-status="soon">
+                  <td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/box.svg" alt=""></span><span class="src-name"><b>Box</b><span>Cloud content</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td>
+                  <td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td>
+                  <td class="c-enable"><button class="sw locked" title="Coming soon"></button></td>
+                </tr>
+                <tr data-name="dropbox" data-status="soon">
+                  <td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/dropbox.svg" alt=""></span><span class="src-name"><b>Dropbox</b><span>Files &amp; folders</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td>
+                  <td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td>
+                  <td class="c-enable"><button class="sw locked" title="Coming soon"></button></td>
+                </tr>
+              </tbody>
+            </table>          </div>
+        </section>
+
+        <!-- MESSAGING -->
+        <section class="cat" data-cat="Messaging">
+          <div class="cat-label">Messaging</div>
+          <div class="ds-card">
+            <table>
+              <thead><tr><th class="c-source">Source</th><th class="c-status">Status</th><th class="c-items">Items</th><th class="c-sync">Last Sync</th><th class="c-enable">Enable Sync</th></tr></thead>
+              <tbody>
+                <tr data-name="microsoft teams" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/teams.svg" alt=""></span><span class="src-name"><b>Microsoft Teams</b><span>Channels &amp; chats</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="slack" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/slack.svg" alt=""></span><span class="src-name"><b>Slack</b><span>Channels &amp; DMs</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="google chat" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/google-chat.svg" alt=""></span><span class="src-name"><b>Google Chat</b><span>Spaces &amp; messages</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+              </tbody>
+            </table>          </div>
+        </section>
+
+        <!-- WIKI / KNOWLEDGE -->
+        <section class="cat" data-cat="Wiki / Knowledge">
+          <div class="cat-label">Wiki / Knowledge</div>
+          <div class="ds-card">
+            <table>
+              <thead><tr><th class="c-source">Source</th><th class="c-status">Status</th><th class="c-items">Items</th><th class="c-sync">Last Sync</th><th class="c-enable">Enable Sync</th></tr></thead>
+              <tbody>
+                <tr data-name="confluence" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/confluence.svg" alt=""></span><span class="src-name"><b>Confluence</b><span>Spaces &amp; pages</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="notion" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/notion.svg" alt=""></span><span class="src-name"><b>Notion</b><span>Pages &amp; databases</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="coda" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/coda.svg" alt=""></span><span class="src-name"><b>Coda</b><span>Docs &amp; tables</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+              </tbody>
+            </table>          </div>
+        </section>
+
+        <!-- CRM -->
+        <section class="cat" data-cat="CRM">
+          <div class="cat-label">CRM</div>
+          <div class="ds-card">
+            <table>
+              <thead><tr><th class="c-source">Source</th><th class="c-status">Status</th><th class="c-items">Items</th><th class="c-sync">Last Sync</th><th class="c-enable">Enable Sync</th></tr></thead>
+              <tbody>
+                <tr data-name="salesforce" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/salesforce.svg" alt=""></span><span class="src-name"><b>Salesforce</b><span>Accounts &amp; opportunities</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="hubspot" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/hubspot.svg" alt=""></span><span class="src-name"><b>HubSpot</b><span>Contacts &amp; deals</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="microsoft dynamics" data-status="soon"><td><div class="src-cell"><span class="src-logo"><span class="tile">D365</span></span><span class="src-name"><b>Microsoft Dynamics</b><span>CRM records</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+              </tbody>
+            </table>          </div>
+        </section>
+
+        <!-- TICKETS / ISSUES -->
+        <section class="cat" data-cat="Tickets / Issues">
+          <div class="cat-label">Tickets / Issues</div>
+          <div class="ds-card">
+            <table>
+              <thead><tr><th class="c-source">Source</th><th class="c-status">Status</th><th class="c-items">Items</th><th class="c-sync">Last Sync</th><th class="c-enable">Enable Sync</th></tr></thead>
+              <tbody>
+                <tr data-name="jira" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/jira.svg" alt=""></span><span class="src-name"><b>Jira</b><span>Issues &amp; projects</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="linear" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/linear.svg" alt=""></span><span class="src-name"><b>Linear</b><span>Issues &amp; cycles</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="servicenow" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/servicenow.svg" alt=""></span><span class="src-name"><b>ServiceNow</b><span>Incidents &amp; tickets</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+              </tbody>
+            </table>          </div>
+        </section>
+
+        <!-- MEETINGS -->
+        <section class="cat" data-cat="Meetings">
+          <div class="cat-label">Meetings</div>
+          <div class="ds-card">
+            <table>
+              <thead><tr><th class="c-source">Source</th><th class="c-status">Status</th><th class="c-items">Items</th><th class="c-sync">Last Sync</th><th class="c-enable">Enable Sync</th></tr></thead>
+              <tbody>
+                <tr data-name="microsoft teams" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/teams.svg" alt=""></span><span class="src-name"><b>Microsoft Teams</b><span>Meeting recordings</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="zoom" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/zoom.svg" alt=""></span><span class="src-name"><b>Zoom</b><span>Recordings &amp; transcripts</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="google meet" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/google-meet.svg" alt=""></span><span class="src-name"><b>Google Meet</b><span>Recordings &amp; notes</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+              </tbody>
+            </table>          </div>
+        </section>
+
+        <!-- EMAIL -->
+        <section class="cat" data-cat="Email">
+          <div class="cat-label">Email</div>
+          <div class="ds-card">
+            <table>
+              <thead><tr><th class="c-source">Source</th><th class="c-status">Status</th><th class="c-items">Items</th><th class="c-sync">Last Sync</th><th class="c-enable">Enable Sync</th></tr></thead>
+              <tbody>
+                <tr data-name="outlook" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/outlook.svg" alt=""></span><span class="src-name"><b>Outlook</b><span>Mail &amp; threads</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="gmail" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/gmail.svg" alt=""></span><span class="src-name"><b>Gmail</b><span>Mail &amp; threads</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+              </tbody>
+            </table>          </div>
+        </section>
+
+        <!-- CALENDAR -->
+        <section class="cat" data-cat="Calendar">
+          <div class="cat-label">Calendar</div>
+          <div class="ds-card">
+            <table>
+              <thead><tr><th class="c-source">Source</th><th class="c-status">Status</th><th class="c-items">Items</th><th class="c-sync">Last Sync</th><th class="c-enable">Enable Sync</th></tr></thead>
+              <tbody>
+                <tr data-name="google calendar" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/google-calendar.svg" alt=""></span><span class="src-name"><b>Google Calendar</b><span>Events</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+                <tr data-name="outlook" data-status="soon"><td><div class="src-cell"><span class="src-logo"><img src="../web/public/logos/outlook.svg" alt=""></span><span class="src-name"><b>Outlook</b><span>Events</span></span></div></td>
+                  <td class="c-status"><span class="st soon">Coming soon</span></td><td class="c-items"><span class="dash">—</span></td><td class="c-sync"><span class="dash">—</span></td><td class="c-enable"><button class="sw locked" title="Coming soon"></button></td></tr>
+              </tbody>
+            </table>          </div>
+        </section>
+      </div>
+      <div id="empty" class="empty">No sources match your search.</div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const q = document.getElementById('q');
+  const fcat = document.getElementById('fcat');
+  const fstatus = document.getElementById('fstatus');
+  const empty = document.getElementById('empty');
+  function apply(){
+    const term = q.value.trim().toLowerCase();
+    const cat = fcat.value;
+    const st = fstatus.value;
+    let total = 0;
+    document.querySelectorAll('.cat').forEach(sec => {
+      const catOk = (cat === 'all' || sec.dataset.cat === cat);
+      let visible = 0;
+      sec.querySelectorAll('tbody tr').forEach(tr => {
+        const ok = catOk
+          && (!term || tr.dataset.name.includes(term))
+          && (st === 'all' || tr.dataset.status === st);
+        tr.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+      });
+      // hide the whole category table when nothing in it matches
+      sec.style.display = visible ? '' : 'none';
+      total += visible;
+    });
+    empty.classList.toggle('show', total === 0);
+  }
+  [q, fcat, fstatus].forEach(el => el.addEventListener('input', apply));
+  // demo: clicking an unlocked switch flips it
+  document.querySelectorAll('.sw:not(.locked)').forEach(s =>
+    s.addEventListener('click', () => s.classList.toggle('on')));
+</script>
+</body>
+</html>
