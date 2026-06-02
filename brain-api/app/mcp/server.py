@@ -8,6 +8,7 @@ the resolved User in a ContextVar the tool wrappers read.
 """
 from __future__ import annotations
 
+import contextlib
 import logging
 from contextvars import ContextVar
 
@@ -108,3 +109,23 @@ class AuthMiddleware:
 def build_mcp_asgi():
     """The Streamable-HTTP ASGI app wrapped with PAT auth. Mount at /mcp."""
     return AuthMiddleware(mcp.streamable_http_app())
+
+
+_session_started = False
+
+
+@contextlib.asynccontextmanager
+async def run_session_manager():
+    """Run the Streamable-HTTP session manager exactly once.
+
+    The manager can only ``.run()`` once per instance and ``mcp`` is a
+    module-level singleton, but the TestClient re-enters the app lifespan for
+    every test. So we start it on the first lifespan entry and no-op on any
+    later one. Production enters the lifespan exactly once."""
+    global _session_started
+    if _session_started:
+        yield
+        return
+    _session_started = True
+    async with mcp.session_manager.run():
+        yield

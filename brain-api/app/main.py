@@ -8,6 +8,7 @@ from app.acl.store import ACLStore
 from app.activity.signal import ActivitySignal
 from app.activity.store import ActivityStore
 from app.api.admin import router as admin_router
+from app.api.context import router as context_router
 from app.api.conversations import router as conversations_router
 from app.api.discover import router as discover_router
 from app.api.feedback import router as feedback_router
@@ -15,6 +16,7 @@ from app.api.history import router as history_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
 from app.api.search import router as search_router
+from app.api.tokens import router as tokens_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
 from app.connectors.cosmos_store import CosmosConnectionStore
@@ -26,6 +28,7 @@ from app.generation.azure_openai import AzureOpenAIClient
 from app.generation.gemini import GeminiClient
 from app.history.store import HistoryStore
 from app.live_fetch.graph_search import MSGraphSearchFetcher
+from app.mcp.server import build_mcp_asgi, mcp_bind, run_session_manager
 from app.metrics.store import MetricsStore
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.orchestrator.planner import QueryPlanner
@@ -35,6 +38,7 @@ from app.ranking.personalized_ranker import PersonalizedRanker
 from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
 from app.search.service import SearchService
+from app.tokens.store import CosmosTokenStore, NullTokenStore
 
 
 @asynccontextmanager
@@ -91,10 +95,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.connection_store = CosmosConnectionStore(graph=app.state.people_graph)
     else:
         app.state.connection_store = ConnectionStore()
+    # PATs: Cosmos (reuses the people graph) when configured, else a no-op store.
+    if _s.cosmos_gremlin_endpoint and _s.cosmos_gremlin_key:
+        app.state.token_store = CosmosTokenStore(graph=app.state.people_graph)
+    else:
+        app.state.token_store = NullTokenStore()
     app.state.metrics_store = MetricsStore()
     app.state.sharepoint = SharePointConnector()
+    mcp_bind(
+        orchestrator=app.state.orchestrator,
+        search=app.state.search_service,
+        token_store=app.state.token_store,
+    )
     try:
-        yield
+        if get_settings().mcp_enabled:
+            async with run_session_manager():
+                yield
+        else:
+            yield
     finally:
         await app.state.orchestrator.aclose()
         await app.state.acl_store.aclose()
@@ -108,6 +126,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.llm.aclose()
         await app.state.connection_store.aclose()
         await app.state.metrics_store.aclose()
+        await app.state.token_store.aclose()
 
 
 app = FastAPI(title="brain-api", version="0.1.0", lifespan=lifespan)
@@ -130,6 +149,11 @@ app.include_router(history_router)
 app.include_router(discover_router)
 app.include_router(search_router)
 app.include_router(conversations_router)
+app.include_router(tokens_router)
+app.include_router(context_router)
+
+if get_settings().mcp_enabled:
+    app.mount("/mcp", build_mcp_asgi())
 
 
 @app.get("/healthz")
