@@ -35,7 +35,11 @@ def _apply_pilot_tenant(user: User) -> User:
 
 
 async def resolve_user(
-    *, easy_auth: str | None, authorization: str | None, debug_header: str | None
+    *,
+    easy_auth: str | None,
+    authorization: str | None,
+    debug_header: str | None,
+    token_store=None,
 ) -> User:
     if easy_auth:  # Container Apps Easy Auth (production)
         try:
@@ -43,8 +47,17 @@ async def resolve_user(
         except InvalidToken as e:
             raise HTTPException(status_code=401, detail=f"invalid principal: {e}") from e
     if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1]
+        # Personal Access Token: only when a token_store is supplied (Context API,
+        # /query, /search). A leaked PAT therefore can't authenticate token
+        # management, which never passes a token_store.
+        if token_store is not None and token.startswith(get_settings().token_prefix):
+            user = await token_store.resolve(token)
+            if user is None:
+                raise HTTPException(status_code=401, detail="invalid token")
+            return _apply_pilot_tenant(user)
         try:
-            return _apply_pilot_tenant(await user_from_bearer(authorization.split(" ", 1)[1]))
+            return _apply_pilot_tenant(await user_from_bearer(token))
         except InvalidToken as e:
             raise HTTPException(status_code=401, detail=f"invalid token: {e}") from e
     if get_settings().enable_debug_auth and debug_header:
