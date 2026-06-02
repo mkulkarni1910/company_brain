@@ -14,7 +14,7 @@ import json
 import logging
 import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.config import get_settings
 from app.domain.identity import User
@@ -30,7 +30,22 @@ def _hash(plaintext: str) -> str:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
+
+
+# Only re-write last_used_at after this many seconds, so an authenticated PAT
+# doesn't trigger a Cosmos write on every Context API / MCP request.
+_LAST_USED_THROTTLE_S = 300
+
+
+def _stale(last_used_at: str | None) -> bool:
+    if not last_used_at:
+        return True
+    try:
+        prev = datetime.fromisoformat(last_used_at)
+    except (TypeError, ValueError):
+        return True
+    return (datetime.now(UTC) - prev).total_seconds() >= _LAST_USED_THROTTLE_S
 
 
 def _meta_from_data(d: dict) -> TokenMeta:
@@ -125,12 +140,14 @@ class CosmosTokenStore:
             d = json.loads(rows[0])
         except Exception:  # noqa: BLE001
             return None
-        # Best-effort last_used_at bump (re-upsert with refreshed record).
-        d["last_used_at"] = _now()
-        await self._upsert(
-            token_id=d["token_id"], tenant=d["tenant_id"], user_id=d["user_id"],
-            token_hash=_hash(plaintext), data=json.dumps(d),
-        )
+        # Best-effort last_used_at bump, throttled so we don't write to Cosmos on
+        # every programmatic call (the MCP middleware resolves on each request).
+        if _stale(d.get("last_used_at")):
+            d["last_used_at"] = _now()
+            await self._upsert(
+                token_id=d["token_id"], tenant=d["tenant_id"], user_id=d["user_id"],
+                token_hash=_hash(plaintext), data=json.dumps(d),
+            )
         return User(
             user_id=d["user_id"], tenant_id=d["tenant_id"],
             email=d.get("email", f"{d['user_id']}@token"),
@@ -146,7 +163,7 @@ class NullTokenStore:
         return
 
     async def create(self, *, user: User, name: str) -> tuple[TokenMeta, str]:
-        meta = TokenMeta(token_id="", name=name, masked="(unavailable)", created_at=datetime.now(timezone.utc))
+        meta = TokenMeta(token_id="", name=name, masked="(unavailable)", created_at=datetime.now(UTC))
         return meta, ""
 
     async def list(self, *, user: User) -> list[TokenMeta]:
