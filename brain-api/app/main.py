@@ -17,6 +17,7 @@ from app.api.retrieve import router as retrieve_router
 from app.api.search import router as search_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
+from app.connectors.cosmos_store import CosmosConnectionStore
 from app.connectors.sharepoint import SharePointConnector
 from app.connectors.store import ConnectionStore
 from app.conversations.store import ConversationStore
@@ -82,7 +83,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         search=app.state.ai_search,
         people=app.state.people_graph,
     )
-    app.state.connection_store = ConnectionStore()
+    # Durable connector state: Cosmos (reuses the people graph connection) when
+    # configured — e.g. the India deploy has no Redis; else the Redis store
+    # (which itself no-ops when AZURE_REDIS_HOST is unset).
+    _s = get_settings()
+    if _s.cosmos_gremlin_endpoint and _s.cosmos_gremlin_key:
+        app.state.connection_store = CosmosConnectionStore(graph=app.state.people_graph)
+    else:
+        app.state.connection_store = ConnectionStore()
     app.state.metrics_store = MetricsStore()
     app.state.sharepoint = SharePointConnector()
     try:
