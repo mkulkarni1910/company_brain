@@ -13,6 +13,7 @@ import logging
 from contextvars import ContextVar
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from app.domain.identity import User
 from app.domain.query import QueryRequest
@@ -20,7 +21,16 @@ from app.domain.query import QueryRequest
 logger = logging.getLogger(__name__)
 
 # Serve at the mount root so app.mount("/mcp", ...) yields exactly /mcp.
-mcp = FastMCP("substrateos", stateless_http=True, streamable_http_path="/")
+# DNS-rebinding host validation defaults to localhost-only; behind Container Apps
+# the public host isn't localhost, and this is a bearer-authenticated
+# server-to-server API (no browser origin), so we disable that check — otherwise
+# every real client is rejected with "Invalid Host header".
+mcp = FastMCP(
+    "substrateos",
+    stateless_http=True,
+    streamable_http_path="/",
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+)
 
 _state: dict = {}
 _current_user: ContextVar[User | None] = ContextVar("mcp_user", default=None)
