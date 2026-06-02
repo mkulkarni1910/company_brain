@@ -256,7 +256,7 @@ function CodeBlock({ text }: { text: string }) {
 // Token manager matching web-chat-light.html: rich rows (name · created/last-used ·
 // masked value), a "＋ Create token" → name form → one-time reveal flow. Wired to
 // the real /tokens API (created_at + last_used_at come straight from TokenMeta).
-function TokenManager({ ghost }: { ghost?: boolean }) {
+function TokenManager() {
   const [tokens, setTokens] = useState<TokenMeta[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -324,7 +324,7 @@ function TokenManager({ ghost }: { ghost?: boolean }) {
       )}
 
       {!creating && (
-        <button className={"btn" + (ghost ? " ghost" : "")} style={{ marginTop: 6 }} onClick={() => { setCreating(true); setFresh(null); }}>
+        <button className="btn" style={{ marginTop: 6 }} onClick={() => { setCreating(true); setFresh(null); }}>
           ＋ Create token
         </button>
       )}
@@ -402,7 +402,7 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
                 <div className="tool"><span className="tn">ask_company_brain</span><span className="td">— grounded answer with citations for a question</span></div>
                 <div className="tool"><span className="tn">search_company_brain</span><span className="td">— ranked context/results across connected sources</span></div>
               </div>
-              <TokenManager ghost />
+              <TokenManager />
             </>
           )}
 
@@ -410,7 +410,6 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
             <div className="soon-wrap">
               <div className="big">{surface} app — coming soon</div>
               <div>You&apos;ll add the SubStrateOS {surface} app, then <code>/ask</code> the brain or @mention it in any channel. Answers stay scoped to each user&apos;s access.</div>
-              <button className="btn ghost" style={{ marginTop: 16 }} disabled>Notify me</button>
             </div>
           )}
         </div>
