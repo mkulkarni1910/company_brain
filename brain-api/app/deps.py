@@ -61,6 +61,10 @@ def get_conversation_store(request: Request) -> "ConversationStore | None":
     return getattr(request.app.state, "conversation_store", None)
 
 
+def get_token_store(request: Request):
+    return getattr(request.app.state, "token_store", None)
+
+
 def get_connection_store(request: Request):
     return request.app.state.connection_store
 
