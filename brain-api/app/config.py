@@ -73,6 +73,11 @@ class Settings(BaseSettings):
     connector_max_items: int = 500
     cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # Programmatic access (Context API + MCP)
+    token_prefix: str = "sbx_live_"
+    mcp_enabled: bool = True
+    public_base_url: str | None = None  # brain-api URL surfaced to the UI for snippets
+
     # ACL store
     acl_doc_ttl_seconds: int | None = None  # None = persistent (live ACL is authoritative)
     acl_fail_closed_on_missing: bool = False  # strict: drop docs with no live ACL entry
