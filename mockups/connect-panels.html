@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SubStrateOS · Connect (API / MCP) panels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#fefdfb; --paper-2:#f6f3ec; --surface:#fffefb; --surface-2:#ffffff;
+    --panel:#f5f1e8; --line:#d6cdb9; --line-soft:#e2dac9;
+    --ink:#1a1611; --ink-dim:#4f4839; --ink-faint:#827a67;
+    --amber:#b06e0d; --amber-bg:#f6e7c8; --teal:#0f897e; --teal-bg:#d8efea;
+    --violet:#6a5acd; --green:#3f8f5e; --shadow:0 1px 2px rgba(60,50,30,.04),0 18px 40px -26px rgba(80,60,25,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);font-family:"Archivo",sans-serif;font-size:15px;line-height:1.6;
+    background:radial-gradient(900px 460px at 88% -16%,rgba(196,122,22,.05),transparent 60%),var(--paper);-webkit-font-smoothing:antialiased;padding:30px}
+  h2.section{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin:8px 0 14px}
+
+  /* mock topbar to show the clickable chips */
+  .topbar{display:flex;align-items:center;gap:14px;padding:14px 20px;border:1px solid var(--line-soft);border-radius:14px;background:rgba(254,253,251,.9);margin-bottom:26px;max-width:1000px}
+  .topbar .title{font-family:"Fraunces",serif;font-size:16px;font-weight:500}
+  .topbar .tenant{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-faint);border:1px solid var(--line);padding:3px 9px;border-radius:99px}
+  .surfaces{margin-left:auto;display:flex;gap:7px}
+  .surfaces .chip{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.6px;color:var(--ink-dim);border:1px solid var(--line);border-radius:99px;padding:5px 11px;display:flex;align-items:center;gap:6px;cursor:pointer;transition:.15s}
+  .surfaces .chip:hover{border-color:var(--amber);color:var(--ink)}
+  .surfaces .chip.on{color:var(--ink);border-color:#cabd9f;background:var(--surface)}
+  .surfaces .chip .d{width:6px;height:6px;border-radius:50%;background:var(--teal)}
+  .surfaces .chip.sel{background:var(--amber-bg);border-color:#e6d3a8;color:var(--ink)}
+
+  /* connect modal */
+  .modal{width:680px;max-width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:34px}
+  .m-head{display:flex;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line-soft)}
+  .m-icon{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line-soft);font-size:17px}
+  .m-title{font-family:"Fraunces",serif;font-size:18px;font-weight:500}
+  .m-sub{font-size:12.5px;color:var(--ink-faint)}
+  .m-x{margin-left:auto;color:var(--ink-faint);cursor:pointer;font-size:18px}
+  /* surface tabs inside modal */
+  .m-tabs{display:flex;gap:6px;padding:12px 22px 0;flex-wrap:wrap}
+  .m-tab{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.5px;color:var(--ink-dim);border:1px solid var(--line);border-radius:99px;padding:5px 12px;cursor:pointer}
+  .m-tab.on{background:var(--amber-bg);border-color:#e6d3a8;color:var(--ink)}
+  .m-body{padding:18px 22px 22px}
+  .lead{font-size:14px;color:var(--ink-dim);margin:0 0 16px}
+  .lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin:18px 0 8px}
+  .lbl:first-child{margin-top:0}
+
+  .code{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:#fbf8f1;border:1px solid var(--line-soft);border-radius:10px;padding:12px 14px;color:var(--ink);white-space:pre;overflow:auto;position:relative}
+  .code .cp{position:absolute;top:8px;right:8px;font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 7px;cursor:pointer}
+  .endpoint{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line-soft);font-size:13.5px}
+  .endpoint:last-child{border-bottom:none}
+  .verb{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:500;color:var(--teal);background:var(--teal-bg);border:1px solid rgba(15,137,126,.3);border-radius:5px;padding:2px 7px}
+  .endpoint code{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--ink)}
+  .endpoint .desc{margin-left:auto;color:var(--ink-faint);font-size:12px}
+
+  /* token manager */
+  .tok-row{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:8px}
+  .tok-name{font-weight:600;font-size:13.5px}
+  .tok-meta{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-faint)}
+  .tok-val{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-dim)}
+  .revoke{margin-left:auto;font-size:12px;color:var(--rose,#c8546a);background:none;border:1px solid rgba(200,84,106,.3);border-radius:7px;padding:4px 10px;cursor:pointer}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--amber);color:#fff;border:none;border-radius:9px;padding:8px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+  .newtok{background:linear-gradient(180deg,#fff8ea,#fffdf8);border:1px solid #ecd9ad;border-radius:11px;padding:13px 15px;margin-bottom:8px}
+  .newtok .warn{font-size:11.5px;color:var(--amber);margin-top:8px}
+  .pill-soon{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-faint);background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:3px 9px}
+  .toollist{display:flex;flex-direction:column;gap:8px}
+  .tool{display:flex;gap:10px;align-items:flex-start;background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;padding:11px 13px}
+  .tool .tn{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--teal)}
+  .tool .td{font-size:12.5px;color:var(--ink-dim)}
+  .soon-wrap{text-align:center;padding:26px 10px;color:var(--ink-faint)}
+  .soon-wrap .big{font-family:"Fraunces",serif;font-size:18px;color:var(--ink);margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<h2 class="section">Topbar — chips are now clickable</h2>
+<div class="topbar">
+  <div class="title">Ask the brain</div>
+  <span class="tenant">tenant · contoso</span>
+  <div class="surfaces">
+    <span class="chip on"><span class="d"></span>Web</span>
+    <span class="chip">Teams</span>
+    <span class="chip">Slack</span>
+    <span class="chip sel">API</span>
+    <span class="chip">MCP</span>
+  </div>
+</div>
+
+<h2 class="section">Panel A — clicking “API” → Context API + token manager</h2>
+<div class="modal">
+  <div class="m-head">
+    <div class="m-icon">🔌</div>
+    <div><div class="m-title">Use SubStrateOS via API</div><div class="m-sub">Grounded company context for your own apps & agents</div></div>
+    <div class="m-x">✕</div>
+  </div>
+  <div class="m-tabs">
+    <span class="m-tab">Web</span><span class="m-tab">Teams</span><span class="m-tab">Slack</span>
+    <span class="m-tab on">API</span><span class="m-tab">MCP</span>
+  </div>
+  <div class="m-body">
+    <p class="lead">Call the Context API to pull ranked, ACL-scoped company context into your own LLM — or get a fully grounded answer with citations.</p>
+
+    <div class="lbl">Base URL</div>
+    <div class="code"><span class="cp">copy</span>https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io</div>
+
+    <div class="lbl">Endpoints</div>
+    <div class="endpoint"><span class="verb">POST</span><code>/context</code><span class="desc">ranked context chunks for a query</span></div>
+    <div class="endpoint"><span class="verb">POST</span><code>/query</code><span class="desc">grounded answer + citations</span></div>
+    <div class="endpoint"><span class="verb">POST</span><code>/search</code><span class="desc">enterprise search results + facets</span></div>
+
+    <div class="lbl">Personal access tokens</div>
+    <div class="newtok">
+      <div style="display:flex;align-items:center;gap:10px"><b style="font-size:13.5px">sbx_live_9f3c…a210</b><span class="cp" style="position:static">copy</span></div>
+      <div class="warn">⚠ Copy this now — you won’t be able to see it again.</div>
+    </div>
+    <div class="tok-row"><div><div class="tok-name">my-laptop</div><div class="tok-meta">created 2d ago · last used 3h ago</div></div><span class="tok-val">sbx_live_••••a210</span><button class="revoke">Revoke</button></div>
+    <div class="tok-row"><div><div class="tok-name">ci-pipeline</div><div class="tok-meta">created 9d ago · never used</div></div><span class="tok-val">sbx_live_••••77b1</span><button class="revoke">Revoke</button></div>
+    <button class="btn" style="margin-top:6px">＋ Create token</button>
+
+    <div class="lbl">Example — pull context with curl</div>
+    <div class="code"><span class="cp">copy</span>curl -s https://brain-api…azurecontainerapps.io/context \
+  -H "Authorization: Bearer $SUBSTRATE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"what is our PTO policy?","top":6}'</div>
+  </div>
+</div>
+
+<h2 class="section">Panel B — clicking “MCP” → connect from Claude / Cursor</h2>
+<div class="modal">
+  <div class="m-head">
+    <div class="m-icon">🧩</div>
+    <div><div class="m-title">Use SubStrateOS via MCP</div><div class="m-sub">Connect your AI assistant to the company brain</div></div>
+    <div class="m-x">✕</div>
+  </div>
+  <div class="m-tabs">
+    <span class="m-tab">Web</span><span class="m-tab">Teams</span><span class="m-tab">Slack</span>
+    <span class="m-tab">API</span><span class="m-tab on">MCP</span>
+  </div>
+  <div class="m-body">
+    <p class="lead">SubStrateOS speaks the Model Context Protocol over a hosted HTTP endpoint. Paste the config below into your MCP client (Claude Desktop, Cursor, …) and it can search & ask the company brain — scoped to your access.</p>
+
+    <div class="lbl">MCP server URL</div>
+    <div class="code"><span class="cp">copy</span>https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io/mcp</div>
+
+    <div class="lbl">Config (mcp.json)</div>
+    <div class="code"><span class="cp">copy</span>{
+  "mcpServers": {
+    "substrateos": {
+      "url": "https://brain-api…azurecontainerapps.io/mcp",
+      "headers": { "Authorization": "Bearer sbx_live_…" }
+    }
+  }
+}</div>
+    <button class="btn ghost" style="margin-top:10px">＋ Create token</button>
+
+    <div class="lbl">Tools your assistant gets</div>
+    <div class="toollist">
+      <div class="tool"><span class="tn">ask_company_brain</span><span class="td">— grounded answer with citations for a question</span></div>
+      <div class="tool"><span class="tn">search_company_brain</span><span class="td">— ranked context/results across connected sources</span></div>
+    </div>
+  </div>
+</div>
+
+<h2 class="section">Panel C — Slack / Teams (honest “coming soon”)</h2>
+<div class="modal" style="width:520px">
+  <div class="m-head">
+    <div class="m-icon">💬</div>
+    <div><div class="m-title">Use SubStrateOS in Slack</div><div class="m-sub">Ask the brain without leaving your channels</div></div>
+    <span class="pill-soon">soon</span>
+  </div>
+  <div class="m-body">
+    <div class="soon-wrap">
+      <div class="big">Slack app — coming soon</div>
+      <div>You’ll add the SubStrateOS Slack app, then <code>/ask</code> the brain or @mention it in any channel. Answers stay scoped to each user’s access.</div>
+      <button class="btn ghost" style="margin-top:16px">Notify me</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
