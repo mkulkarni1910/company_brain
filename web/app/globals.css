@@ -384,7 +384,9 @@
   @media(max-width:880px){.tiles{grid-template-columns:repeat(2,1fr)}.admin-cols{grid-template-columns:1fr}}
 
 /* ---- Connect panels (API / MCP / Slack / Teams) — matches mockups/web-chat-light.html ---- */
-.surfaces .chip { background: none; font: inherit; cursor: pointer; }
+/* NOTE: no `font`/`font-family` here — `.surfaces .chip` above already sets mono +
+   10px; a `font: inherit` shorthand would reset font-size and blow the chips up. */
+.surfaces .chip { background: none; cursor: pointer; }
 .surfaces .chip.sel { background: var(--amber-bg); border-color: #e6d3a8; color: var(--ink); }
 
 .cx-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 30px;
