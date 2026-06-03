@@ -29,7 +29,7 @@ def _chunk(doc_id: str) -> Chunk:
 
 
 class _FakeRetriever:
-    async def retrieve(self, *, query, user, k):
+    async def retrieve(self, *, query, user, k, timer=None):
         return [Candidate(chunk=_chunk("idx-1"), sources_hit={"vector"},
                           raw_scores={"content_rrf": 0.9})]
 

@@ -21,7 +21,7 @@ def _chunk(doc_id: str, source: str, acl: list[str]) -> Chunk:
 
 
 class _FakeRetriever:
-    async def retrieve(self, *, query, user, k):
+    async def retrieve(self, *, query, user, k, timer=None):
         return [Candidate(chunk=_chunk("idx-1", "uploaded", ["t-test:everyone"]),
                           sources_hit={"vector"}, raw_scores={"content_rrf": 0.9})]
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.domain.identity import User
 from app.domain.query import Candidate
 from app.generation.azure_openai import AzureOpenAIClient
+from app.orchestrator.timing import StageTimer, maybe_stage
 from app.retrieval.ai_search_client import AISearchClient
 
 # Reciprocal Rank Fusion constant (standard default; dampens top-rank dominance).
@@ -21,9 +22,13 @@ class HybridRetriever:
         self._search = search
         self._embedder = embedder
 
-    async def retrieve(self, *, query: str, user: User, k: int = 30) -> list[Candidate]:
-        vec = await self._embedder.embed(query)
-        chunks = await self._search.hybrid_search(query=query, user=user, vector=vec, top=k)
+    async def retrieve(
+        self, *, query: str, user: User, k: int = 30, timer: StageTimer | None = None
+    ) -> list[Candidate]:
+        async with maybe_stage(timer, "embed"):
+            vec = await self._embedder.embed(query)
+        async with maybe_stage(timer, "search"):
+            chunks = await self._search.hybrid_search(query=query, user=user, vector=vec, top=k)
         return [
             Candidate(
                 chunk=c,

@@ -43,7 +43,7 @@ class _FakeRetriever:
     def __init__(self, candidates: list[Candidate]) -> None:
         self._candidates = candidates
 
-    async def retrieve(self, *, query: str, user: User, k: int) -> list[Candidate]:
+    async def retrieve(self, *, query: str, user: User, k: int, timer=None) -> list[Candidate]:
         return list(self._candidates)
 
 

@@ -1,3 +1,5 @@
+import logging
+import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -42,10 +44,46 @@ from app.retrieval.hybrid_retriever import HybridRetriever
 from app.search.service import SearchService
 from app.tokens.store import CosmosTokenStore, NullTokenStore
 
+logger = logging.getLogger("app.startup")
+
+
+def _configure_observability(app: FastAPI) -> None:
+    """Make pipeline timing visible. Two parts, both best-effort:
+
+    1. Logging — nothing configures it otherwise, so app `INFO` logs (incl. the
+       per-stage query timings) are dropped by the default WARNING root. Set the
+       `app` logger to the configured level and ensure a stdout handler exists.
+    2. Azure Monitor OTel — already a dependency but never initialized, so App
+       Insights had no dependency telemetry. Initializing it auto-instruments
+       httpx (Gemini + Azure OpenAI + Search) so each external call shows up as a
+       timed dependency span alongside our stage logs. Must run BEFORE clients are
+       constructed so their httpx sessions are patched.
+    """
+    settings = get_settings()
+    level = getattr(logging, settings.brain_log_level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(name)s %(message)s"
+    )
+    logging.getLogger("app").setLevel(level)
+
+    cs = settings.applicationinsights_connection_string
+    if not cs:
+        return
+    try:
+        from azure.monitor.opentelemetry import configure_azure_monitor
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        configure_azure_monitor(connection_string=cs)
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("Azure Monitor OTel initialized (httpx dependency tracing on)")
+    except Exception as e:  # noqa: BLE001 — telemetry must never block startup
+        logger.warning("Azure Monitor OTel init skipped: %s", e)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     load_secrets_from_keyvault(get_settings())
+    _configure_observability(app)  # logging + OTel before any httpx client is built
     app.state.embedder = AzureOpenAIClient()  # embeddings (vector search)
     app.state.llm = GeminiClient()            # answer generation (Gemini 2.5 Pro)
     app.state.ai_search = AISearchClient()
