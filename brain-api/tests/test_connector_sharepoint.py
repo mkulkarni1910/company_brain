@@ -5,6 +5,7 @@ import pytest
 from app.connectors.sharepoint import SharePointConnector, _parse_drive_children, _parse_sites
 from app.connectors.sync import CollectResult
 
+
 def test_parse_sites():
     data={"value":[{"id":"s1","displayName":"Sales","webUrl":"https://x/sales"},
                    {"id":"s2","name":"Eng","webUrl":"https://x/eng"}]}
@@ -28,6 +29,48 @@ async def test_list_sites_degrades_on_error(monkeypatch):
     async def boom(*a, **k): raise RuntimeError("401")
     monkeypatch.setattr(c, "_get_json", boom)
     assert await c.list_sites()==[]
+
+@pytest.mark.asyncio
+async def test_list_sites_uses_getallsites_and_paginates(monkeypatch):
+    """Org-wide enumeration must use /sites/getAllSites (not the app-only-broken
+    /sites?search=*) and follow @odata.nextLink across pages."""
+    c = SharePointConnector()
+    calls = []
+    page1 = {"value": [{"id": "s1", "displayName": "A", "webUrl": "u1"}],
+             "@odata.nextLink": "https://graph.microsoft.com/v1.0/sites/getAllSites?page=2"}
+    page2 = {"value": [{"id": "s2", "displayName": "B", "webUrl": "u2"}]}
+    async def fake_get(url, self=None):
+        calls.append(url)
+        return page1 if "page=2" not in url else page2
+    monkeypatch.setattr(c, "_get_json", fake_get)
+    sites = await c.list_sites()
+    assert [s["site_id"] for s in sites] == ["s1", "s2"]
+    assert "getAllSites" in calls[0] and "search=*" not in calls[0]
+    assert any("page=2" in u for u in calls)  # followed the nextLink
+
+
+@pytest.mark.asyncio
+async def test_graph_get_json_raises_with_body(monkeypatch):
+    """A Graph 4xx must surface its response BODY (the real reason), not just the
+    status — so connectors can report e.g. 'Tenant does not have a SPO license'."""
+    import app.connectors.graph as g
+
+    class FakeResp:
+        status_code = 400
+        text = '{"error":{"code":"BadRequest","message":"Tenant does not have a SPO license."}}'
+        def json(self): return {}
+
+    class FakeClient:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def get(self, url, headers=None): return FakeResp()
+
+    monkeypatch.setattr(g.httpx, "AsyncClient", FakeClient)
+    with pytest.raises(g.GraphError) as ei:
+        await g.graph_get_json("tok", "https://graph.microsoft.com/v1.0/sites/root")
+    assert ei.value.status_code == 400
+    assert "SPO license" in ei.value.body
 
 @pytest.mark.asyncio
 async def test_list_files_degrades_on_error(monkeypatch):
@@ -61,7 +104,9 @@ async def test_token_uses_connected_tenant(monkeypatch):
         def __init__(self, *a, **k): pass
         async def __aenter__(self): return self
         async def __aexit__(self, *a): return False
-        async def post(self, url, data=None): captured["url"] = url; return FakeResp()
+        async def post(self, url, data=None):
+            captured["url"] = url
+            return FakeResp()
 
     monkeypatch.setattr(sp.httpx, "AsyncClient", FakeClient)
     c = sp.SharePointConnector(tenant_id="tenantX")

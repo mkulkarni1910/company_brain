@@ -46,10 +46,27 @@ async def graph_token(tenant_id: str | None) -> str:
         await cred.close()
 
 
+class GraphError(RuntimeError):
+    """A Microsoft Graph HTTP error that preserves the response BODY.
+
+    httpx's default `raise_for_status()` message includes the status and URL but
+    drops the body — which is where Graph puts the actual reason (e.g. "Tenant does
+    not have a SPO license", "Access denied"). Connectors log/surface this, so the
+    admin sees why a sync found nothing instead of a bare "0 indexed".
+    """
+
+    def __init__(self, status_code: int, url: str, body: str) -> None:
+        self.status_code = status_code
+        self.url = url
+        self.body = body
+        super().__init__(f"Graph {status_code} for {url}: {body[:500]}")
+
+
 async def graph_get_json(token: str, url: str) -> dict:
     async with httpx.AsyncClient(timeout=15.0) as http:
         r = await http.get(url, headers={"Authorization": f"Bearer {token}"})
-        r.raise_for_status()
+        if r.status_code >= 400:
+            raise GraphError(r.status_code, url, r.text)
         return r.json()
 
 

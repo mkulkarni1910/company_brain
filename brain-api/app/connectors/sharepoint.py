@@ -70,11 +70,21 @@ class SharePointConnector:
         return await graph_get_json(await self._token(), url)
 
     async def list_sites(self) -> list[dict]:
+        """Enumerate all sites org-wide via /sites/getAllSites (app-only friendly;
+        needs Sites.Read.All). The previous /sites?search=* is a delegated, user-
+        context search that returns 400 ("Tenant does not have a SPO license") under
+        app-only auth and also misses private/newly-created group sites. Paginates
+        @odata.nextLink. The error is logged with its Graph body (see GraphError)."""
         try:
-            data = await self._get_json(f"{_GRAPH}/sites?search=*&$top=50")
-            return _parse_sites(data)
+            sites: list[dict] = []
+            url = f"{_GRAPH}/sites/getAllSites?$select=id,displayName,webUrl&$top=100"
+            while url:
+                data = await self._get_json(url)
+                sites.extend(_parse_sites(data))
+                url = data.get("@odata.nextLink", "")
+            return sites
         except Exception as e:  # noqa: BLE001
-            logger.warning("list_sites failed (Graph perm pending?): %s", e)
+            logger.warning("list_sites failed: %s", e)
             return []
 
     async def list_files(self, site_id: str, max_items: int | None = None) -> list[RemoteFile]:
