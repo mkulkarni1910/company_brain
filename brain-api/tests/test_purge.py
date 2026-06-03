@@ -3,6 +3,7 @@ import fnmatch
 
 import app.retrieval.ai_search_client as aisc
 from app.acl.store import ACLStore
+from app.activity.store import ActivityStore
 
 
 class _FakeSearchCli:
@@ -92,3 +93,15 @@ def test_clear_tenant_deletes_only_matching():
     n = asyncio.run(store.clear_tenant(tenant_id="t-eval"))
     assert n == 2
     assert sorted(store._r.deleted) == ["acl:doc:t-eval:d1", "acl:doc:t-eval:d2"]
+
+
+# ---------------------------------------------------------------------------
+# ActivityStore.purge_tenant
+# ---------------------------------------------------------------------------
+
+
+def test_purge_tenant_noop_without_cluster():
+    store = ActivityStore.__new__(ActivityStore)
+    store._client = None
+    store._db = "brain"
+    assert asyncio.run(store.purge_tenant(tenant_id="t-eval")) is None

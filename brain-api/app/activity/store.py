@@ -212,3 +212,31 @@ class ActivityStore:
             (row["Source"], int(row["events"]), float(row["score"]))
             for row in resp.primary_results[0]
         ]
+
+    async def purge_tenant(self, *, tenant_id: str) -> int | None:
+        """Best-effort soft-delete of this tenant's events. Returns the number of
+        records removed, or None when no cluster is configured. Raises on an ADX
+        failure so the caller can record it (e.g. missing managed-identity grant).
+
+        tenant_id is server config (brain_tenant_id), not user input, so it is
+        inlined safely — consistent with the inlined ints in the Discover queries.
+        """
+        if self._client is None:
+            return None
+        safe = tenant_id.replace('"', '\\"')
+
+        def _count():
+            q = f'{_TABLE} | where TenantId == "{safe}" | count'
+            return self._client.execute_query(self._db, q)
+
+        resp = await asyncio.to_thread(_count)
+        rows = list(resp.primary_results[0])
+        n = int(rows[0]["Count"]) if rows else 0
+
+        cmd = f'.delete table {_TABLE} records <| {_TABLE} | where TenantId == "{safe}"'
+
+        def _del():
+            return self._client.execute_mgmt(self._db, cmd)
+
+        await asyncio.to_thread(_del)
+        return n
