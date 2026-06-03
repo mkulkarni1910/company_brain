@@ -82,7 +82,7 @@ export async function postQuery(query: string, conversationId?: string): Promise
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, include_debug: true, ...(conversationId ? { conversation_id: conversationId } : {}) }),
   });
-  if (!resp.ok) throw new Error(`brain-api ${resp.status}: ${await resp.text()}`);
+  if (!resp.ok) throw new Error(`substrateos-api ${resp.status}: ${await resp.text()}`);
   const answer = (await resp.json()) as Answer;
   return { answer, latencyMs: Math.round(performance.now() - t0) };
 }
@@ -184,7 +184,7 @@ export type TokenMeta = {
 };
 export type TokenCreated = { token: string; meta: TokenMeta };
 
-// The brain-api base URL — surfaced in copy-paste snippets in the Connect panels.
+// The substrateos-api base URL — surfaced in copy-paste snippets in the Connect panels.
 export function apiBaseUrl(): string {
   return API_BASE;
 }

@@ -335,9 +335,9 @@ function TokenManager() {
 const SURFACE_META: Record<Surface, { icon: string; title: string; sub: string }> = {
   Web:   { icon: "🌐", title: "Use SubStrateOS on the web", sub: "You're using it right now" },
   API:   { icon: "🔌", title: "Use SubStrateOS via API", sub: "Grounded company context for your own apps & agents" },
-  MCP:   { icon: "🧩", title: "Use SubStrateOS via MCP", sub: "Connect your AI assistant to the company brain" },
-  Slack: { icon: "💬", title: "Use SubStrateOS in Slack", sub: "Ask the brain without leaving your channels" },
-  Teams: { icon: "💬", title: "Use SubStrateOS in Teams", sub: "Ask the brain without leaving your channels" },
+  MCP:   { icon: "🧩", title: "Use SubStrateOS via MCP", sub: "Connect your AI assistant to SubStrateOS" },
+  Slack: { icon: "💬", title: "Use SubStrateOS in Slack", sub: "Ask SubStrateOS without leaving your channels" },
+  Teams: { icon: "💬", title: "Use SubStrateOS in Teams", sub: "Ask SubStrateOS without leaving your channels" },
 };
 
 function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => void }) {
@@ -392,7 +392,7 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
 
           {surface === "MCP" && (
             <>
-              <p className="lead">SubStrateOS speaks the Model Context Protocol over a hosted HTTP endpoint. Paste the config below into your MCP client (Claude Desktop, Cursor, …) and it can search &amp; ask the company brain — scoped to your access.</p>
+              <p className="lead">SubStrateOS speaks the Model Context Protocol over a hosted HTTP endpoint. Paste the config below into your MCP client (Claude Desktop, Cursor, …) and it can search &amp; ask SubStrateOS — scoped to your access.</p>
               <div className="lbl">MCP server URL</div>
               <CodeBlock text={`${base}/mcp`} />
               <div className="lbl">Config (mcp.json)</div>
@@ -409,7 +409,7 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
           {soon && (
             <div className="soon-wrap">
               <div className="big">{surface} app — coming soon</div>
-              <div>You&apos;ll add the SubStrateOS {surface} app, then <code>/ask</code> the brain or @mention it in any channel. Answers stay scoped to each user&apos;s access.</div>
+              <div>You&apos;ll add the SubStrateOS {surface} app, then <code>/ask</code> SubStrateOS or @mention it in any channel. Answers stay scoped to each user&apos;s access.</div>
             </div>
           )}
         </div>
@@ -501,7 +501,7 @@ export default function Chat() {
       {view === "ask" && (
       <main className="main">
         <header className="topbar">
-          <div className="title">Ask the brain</div>
+          <div className="title">Ask SubStrateOS</div>
           <span className="tenant">tenant · contoso</span>
           <div className="surfaces">
             <button className="chip on" onClick={() => setConnectSurface(null)}><span className="d" />Web</button>
