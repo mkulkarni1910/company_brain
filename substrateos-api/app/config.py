@@ -63,12 +63,12 @@ class Settings(BaseSettings):
     # App Insights (optional in dev)
     applicationinsights_connection_string: str | None = None
 
-    # Brain
-    brain_tenant_id: str = "t-test"
-    brain_log_level: str = "INFO"
+    # SubStrateOS
+    substrateos_tenant_id: str = "t-test"
+    substrateos_log_level: str = "INFO"
     enable_debug_auth: bool = False
     # Single-org pilot: map every authenticated real user (Easy Auth / Bearer)
-    # onto `brain_tenant_id` and grant the `<brain_tenant_id>:everyone` group, so
+    # onto `substrateos_tenant_id` and grant the `<substrateos_tenant_id>:everyone` group, so
     # the loaded corpus is reachable without per-user provisioning. Off in tests.
     pilot_single_tenant: bool = False
     admin_api_key: str | None = None
@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     connector_max_items: int = 500
     # SharePoint admin-consent OAuth
     web_base_url: str = "http://localhost:3000"        # post-callback redirect (env WEB_BASE_URL)
-    brain_api_base_url: str = "http://localhost:8000"  # our public base, for the OAuth redirect_uri (env BRAIN_API_BASE_URL)
+    substrateos_api_base_url: str = "http://localhost:8000"  # our public base, for the OAuth redirect_uri (env SUBSTRATEOS_API_BASE_URL)
     oauth_state_ttl_seconds: int = 600
     cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
@@ -92,7 +92,7 @@ class Settings(BaseSettings):
     # Programmatic access (Context API + MCP)
     token_prefix: str = "sbx_live_"
     mcp_enabled: bool = True
-    public_base_url: str | None = None  # brain-api URL surfaced to the UI for snippets
+    public_base_url: str | None = None  # substrateos-api URL surfaced to the UI for snippets
 
     # ACL store
     acl_doc_ttl_seconds: int | None = None  # None = persistent (live ACL is authoritative)

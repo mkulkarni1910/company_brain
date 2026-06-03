@@ -67,13 +67,13 @@ def test_parse_messages_html_stripped():
             }
         ]
     }
-    docs = _parse_messages(data, "t1", "c1", "Engineering", "General", "brain-t")
+    docs = _parse_messages(data, "t1", "c1", "Engineering", "General", "sos-t")
     assert len(docs) == 1
     doc = docs[0]
     assert doc.doc_id == "teams:t1:c1:m1"
     assert doc.source == "teams"
-    assert doc.tenant_id == "brain-t"
-    assert doc.acl_principals == ["brain-t:everyone"]
+    assert doc.tenant_id == "sos-t"
+    assert doc.acl_principals == ["sos-t:everyone"]
     assert doc.title == "Engineering / General"
     assert "Hello" in doc.body and "<p>" not in doc.body
     assert doc.author_id == "u1"
@@ -92,7 +92,7 @@ def test_parse_messages_plain_text():
             }
         ]
     }
-    docs = _parse_messages(data, "t1", "c1", "T", "C", "brain-t")
+    docs = _parse_messages(data, "t1", "c1", "T", "C", "sos-t")
     assert len(docs) == 1
     assert docs[0].body == "Plain message"
 
@@ -114,7 +114,7 @@ def test_parse_messages_skips_system_messages():
             },
         ]
     }
-    docs = _parse_messages(data, "t1", "c1", "T", "C", "brain-t")
+    docs = _parse_messages(data, "t1", "c1", "T", "C", "sos-t")
     assert len(docs) == 1
     assert docs[0].doc_id == "teams:t1:c1:m1"
 
@@ -136,7 +136,7 @@ def test_parse_messages_skips_empty_body():
             },
         ]
     }
-    docs = _parse_messages(data, "t1", "c1", "T", "C", "brain-t")
+    docs = _parse_messages(data, "t1", "c1", "T", "C", "sos-t")
     assert docs == []
 
 
@@ -151,7 +151,7 @@ def test_parse_messages_doc_id_format():
             }
         ]
     }
-    docs = _parse_messages(data, "team-1", "chan-2", "T", "C", "brain-t")
+    docs = _parse_messages(data, "team-1", "chan-2", "T", "C", "sos-t")
     assert docs[0].doc_id == "teams:team-1:chan-2:msg-abc"
 
 
@@ -166,9 +166,9 @@ def test_parse_messages_acl_uses_brain_tenant():
             }
         ]
     }
-    docs = _parse_messages(data, "t1", "c1", "T", "C", "my-brain-tenant")
-    assert docs[0].acl_principals == ["my-brain-tenant:everyone"]
-    assert docs[0].tenant_id == "my-brain-tenant"
+    docs = _parse_messages(data, "t1", "c1", "T", "C", "my-substrateos-tenant")
+    assert docs[0].acl_principals == ["my-substrateos-tenant:everyone"]
+    assert docs[0].tenant_id == "my-substrateos-tenant"
 
 
 # ---- collect_documents degradation tests ----
@@ -202,7 +202,7 @@ async def test_collect_documents_degrades_on_get_json_error(monkeypatch):
 @pytest.mark.asyncio
 async def test_collect_documents_returns_docs_from_fake_graph(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
 
     c = TeamsConnector(tenant_id="tenantX")
@@ -238,9 +238,9 @@ async def test_collect_documents_returns_docs_from_fake_graph(monkeypatch):
     assert len(result.docs) == 1
     doc = result.docs[0]
     assert doc.doc_id == "teams:t1:c1:m1"
-    assert doc.tenant_id == "brain-t"
+    assert doc.tenant_id == "sos-t"
     assert doc.source == "teams"
-    assert doc.acl_principals == ["brain-t:everyone"]
+    assert doc.acl_principals == ["sos-t:everyone"]
     assert doc.body == "Hello team"
     assert result.skipped == 0
     assert result.truncated is False
@@ -249,7 +249,7 @@ async def test_collect_documents_returns_docs_from_fake_graph(monkeypatch):
 @pytest.mark.asyncio
 async def test_collect_documents_skips_system_messages_increments_skipped(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
 
     c = TeamsConnector(tenant_id="tenantX")
@@ -292,7 +292,7 @@ async def test_collect_documents_skips_system_messages_increments_skipped(monkey
 @pytest.mark.asyncio
 async def test_collect_documents_truncates_at_cap(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
 
     c = TeamsConnector(tenant_id="tenantX")

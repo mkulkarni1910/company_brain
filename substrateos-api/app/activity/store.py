@@ -218,7 +218,7 @@ class ActivityStore:
         records removed, or None when no cluster is configured. Raises on an ADX
         failure so the caller can record it (e.g. missing managed-identity grant).
 
-        tenant_id is server config (brain_tenant_id), not user input, so it is
+        tenant_id is server config (substrateos_tenant_id), not user input, so it is
         inlined safely — consistent with the inlined ints in the Discover queries.
         """
         if self._client is None:

@@ -60,7 +60,7 @@ def _configure_observability(app: FastAPI) -> None:
        constructed so their httpx sessions are patched.
     """
     settings = get_settings()
-    level = getattr(logging, settings.brain_log_level.upper(), logging.INFO)
+    level = getattr(logging, settings.substrateos_log_level.upper(), logging.INFO)
     logging.basicConfig(
         level=level, stream=sys.stdout, format="%(asctime)s %(levelname)s %(name)s %(message)s"
     )

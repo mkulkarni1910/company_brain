@@ -75,8 +75,8 @@ async def oauth_connect(
         raise HTTPException(status_code=400, detail=f"unknown provider: {provider!r}")
     s = get_settings()
     state = secrets.token_urlsafe(24)
-    await store.put_oauth_state(state, s.brain_tenant_id, provider)
-    redirect_uri = f"{s.brain_api_base_url.rstrip('/')}/admin/connections/oauth/callback"
+    await store.put_oauth_state(state, s.substrateos_tenant_id, provider)
+    redirect_uri = f"{s.substrateos_api_base_url.rstrip('/')}/admin/connections/oauth/callback"
     return {"auth_url": admin_consent_url(
         client_id=s.azure_client_id or "", redirect_uri=redirect_uri, state=state)}
 
@@ -165,8 +165,8 @@ async def sharepoint_connect(store: ConnectionStore = Depends(get_connection_sto
     """Back-compat: same as /oauth/connect?provider=sharepoint but uses the old redirect_uri."""
     s = get_settings()
     state = secrets.token_urlsafe(24)
-    await store.put_oauth_state(state, s.brain_tenant_id, "sharepoint")
-    redirect_uri = f"{s.brain_api_base_url.rstrip('/')}/admin/connections/sharepoint/callback"
+    await store.put_oauth_state(state, s.substrateos_tenant_id, "sharepoint")
+    redirect_uri = f"{s.substrateos_api_base_url.rstrip('/')}/admin/connections/sharepoint/callback"
     return {"auth_url": admin_consent_url(
         client_id=s.azure_client_id or "", redirect_uri=redirect_uri, state=state)}
 
@@ -214,7 +214,7 @@ async def ingest(
 
 @router.post("/seed-people")
 async def seed_people(users_limit: int = 50, groups_limit: int = 50) -> dict:
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     gc = PeopleGraphClient()
     try:
         seeder = PeopleSeeder(graph=gc, tenant_id=tenant)
@@ -282,7 +282,7 @@ async def purge_everything(
     """Tenant-scoped purge: index docs (primary) + best-effort ACL + activity.
     Connections are intentionally kept so sources can be re-synced. Partial
     failures are reported in `errors`, never hidden."""
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     errors: list[str] = []
 
     # Primary: index documents. If this raises, the whole request 500s.
@@ -321,7 +321,7 @@ async def stats(
     metrics=Depends(get_metrics_store),
     ai_search=Depends(get_ai_search),
 ) -> dict:
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     conns = await store.list_connections(tenant)
     items = await ai_search.count_docs(tenant_id=tenant)
     activity = await store.recent_activity(tenant, limit=10)
@@ -352,7 +352,7 @@ async def stats(
 async def list_connections(
     store: ConnectionStore = Depends(get_connection_store),
 ) -> list[dict]:
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     return [c.model_dump(mode="json") for c in await store.list_connections(tenant)]
 
 
@@ -371,7 +371,7 @@ async def create_connection(
     sp: SharePointConnector = Depends(get_sharepoint),
     pipeline=Depends(get_ingest_pipeline),
 ) -> dict:
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     conn = Connection(
         connection_id=uuid.uuid4().hex, tenant_id=tenant, type="sharepoint",
         site_id=body.site_id, name=body.name or body.site_id,
@@ -391,7 +391,7 @@ async def resync(
     sp: SharePointConnector = Depends(get_sharepoint),
     pipeline=Depends(get_ingest_pipeline),
 ) -> dict:
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     conn = await store.get_connection(tenant, connection_id)
     if not conn:
         raise HTTPException(status_code=404, detail="connection not found")
@@ -405,7 +405,7 @@ async def disconnect(
     connection_id: str,
     store: ConnectionStore = Depends(get_connection_store),
 ) -> dict:
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     await store.delete_connection(tenant, connection_id)
     return {"connection_id": connection_id, "deleted": True}
 
@@ -415,7 +415,7 @@ async def connection_job(
     connection_id: str,
     store: ConnectionStore = Depends(get_connection_store),
 ) -> dict:
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     conn = await store.get_connection(tenant, connection_id)
     if not conn or not conn.last_job_id:
         return {"status": "unknown"}

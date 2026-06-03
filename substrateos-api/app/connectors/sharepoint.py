@@ -127,7 +127,7 @@ class SharePointConnector:
         from app.connectors.sync import CollectResult
         from app.domain.chunk import SourceDoc
 
-        brain_tenant = get_settings().brain_tenant_id
+        brain_tenant = get_settings().substrateos_tenant_id
         docs: list[SourceDoc] = []
         skipped = 0
         truncated = False

@@ -36,7 +36,7 @@ def test_event_body_composes_fields():
 
 
 def test_parse_events_fields_and_acl():
-    docs = _parse_events({"value": [_event("e1", ical="ICAL-1")]}, "owner-1", "brain-t")
+    docs = _parse_events({"value": [_event("e1", ical="ICAL-1")]}, "owner-1", "sos-t")
     assert len(docs) == 1
     d = docs[0]
     assert d.doc_id == "outlookcal:ICAL-1"
@@ -44,11 +44,11 @@ def test_parse_events_fields_and_acl():
     assert d.acl_principals == ["owner-1"]
     assert d.author_id == "org@x.com"
     assert d.title == "Sync"
-    assert d.tenant_id == "brain-t"
+    assert d.tenant_id == "sos-t"
 
 
 def test_parse_events_falls_back_to_event_id():
-    docs = _parse_events({"value": [_event("e9", ical=None)]}, "o", "brain-t")
+    docs = _parse_events({"value": [_event("e9", ical=None)]}, "o", "sos-t")
     assert docs[0].doc_id == "outlookcal:e9"
 
 
@@ -58,13 +58,13 @@ def test_parse_events_skips_removed_and_empty():
         {"id": "e2", "subject": "", "body": {"contentType": "text", "content": ""},
          "start": {}, "attendees": []},
     ]}
-    assert _parse_events(data, "o", "brain-t") == []
+    assert _parse_events(data, "o", "sos-t") == []
 
 
 @pytest.mark.asyncio
 async def test_collect_dedups_across_calendars(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
     c = OutlookCalendarConnector(tenant_id="tenantX")
 

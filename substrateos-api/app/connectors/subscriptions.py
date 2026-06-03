@@ -66,7 +66,7 @@ async def create_subscription(
     resource = resource_for(provider, user_id)
     body = {
         "changeType": "created,updated,deleted",
-        "notificationUrl": f"{s.brain_api_base_url.rstrip('/')}/admin/connections/webhook",
+        "notificationUrl": f"{s.substrateos_api_base_url.rstrip('/')}/admin/connections/webhook",
         "resource": resource,
         "expirationDateTime": _expiry_iso(s.subscription_ttl_minutes),
         "clientState": s.graph_webhook_client_state,

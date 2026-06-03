@@ -132,7 +132,7 @@ class OutlookMailConnector:
         """BFS users → messages → deduped SourceDocs (ACL union). Caps unique docs."""
         from app.connectors.sync import CollectResult
 
-        brain_tenant = get_settings().brain_tenant_id
+        brain_tenant = get_settings().substrateos_tenant_id
         by_id: dict = {}
         skipped = 0
         truncated = False
@@ -158,7 +158,7 @@ class OutlookMailConnector:
     async def delta(self, user_id: str, token: str | None = None):
         """Incremental messages for one mailbox. Returns (docs, new_delta_link).
         `token` is a previously stored @odata.deltaLink (a full URL) or None."""
-        brain_tenant = get_settings().brain_tenant_id
+        brain_tenant = get_settings().substrateos_tenant_id
         url = token or f"{GRAPH}/users/{user_id}/mailFolders('inbox')/messages/delta?{_MSG_SELECT}"
         docs: list = []
         delta_link: str | None = None
@@ -180,7 +180,7 @@ class OutlookMailConnector:
 
     async def fetch_message(self, user_id: str, message_id: str):  # -> SourceDoc | None
         """Fetch a single message (used by the realtime webhook). None on error/empty."""
-        brain_tenant = get_settings().brain_tenant_id
+        brain_tenant = get_settings().substrateos_tenant_id
         try:
             data = await self._get_json(
                 f"{GRAPH}/users/{user_id}/messages/{message_id}?{_MSG_SELECT}"

@@ -158,7 +158,7 @@ class TeamsConnector:
         Caps at `cap` docs. Degrades to CollectResult() on any error (never raises)."""
         from app.connectors.sync import CollectResult
 
-        brain_tenant = get_settings().brain_tenant_id
+        brain_tenant = get_settings().substrateos_tenant_id
         docs = []
         skipped = 0
         truncated = False

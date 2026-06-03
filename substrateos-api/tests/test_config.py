@@ -18,5 +18,5 @@ def test_settings_loads_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.azure_tenant_id == "tid-1"
     assert s.azure_ai_search_index == "brain-content-t-test"
     assert s.azure_openai_api_version == "2024-10-21"  # default
-    assert s.brain_tenant_id == "t-test"               # default
+    assert s.substrateos_tenant_id == "t-test"               # default
     assert s.azure_redis_port == 6380                  # default

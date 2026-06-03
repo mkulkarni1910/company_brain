@@ -162,7 +162,7 @@ class OutlookCalendarConnector:
     async def collect_documents(self, cap: int):  # -> CollectResult
         from app.connectors.sync import CollectResult
 
-        brain_tenant = get_settings().brain_tenant_id
+        brain_tenant = get_settings().substrateos_tenant_id
         by_id: dict = {}
         skipped = 0
         truncated = False
@@ -186,7 +186,7 @@ class OutlookCalendarConnector:
 
     async def delta(self, user_id: str, token: str | None = None):
         """Incremental events for one calendar. Returns (docs, new_delta_link)."""
-        brain_tenant = get_settings().brain_tenant_id
+        brain_tenant = get_settings().substrateos_tenant_id
         if token:
             url = token
         else:
@@ -214,7 +214,7 @@ class OutlookCalendarConnector:
         return docs, delta_link
 
     async def fetch_event(self, user_id: str, event_id: str):  # -> SourceDoc | None
-        brain_tenant = get_settings().brain_tenant_id
+        brain_tenant = get_settings().substrateos_tenant_id
         try:
             data = await self._get_json(
                 f"{GRAPH}/users/{user_id}/events/{event_id}?{_EVENT_SELECT}"

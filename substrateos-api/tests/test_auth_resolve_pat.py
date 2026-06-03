@@ -15,7 +15,7 @@ class FakeTokenStore:
 def _pilot_on():
     s = get_settings()
     s.pilot_single_tenant = True
-    s.brain_tenant_id = "t-eval"
+    s.substrateos_tenant_id = "t-eval"
 
 
 @pytest.mark.asyncio

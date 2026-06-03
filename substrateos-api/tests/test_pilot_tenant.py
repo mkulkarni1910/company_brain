@@ -18,7 +18,7 @@ def _user() -> User:
 def test_pilot_off_leaves_user_unchanged(monkeypatch) -> None:
     monkeypatch.setattr(
         _auth_resolve, "get_settings",
-        lambda: SimpleNamespace(pilot_single_tenant=False, brain_tenant_id="t-eval"),
+        lambda: SimpleNamespace(pilot_single_tenant=False, substrateos_tenant_id="t-eval"),
     )
     u = _auth_resolve._apply_pilot_tenant(_user())
     assert u.tenant_id == "f3bddc3c-aad-guid"
@@ -28,7 +28,7 @@ def test_pilot_off_leaves_user_unchanged(monkeypatch) -> None:
 def test_pilot_on_remaps_tenant_and_grants_everyone(monkeypatch) -> None:
     monkeypatch.setattr(
         _auth_resolve, "get_settings",
-        lambda: SimpleNamespace(pilot_single_tenant=True, brain_tenant_id="t-eval"),
+        lambda: SimpleNamespace(pilot_single_tenant=True, substrateos_tenant_id="t-eval"),
     )
     u = _auth_resolve._apply_pilot_tenant(_user())
     assert u.tenant_id == "t-eval"

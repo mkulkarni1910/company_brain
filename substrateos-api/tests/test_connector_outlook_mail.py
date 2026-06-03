@@ -26,12 +26,12 @@ def _msg(mid, imid=None, subject="Hi", html=False, content="Hello world", sender
 
 def test_parse_messages_html_stripped_and_fields():
     data = {"value": [_msg("m1", imid="<abc@x>", html=True, content="<p>Hello <b>team</b></p>")]}
-    docs = _parse_messages(data, "owner-1", "brain-t")
+    docs = _parse_messages(data, "owner-1", "sos-t")
     assert len(docs) == 1
     d = docs[0]
     assert d.doc_id == "outlookmail:<abc@x>"
     assert d.source == "outlook_mail"
-    assert d.tenant_id == "brain-t"
+    assert d.tenant_id == "sos-t"
     assert d.acl_principals == ["owner-1"]
     assert d.title == "Hi"
     assert "Hello" in d.body and "team" in d.body and "<p>" not in d.body
@@ -40,25 +40,25 @@ def test_parse_messages_html_stripped_and_fields():
 
 
 def test_parse_messages_falls_back_to_message_id_when_no_internet_id():
-    docs = _parse_messages({"value": [_msg("m9", imid=None)]}, "owner-1", "brain-t")
+    docs = _parse_messages({"value": [_msg("m9", imid=None)]}, "owner-1", "sos-t")
     assert docs[0].doc_id == "outlookmail:owner-1:m9"
 
 
 def test_parse_messages_skips_when_no_subject_and_no_body():
     data = {"value": [{"id": "m1", "subject": "  ",
                        "body": {"contentType": "text", "content": "   "}}]}
-    assert _parse_messages(data, "o", "brain-t") == []
+    assert _parse_messages(data, "o", "sos-t") == []
 
 
 def test_parse_messages_skips_removed_tombstones():
     data = {"value": [{"id": "m1", "@removed": {"reason": "deleted"}}]}
-    assert _parse_messages(data, "o", "brain-t") == []
+    assert _parse_messages(data, "o", "sos-t") == []
 
 
 def test_parse_messages_subject_only_is_kept():
     data = {"value": [{"id": "m1", "subject": "Only subject",
                        "body": {"contentType": "text", "content": ""}}]}
-    docs = _parse_messages(data, "o", "brain-t")
+    docs = _parse_messages(data, "o", "sos-t")
     assert len(docs) == 1
     assert "Only subject" in docs[0].body
 
@@ -66,8 +66,8 @@ def test_parse_messages_subject_only_is_kept():
 # ---- merge / union ----
 
 def test_merge_into_unions_acl_on_collision():
-    a = _parse_messages({"value": [_msg("m1", imid="<same@x>")]}, "owner-A", "brain-t")
-    b = _parse_messages({"value": [_msg("m1", imid="<same@x>")]}, "owner-B", "brain-t")
+    a = _parse_messages({"value": [_msg("m1", imid="<same@x>")]}, "owner-A", "sos-t")
+    b = _parse_messages({"value": [_msg("m1", imid="<same@x>")]}, "owner-B", "sos-t")
     by_id: dict = {}
     _merge_into(by_id, a)
     _merge_into(by_id, b)
@@ -80,7 +80,7 @@ def test_merge_into_unions_acl_on_collision():
 @pytest.mark.asyncio
 async def test_collect_dedups_across_mailboxes_with_acl_union(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
     c = OutlookMailConnector(tenant_id="tenantX")
 
@@ -104,7 +104,7 @@ async def test_collect_dedups_across_mailboxes_with_acl_union(monkeypatch):
 @pytest.mark.asyncio
 async def test_collect_truncates_at_cap(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
     c = OutlookMailConnector(tenant_id="tenantX")
 
@@ -138,7 +138,7 @@ async def test_collect_degrades_on_token_error(monkeypatch):
 @pytest.mark.asyncio
 async def test_fetch_message_returns_sourcedoc(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
     c = OutlookMailConnector(tenant_id="tenantX")
 
@@ -156,7 +156,7 @@ async def test_fetch_message_returns_sourcedoc(monkeypatch):
 @pytest.mark.asyncio
 async def test_delta_returns_docs_and_link(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
     c = OutlookMailConnector(tenant_id="tenantX")
 

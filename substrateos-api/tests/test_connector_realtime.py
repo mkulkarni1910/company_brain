@@ -71,7 +71,7 @@ def _conn(provider="outlook_mail", status="live"):
 @pytest.fixture(autouse=True)
 def _env(monkeypatch):
     from app.config import get_settings
-    monkeypatch.setenv("BRAIN_TENANT_ID", "t-eval")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "t-eval")
     monkeypatch.setenv("GRAPH_WEBHOOK_CLIENT_STATE", "secret123")
     get_settings.cache_clear()
     yield

@@ -121,7 +121,7 @@ async def test_collect_documents_builds_source_docs(monkeypatch):
     from app.config import get_settings
     from app.connectors.models import RemoteFile
 
-    monkeypatch.setenv("BRAIN_TENANT_ID", "brain-t")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "sos-t")
     get_settings.cache_clear()
 
     now = datetime.now(UTC)
@@ -160,9 +160,9 @@ async def test_collect_documents_builds_source_docs(monkeypatch):
     assert result.truncated is False
     doc = result.docs[0]
     assert doc.doc_id == "sp:s1:f1"
-    assert doc.tenant_id == "brain-t"
+    assert doc.tenant_id == "sos-t"
     assert doc.source == "sharepoint"
-    assert doc.acl_principals == ["brain-t:everyone"]
+    assert doc.acl_principals == ["sos-t:everyone"]
     assert doc.title == "plan.md"
 
 

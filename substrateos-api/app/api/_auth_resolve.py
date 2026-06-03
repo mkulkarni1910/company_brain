@@ -29,8 +29,8 @@ def _apply_pilot_tenant(user: User) -> User:
     s = get_settings()
     if not s.pilot_single_tenant:
         return user
-    user.tenant_id = s.brain_tenant_id
-    user.group_ids = set(user.group_ids) | {f"{s.brain_tenant_id}:everyone"}
+    user.tenant_id = s.substrateos_tenant_id
+    user.group_ids = set(user.group_ids) | {f"{s.substrateos_tenant_id}:everyone"}
     return user
 
 

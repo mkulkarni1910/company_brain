@@ -13,5 +13,5 @@ def resolve_synthetic_acl(
 ) -> list[str]:
     if overrides:
         return list(overrides)
-    tenant = get_settings().brain_tenant_id
+    tenant = get_settings().substrateos_tenant_id
     return [f"{tenant}:everyone"]

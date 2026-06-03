@@ -85,7 +85,7 @@ async def ingest_notifications(
     """Process a Graph notification batch. Verifies clientState; fetches each changed
     resource and ingests it (ACL-union). Returns count ingested. Never raises."""
     expected = get_settings().graph_webhook_client_state
-    brain_tenant = get_settings().brain_tenant_id
+    brain_tenant = get_settings().substrateos_tenant_id
     conns = await conn_store.list_connections(brain_tenant)
     processed = 0
     for note in payload.get("value", []):
@@ -134,7 +134,7 @@ async def run_maintenance(
     from datetime import UTC, datetime, timedelta
 
     s = get_settings()
-    brain_tenant = s.brain_tenant_id
+    brain_tenant = s.substrateos_tenant_id
     summary = {"renewed": 0, "created": 0, "deleted": 0, "ingested": 0}
     try:
         conns = [c for c in await conn_store.list_connections(brain_tenant) if c.type in _OUTLOOK]

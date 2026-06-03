@@ -41,7 +41,7 @@ class StateRedis:
 
 def _build_app(monkeypatch, **overrides):
     monkeypatch.setenv("ADMIN_API_KEY", "k")
-    monkeypatch.setenv("BRAIN_TENANT_ID", "t-eval")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "t-eval")
     get_settings.cache_clear()
     app = FastAPI()
     app.include_router(router)
