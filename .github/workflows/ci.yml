@@ -7,9 +7,9 @@ on:
     branches: [main]
 
 jobs:
-  brain-api:
+  substrateos-api:
     runs-on: ubuntu-latest
-    defaults: { run: { working-directory: brain-api } }
+    defaults: { run: { working-directory: substrateos-api } }
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3

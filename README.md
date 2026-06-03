@@ -21,19 +21,19 @@ Azure services.
 ```
 ./infra/provision.sh                # ~15 min, prints .env block at end
 # follow infra/entra_setup.md       # ~15 min — Entra app reg in portal (manual)
-cp <pasted .env block> brain-api/.env
+cp <pasted .env block> substrateos-api/.env
 ```
 
 ### Run
 
 ```
 # Terminal 1
-cd brain-api && uv sync
+cd substrateos-api && uv sync
 uv run python scripts/create_search_index.py   # one-time index creation
 uv run uvicorn app.main:app --port 8000
 
 # Terminal 2 — load test corpus
-cd brain-api && uv run python eval/load_corpus.py
+cd substrateos-api && uv run python eval/load_corpus.py
 
 # Terminal 3 — web
 cd web && pnpm install && pnpm dev
@@ -51,7 +51,7 @@ the corpus markdown file.
 ### Verify quality
 
 ```
-cd brain-api
+cd substrateos-api
 uv run python eval/run_eval.py --mode retrieval
 ```
 
@@ -60,7 +60,7 @@ Phase 1 baseline: 1.0 / 1.0 on 10 golden Qs (2026-05-29).
 
 ## Layout
 
-- `brain-api/` — FastAPI monolith (Zone 4 intelligence layer)
+- `substrateos-api/` — FastAPI monolith (Zone 4 intelligence layer)
 - `web/` — Next.js 14 chat UI with Entra SSO
 - `infra/` — Azure provisioning (`az` CLI; Bicep later)
 - `docs/` — specs and plans
@@ -86,7 +86,7 @@ Each gets its own plan in `docs/superpowers/plans/`.
 
 ```
 # terminal 1 — API
-cd brain-api && uv run uvicorn app.main:app --port 8000
+cd substrateos-api && uv run uvicorn app.main:app --port 8000
 # terminal 2 — web
 cd web && cp .env.local.example .env.local && pnpm install && pnpm dev
 ```

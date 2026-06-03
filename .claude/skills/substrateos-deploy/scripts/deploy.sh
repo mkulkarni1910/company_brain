@@ -99,7 +99,7 @@ deploy_one() {
 
 # ---- 2-4. Build / push / roll / verify --------------------------------------
 if [ "$TARGET" = "brain-api" ] || [ "$TARGET" = "both" ]; then
-  deploy_one "brain-api" "brain-api" "brain-api"
+  deploy_one "brain-api" "substrateos-api" "brain-api"
 fi
 if [ "$TARGET" = "web" ] || [ "$TARGET" = "both" ]; then
   deploy_one "substrateos-web" "web" "substrateos-web"

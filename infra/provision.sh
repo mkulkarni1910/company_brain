@@ -123,7 +123,7 @@ fi
 # Print .env values
 cat <<EOF
 
-=== Done. Copy into brain-api/.env ===
+=== Done. Copy into substrateos-api/.env ===
 AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
 AZURE_CLIENT_ID=$MI_CLIENT
 AZURE_AI_SEARCH_ENDPOINT=https://$SEARCH_NAME.search.windows.net

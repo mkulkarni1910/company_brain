@@ -17,7 +17,7 @@ Deploys two Azure Container Apps in resource group `rg-company-brain-india`
 
 | App | Source dir | Image repo | Container App | Health check |
 |-----|-----------|-----------|---------------|--------------|
-| Backend | `brain-api/` | `brain-api` | `brain-api` | `GET /healthz` → 200 `{"status":"ok"}` |
+| Backend | `substrateos-api/` | `brain-api` | `brain-api` | `GET /healthz` → 200 `{"status":"ok"}` |
 | Frontend | `web/` | `substrateos-web` | `substrateos-web` | `GET /` → 401 (behind Easy Auth = reachable) |
 
 Public URLs:
@@ -101,7 +101,7 @@ git rev-parse --abbrev-ref HEAD          # must be: main
 git pull --ff-only origin main
 TAG=$(git rev-parse --short HEAD)
 az acr login --name cbrainindiaacr
-docker build --platform linux/amd64 -t cbrainindiaacr.azurecr.io/brain-api:$TAG -f brain-api/Dockerfile brain-api
+docker build --platform linux/amd64 -t cbrainindiaacr.azurecr.io/brain-api:$TAG -f substrateos-api/Dockerfile substrateos-api
 docker push cbrainindiaacr.azurecr.io/brain-api:$TAG
 az containerapp update -n brain-api -g rg-company-brain-india --image cbrainindiaacr.azurecr.io/brain-api:$TAG
 # then verify:

@@ -41,7 +41,7 @@ GREMLIN_KEY=$(az cosmosdb keys list -g "$RG" -n "$COSMOS_NAME" --query primaryMa
 
 cat <<EOF
 
-=== Done. Copy into brain-api/.env ===
+=== Done. Copy into substrateos-api/.env ===
 COSMOS_GREMLIN_ENDPOINT=wss://${COSMOS_NAME}.gremlin.cosmos.azure.com:443/
 COSMOS_GREMLIN_KEY=${GREMLIN_KEY}
 COSMOS_GREMLIN_DATABASE=${DB_NAME}
