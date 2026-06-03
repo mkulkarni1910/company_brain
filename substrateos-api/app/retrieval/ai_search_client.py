@@ -123,7 +123,7 @@ class AISearchClient:
             search_text=query,
             vector_queries=[vector_query],
             query_type="semantic",
-            semantic_configuration_name="brain-semantic",
+            semantic_configuration_name="substrateos-semantic",
             filter=flt,
             top=top,
             select=[
@@ -205,7 +205,7 @@ class AISearchClient:
                 search_text=query,
                 vector_queries=[vq],
                 query_type="semantic",
-                semantic_configuration_name="brain-semantic",
+                semantic_configuration_name="substrateos-semantic",
                 filter=flt,
                 top=max(top * 4, 20),
                 # NOTE: skip is chunk-level, not doc-level — reliable only for the first page.

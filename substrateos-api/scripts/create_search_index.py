@@ -1,4 +1,4 @@
-"""One-shot: create or update the brain-content-{tenant} index in AI Search."""
+"""One-shot: create or update the substrateos-content-{tenant} index in AI Search."""
 
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ def build_index(name: str) -> SearchIndex:
     semantic = SemanticSearch(
         configurations=[
             SemanticConfiguration(
-                name="brain-semantic",
+                name="substrateos-semantic",
                 prioritized_fields=SemanticPrioritizedFields(
                     title_field=SemanticField(field_name="title"),
                     content_fields=[SemanticField(field_name="content")],

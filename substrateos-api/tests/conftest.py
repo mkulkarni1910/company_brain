@@ -22,7 +22,7 @@ def _default_env(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
         "AZURE_TENANT_ID": "tid-test",
         "AZURE_CLIENT_ID": "cid-test",
         "AZURE_AI_SEARCH_ENDPOINT": "https://test.search.windows.net",
-        "AZURE_AI_SEARCH_INDEX": "brain-content-t-test",
+        "AZURE_AI_SEARCH_INDEX": "substrateos-content-t-test",
         "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
         "AZURE_REDIS_HOST": "test.redis.cache.windows.net",
         "ENABLE_DEBUG_AUTH": "true",

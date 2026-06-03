@@ -127,7 +127,7 @@ cat <<EOF
 AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
 AZURE_CLIENT_ID=$MI_CLIENT
 AZURE_AI_SEARCH_ENDPOINT=https://$SEARCH_NAME.search.windows.net
-AZURE_AI_SEARCH_INDEX=brain-content-t-test
+AZURE_AI_SEARCH_INDEX=substrateos-content-t-test
 AZURE_OPENAI_ENDPOINT=$(az cognitiveservices account show -g "$RG" -n "$OPENAI_NAME" --query properties.endpoint -o tsv)
 AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4o
 AZURE_OPENAI_PLAN_DEPLOYMENT=gpt-4o-mini
