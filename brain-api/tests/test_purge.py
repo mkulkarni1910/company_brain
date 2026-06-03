@@ -1,6 +1,8 @@
 import asyncio
+import fnmatch
 
 import app.retrieval.ai_search_client as aisc
+from app.acl.store import ACLStore
 
 
 class _FakeSearchCli:
@@ -54,3 +56,39 @@ def test_delete_tenant_docs_escapes_single_quote(monkeypatch):
     cli = _FakeSearchCli([[]])
     asyncio.run(_client(cli).delete_tenant_docs(tenant_id="o'brien"))
     assert cli.last_filter == "tenant_id eq 'o''brien'"
+
+
+# ---------------------------------------------------------------------------
+# ACLStore.clear_tenant
+# ---------------------------------------------------------------------------
+
+
+class _FakeRedisAcl:
+    def __init__(self, keys) -> None:
+        self._keys = set(keys)
+        self.deleted: list[str] = []
+
+    async def scan_iter(self, match, count=500):
+        for k in list(self._keys):
+            if fnmatch.fnmatch(k, match):
+                yield k
+
+    async def delete(self, k):
+        self.deleted.append(k)
+        self._keys.discard(k)
+
+
+def test_clear_tenant_noop_without_redis():
+    store = ACLStore.__new__(ACLStore)
+    store._r = None
+    assert asyncio.run(store.clear_tenant(tenant_id="t-eval")) is None
+
+
+def test_clear_tenant_deletes_only_matching():
+    store = ACLStore.__new__(ACLStore)
+    store._r = _FakeRedisAcl(
+        {"acl:doc:t-eval:d1", "acl:doc:t-eval:d2", "acl:doc:other:x"}
+    )
+    n = asyncio.run(store.clear_tenant(tenant_id="t-eval"))
+    assert n == 2
+    assert sorted(store._r.deleted) == ["acl:doc:t-eval:d1", "acl:doc:t-eval:d2"]
