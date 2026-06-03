@@ -1,7 +1,7 @@
 # Discover → Glean-style Search — Design Spec
 
 **Date:** 2026-05-31
-**Status:** Approved (brainstorming) — mockup `mockups/discover-search.html`
+**Status:** Approved (brainstorming) — mockup `mockups/user-web-chat.html (Discover view — `.view-discover`)`
 **Supersedes:** the trending-engagement Discover (`DiscoverService.result`, the Discover view from `history-discover-v1`). The trending backend code stays in the repo (still tested; `ActivityStore` remains used by the ranker) but is no longer surfaced in the UI.
 
 ## Goal
@@ -89,7 +89,7 @@ Replace `DiscoverView` with `SearchView` (the `Discover` nav item renders it):
 - **People** block: "People who work on this" cards from `people`.
 - **Right rail facets:** "Found N results" + Source list with counts; clicking a source toggles the `sources` filter and re-queries.
 - Empty state when `total === 0`; the Ask view + History view are unchanged.
-- Styles: reuse `mockups/discover-search.html` (already in SubStrateOS tokens) — port its CSS into `globals.css`.
+- Styles: reuse `mockups/user-web-chat.html (Discover view — `.view-discover`)` (already in SubStrateOS tokens) — port its CSS into `globals.css`.
 
 ## Error handling / degradation
 - AI Overview failure → render results without the card.

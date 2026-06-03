@@ -25,7 +25,7 @@ Backend:
 Frontend:
 - Modify `web/lib/api.ts` — search types + `postSearch`.
 - Modify `web/components/Chat.tsx` — replace `DiscoverView` with `SearchView`.
-- Modify `web/app/globals.css` — port mockup CSS (`mockups/discover-search.html`).
+- Modify `web/app/globals.css` — port mockup CSS (`mockups/user-web-chat.html (Discover view — `.view-discover`)`).
 
 ---
 
@@ -770,7 +770,7 @@ git commit -m "feat(web): postSearch api client"
 
 **Files:** Modify `web/components/Chat.tsx`, `web/app/globals.css`
 
-READ `web/components/Chat.tsx` first (it has `view: "ask"|"discover"|"history"`, a `DiscoverView`, and `ask()`/`AnswerText`). Read `mockups/discover-search.html` for the exact markup/classes to port.
+READ `web/components/Chat.tsx` first (it has `view: "ask"|"discover"|"history"`, a `DiscoverView`, and `ask()`/`AnswerText`). Read `mockups/user-web-chat.html (Discover view — `.view-discover`)` for the exact markup/classes to port.
 
 - [ ] **Step 1: Replace `DiscoverView` with `SearchView`** in `Chat.tsx`.
 
@@ -893,7 +893,7 @@ function sourceIcon(s: string): string {
 
 Change the Discover branch in `Chat`'s return from `<DiscoverView .../>` to `<SearchView onAsk={(query) => { setView("ask"); ask(query); }} />`. (`onAsk` is kept for parity though SearchView currently only searches; leave the prop wired for future "ask this" actions. If lint flags `onAsk` unused, drop the prop and pass nothing.)
 
-- [ ] **Step 2: Port mockup CSS** — append the search-surface CSS from `mockups/discover-search.html` to `web/app/globals.css`: the `.searchwrap`, `.searchbar`, `.filters`, `.fchip`, `.sgrid` (use `grid-template-columns:1fr 290px;gap:30px;padding:24px 36px 60px;max-width:1180px;margin:0 auto` — rename the mockup's `.grid` to `.sgrid` to avoid collisions), `.ai`, `.ai-*`, `.rescount`, `.result`, `.ricon`, `.rmain`, `.rtitle`, `.rmeta`, `.rsnip`, `.people`, `.people-h`, `.pcards`, `.pcard`, `.facets`, `.facet-h`, `.fac` rules. Keep the existing `cite-ref` rule (already in globals.css) — do not duplicate it.
+- [ ] **Step 2: Port mockup CSS** — append the search-surface CSS from `mockups/user-web-chat.html (Discover view — `.view-discover`)` to `web/app/globals.css`: the `.searchwrap`, `.searchbar`, `.filters`, `.fchip`, `.sgrid` (use `grid-template-columns:1fr 290px;gap:30px;padding:24px 36px 60px;max-width:1180px;margin:0 auto` — rename the mockup's `.grid` to `.sgrid` to avoid collisions), `.ai`, `.ai-*`, `.rescount`, `.result`, `.ricon`, `.rmain`, `.rtitle`, `.rmeta`, `.rsnip`, `.people`, `.people-h`, `.pcards`, `.pcard`, `.facets`, `.facet-h`, `.fac` rules. Keep the existing `cite-ref` rule (already in globals.css) — do not duplicate it.
 
 - [ ] **Step 3: Typecheck + build** `cd web && pnpm typecheck && pnpm build` → clean. Fix any unused-import/lint errors (e.g., remove `getDiscover`, `DiscoverResult` imports now unused).
 
@@ -927,6 +927,6 @@ az containerapp update -n substrateos-web -g rg-company-brain-dev --image cbrain
 ## Notes for the executor
 - Run backend commands from `brain-api/`. Keep the full non-integration suite green: `uv run pytest -q -m "not integration"`.
 - The `/search` surface must never 500 on data-layer failures (search/overview/people all degrade).
-- Match the SubStrateOS aesthetic already in `globals.css` and `mockups/discover-search.html`.
+- Match the SubStrateOS aesthetic already in `globals.css` and `mockups/user-web-chat.html (Discover view — `.view-discover`)`.
 - The old trending Discover backend (`DiscoverService`, `/discover`, `ActivityStore.trending/source_breakdown`) stays in place (still tested; `ActivityStore` is used by the ranker) but is no longer surfaced — do not delete it in this plan.
 - **Deferred to a fast-follow:** the **"Who from" (author) filter UI**. The `/search` API already accepts `author_id`, but the dropdown (author facet + name resolution) is not built in v1 — v1 ships **time-range + source facets** only. "Similar results" expansion and doc-granular facet counts are also deferred (v1 uses chunk-level facet counts, labelled "results").
