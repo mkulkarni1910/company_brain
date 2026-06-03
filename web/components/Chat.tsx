@@ -17,9 +17,9 @@ const SUGGESTIONS: { text: string; live?: boolean }[] = [
   { text: "Expense limits for travel" },
 ];
 const SIGNAL_META: { key: keyof NonNullable<Answer["debug"]>["signals"]; label: string; color: string }[] = [
-  { key: "content", label: "Content", color: "var(--amber)" },
-  { key: "people", label: "People", color: "var(--violet)" },
-  { key: "activity", label: "Activity", color: "var(--rose)" },
+  { key: "content", label: "Relevance", color: "var(--amber)" },
+  { key: "people", label: "Proximity", color: "var(--violet)" },
+  { key: "activity", label: "Engagement", color: "var(--rose)" },
   { key: "recency", label: "Recency", color: "var(--green)" },
 ];
 
@@ -598,7 +598,7 @@ export default function Chat() {
             <span className="t">Why this ranked</span>
           </div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", margin: "6px 0 14px" }}>
-            {latest?.answer ? `personalized for ${USER_NAME} · ${USER_ROLE}` : "Ask a question to see ranking"}
+            {latest?.answer ? `Personalized for ${USER_NAME} · ${USER_ROLE}` : "Ask a question to see ranking"}
           </div>
           <div className="bars">
             {SIGNAL_META.map((m) => {
@@ -664,7 +664,7 @@ function FeedbackBar({ answer, latencyMs }: { answer: Answer; latencyMs?: number
         {sent === "thumbs_down" ? "Noted ✓" : "Not quite"}
       </button>
       <div className="sep" />
-      <span className="cached">{latencyMs ? `${latencyMs} ms` : ""} · feedback → activity pillar</span>
+      <span className="cached">{latencyMs ? `${latencyMs} ms` : ""} · feedback → engagement pillar</span>
     </div>
   );
 }
