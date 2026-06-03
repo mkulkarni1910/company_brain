@@ -186,7 +186,7 @@ Replace `web/.env.local.example` with:
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 # Dev debug-auth (no SSO): tenant,user,group... — corpus lives under t-eval
 NEXT_PUBLIC_DEBUG_AUTH=t-eval,u-demo,t-eval:everyone
-NEXT_PUBLIC_USER_NAME=Alex Kim
+NEXT_PUBLIC_USER_NAME=Lokesh Bhoyar
 NEXT_PUBLIC_USER_ROLE=Central · Sales
 ```
 
@@ -357,7 +357,7 @@ import { postQuery, postFeedback, Answer } from "@/lib/api";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
-const USER_NAME = process.env.NEXT_PUBLIC_USER_NAME ?? "Alex Kim";
+const USER_NAME = process.env.NEXT_PUBLIC_USER_NAME ?? "Lokesh Bhoyar";
 const USER_ROLE = process.env.NEXT_PUBLIC_USER_ROLE ?? "Central · Sales";
 const SUGGESTIONS = [
   "Who is on call right now?",

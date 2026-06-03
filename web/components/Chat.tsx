@@ -8,7 +8,7 @@ import { postQuery, postFeedback, getConversations, getConversation, logClick, p
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
-const USER_NAME = process.env.NEXT_PUBLIC_USER_NAME ?? "Alex Kim";
+const USER_NAME = process.env.NEXT_PUBLIC_USER_NAME ?? "Lokesh Bhoyar";
 const USER_ROLE = process.env.NEXT_PUBLIC_USER_ROLE ?? "Central · Sales";
 const SUGGESTIONS: { text: string; live?: boolean }[] = [
   { text: "Who is on call right now?", live: true },
