@@ -371,6 +371,7 @@ export default function DataSources() {
       const r: PurgeResult = await purgeEverything();
       const parts = [`Purged ${r.docs_deleted} document(s)`];
       if (r.activity_cleared != null) parts.push(`${r.activity_cleared} activity event(s)`);
+      if (r.acl_cleared != null) parts.push(`${r.acl_cleared} ACL entr${r.acl_cleared === 1 ? "y" : "ies"}`);
       if (r.errors.length) parts.push(`skipped: ${r.errors.join("; ")}`);
       setBanner(parts.join(" — "));
     } catch {
