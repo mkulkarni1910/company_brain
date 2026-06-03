@@ -9,8 +9,10 @@ class _FakeSearchCli:
     def __init__(self, pages: list[list[str]]) -> None:
         self._pages = pages
         self.deleted: list[str] = []
+        self.last_filter: str | None = None
 
     async def search(self, *, search_text, filter, select, top, skip):
+        self.last_filter = filter
         idx = skip // top
         rows = self._pages[idx] if idx < len(self._pages) else []
 
@@ -45,3 +47,10 @@ def test_delete_tenant_docs_empty(monkeypatch):
     n = asyncio.run(_client(cli).delete_tenant_docs(tenant_id="t-eval"))
     assert n == 0
     assert cli.deleted == []
+
+
+def test_delete_tenant_docs_escapes_single_quote(monkeypatch):
+    monkeypatch.setattr(aisc, "_DELETE_PAGE", 2)
+    cli = _FakeSearchCli([[]])
+    asyncio.run(_client(cli).delete_tenant_docs(tenant_id="o'brien"))
+    assert cli.last_filter == "tenant_id eq 'o''brien'"

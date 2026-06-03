@@ -68,13 +68,13 @@ class AISearchClient:
         )
 
     async def delete_tenant_docs(self, *, tenant_id: str) -> int:
-        """Delete every indexed document for the tenant. Returns the count deleted.
+        """Delete indexed documents for the tenant. Returns the count deleted.
 
-        Collects keys first (stable, no concurrent writes during purge), then
-        deletes by key (`chunk_id`) in batches — avoids the eventual-consistency
-        re-query loop.
+        Keys are collected up-front, so callers should stop ingestion before
+        purging to avoid missing documents written concurrently. Azure AI Search
+        caps $skip at 100,000, so tenants larger than that are not fully covered.
         """
-        flt = f"tenant_id eq '{tenant_id.replace(chr(39), chr(39) * 2)}'"
+        flt = f"tenant_id eq '{tenant_id.replace("'", "''")}'"
         keys: list[str] = []
         skip = 0
         while True:
