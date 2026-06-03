@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { getConnections, disconnect, connectProvider, Connection } from "@/lib/adminApi";
+import { getConnections, disconnect, connectProvider, resync, purgeEverything, PurgeResult, Connection } from "@/lib/adminApi";
 
 // ── Catalog ─────────────────────────────────────────────────────────────────
 
@@ -141,9 +141,10 @@ type RowProps = {
   statusFilter: string;
   onEnable: () => void;
   onDisable: (id: string) => void;
+  onSync: (id: string) => void;
 };
 
-function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, onDisable }: RowProps) {
+function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, onDisable, onSync }: RowProps) {
   // client-side filter matching
   const nameMatch = !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase());
   const effectiveStatus = p.connectable
@@ -193,6 +194,16 @@ function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, on
           : <span className="dash">—</span>}
       </td>
       <td className="c-enable">
+        {p.connectable && conn && (
+          <button
+            className="row-sync"
+            title="Sync now"
+            disabled={conn.status === "syncing"}
+            onClick={() => onSync(conn.connection_id)}
+          >
+            Sync
+          </button>
+        )}
         <Toggle
           connectable={!!p.connectable}
           conn={conn}
@@ -214,13 +225,14 @@ type CatTableProps = {
   statusFilter: string;
   onEnable: (provider: string) => void;
   onDisable: (id: string) => void;
+  onSync: (id: string) => void;
 };
 
 function connOf(p: Provider, connByType: Record<string, Connection>): Connection | null {
   return p.connectable && p.connType ? (connByType[p.connType] ?? null) : null;
 }
 
-function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilter, onEnable, onDisable }: CatTableProps) {
+function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilter, onEnable, onDisable, onSync }: CatTableProps) {
   // hide entire category when catFilter doesn't match
   if (catFilter !== "all" && catFilter !== category.label) return null;
 
@@ -265,6 +277,7 @@ function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilt
                 statusFilter={statusFilter}
                 onEnable={() => onEnable(p.connType ?? "")}
                 onDisable={onDisable}
+                onSync={onSync}
               />
             ))}
           </tbody>
@@ -284,6 +297,9 @@ export default function DataSources() {
   const [catFilter, setCatFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [banner, setBanner] = useState<string | null>(null);
+  const [purgeOpen, setPurgeOpen] = useState(false);
+  const [purgeText, setPurgeText] = useState("");
+  const [purging, setPurging] = useState(false);
 
   const aliveRef = useRef(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -341,6 +357,33 @@ export default function DataSources() {
     } catch { /* noop */ }
   };
 
+  const onSync = async (id: string) => {
+    try {
+      await resync(id);
+      pollUntilSettled();
+    } catch { /* 403 → layout gate re-prompts */ }
+  };
+
+  const confirmPurge = async () => {
+    if (purgeText !== "PURGE" || purging) return;
+    setPurging(true);
+    try {
+      const r: PurgeResult = await purgeEverything();
+      const parts = [`Purged ${r.docs_deleted} document(s)`];
+      if (r.activity_cleared != null) parts.push(`${r.activity_cleared} activity event(s)`);
+      if (r.acl_cleared != null) parts.push(`${r.acl_cleared} ACL entr${r.acl_cleared === 1 ? "y" : "ies"}`);
+      if (r.errors.length) parts.push(`skipped: ${r.errors.join("; ")}`);
+      setBanner(parts.join(" — "));
+    } catch {
+      setBanner("Purge failed. Check the admin key and try again.");
+    } finally {
+      setPurging(false);
+      setPurgeOpen(false);
+      setPurgeText("");
+      refresh();
+    }
+  };
+
   // Determine if any rows are visible across all categories
   const anyVisible = CATALOG.some((cat) => {
     if (catFilter !== "all" && catFilter !== cat.label) return false;
@@ -362,9 +405,12 @@ export default function DataSources() {
   return (
     <div className="ds-page">
       <div className="wrap">
-        <div className="head">
-          <h1>Data Sources</h1>
-          <p>Connect sources to bring their content into the intelligence layer.</p>
+        <div className="head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div>
+            <h1>Data Sources</h1>
+            <p>Connect sources to bring their content into the intelligence layer.</p>
+          </div>
+          <button className="btn danger" onClick={() => setPurgeOpen(true)}>Purge Everything</button>
         </div>
 
         {banner && <div className="admin-note" style={{ marginTop: 16 }}>{banner}</div>}
@@ -410,12 +456,39 @@ export default function DataSources() {
               statusFilter={statusFilter}
               onEnable={onEnable}
               onDisable={onDisable}
+              onSync={onSync}
             />
           ))}
         </div>
 
         {!anyVisible && (
           <div className="ds-empty show">No sources match your search.</div>
+        )}
+
+        {purgeOpen && (
+          <div className="admin-modal" onClick={() => !purging && setPurgeOpen(false)}>
+            <div className="modal narrow" onClick={(e) => e.stopPropagation()}>
+              <h2>Purge everything</h2>
+              <p>This permanently deletes all indexed documents (and any activity/ACL
+                data) for this workspace. Connected sources are kept — you can re-sync
+                them afterward. Type <b>PURGE</b> to confirm.</p>
+              <input
+                type="text"
+                value={purgeText}
+                onChange={(e) => setPurgeText(e.target.value)}
+                placeholder="PURGE"
+                autoFocus
+                disabled={purging}
+                style={{ width: "100%", marginTop: 12, padding: "9px 12px", borderRadius: 9, border: "1px solid var(--line)", font: "inherit" }}
+              />
+              <div className="modal-foot">
+                <button className="modal-close" onClick={() => setPurgeOpen(false)} disabled={purging}>Cancel</button>
+                <button className="btn danger" onClick={confirmPurge} disabled={purgeText !== "PURGE" || purging}>
+                  {purging ? "Purging…" : "Purge Everything"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

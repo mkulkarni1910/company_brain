@@ -12,6 +12,9 @@ from app.domain.chunk import Chunk
 from app.domain.identity import User
 from app.domain.search import SearchHit, SearchPage, SourceFacet
 
+# Page size for the purge scan/delete loop; small enough to batch, monkeypatched in tests.
+_DELETE_PAGE = 1000
+
 
 def _snippet_from(row: dict) -> str:
     """Prefer a search highlight fragment; strip <b>/<em> tags; else start of content."""
@@ -63,6 +66,33 @@ class AISearchClient:
             documents=[_to_search_doc(c) for c in chunks],
             params={"allowUnsafeKeys": "true"},
         )
+
+    async def delete_tenant_docs(self, *, tenant_id: str) -> int:
+        """Delete indexed documents for the tenant. Returns the count deleted.
+
+        Keys are collected up-front, so callers should stop ingestion before
+        purging to avoid missing documents written concurrently. Azure AI Search
+        caps $skip at 100,000, so tenants larger than that are not fully covered.
+        """
+        flt = f"tenant_id eq '{tenant_id.replace("'", "''")}'"
+        keys: list[str] = []
+        skip = 0
+        while True:
+            res = await self._cli.search(
+                search_text="*", filter=flt, select=["chunk_id"], top=_DELETE_PAGE, skip=skip
+            )
+            batch = [r["chunk_id"] async for r in res]
+            keys.extend(batch)
+            if len(batch) < _DELETE_PAGE:
+                break
+            skip += _DELETE_PAGE
+        if not keys:
+            return 0
+        for i in range(0, len(keys), _DELETE_PAGE):
+            await self._cli.delete_documents(
+                documents=[{"chunk_id": k} for k in keys[i : i + _DELETE_PAGE]]
+            )
+        return len(keys)
 
     async def hybrid_search(
         self, *, query: str, user: User, vector: list[float], top: int = 30

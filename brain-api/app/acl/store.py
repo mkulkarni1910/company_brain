@@ -85,6 +85,21 @@ class ACLStore:
             return None
         return set(json.loads(v))
 
+    async def clear_tenant(self, *, tenant_id: str) -> int | None:
+        """Delete all live ACL entries for the tenant. Returns the count, or None
+        when no store is configured (Redis host unset, e.g. the India deploy)."""
+        if self._r is None:
+            return None
+        pattern = f"acl:doc:{tenant_id}:*"
+        deleted = 0
+        try:
+            async for key in self._r.scan_iter(match=pattern, count=500):
+                await self._r.delete(key)
+                deleted += 1
+        except (RedisError, ConnectionError, TimeoutError, OSError) as e:
+            logger.warning("ACLStore clear_tenant failed (tenant=%s): %s", tenant_id, e)
+        return deleted
+
     async def recheck(self, *, candidates: list[Candidate], user: User) -> list[Candidate]:
         fail_closed_on_missing = getattr(self, "_fail_closed", None)
         if fail_closed_on_missing is None:

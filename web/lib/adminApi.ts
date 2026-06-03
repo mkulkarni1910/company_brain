@@ -59,6 +59,12 @@ export type SyncJob = {
   status: string; total: number; processed: number; skipped: number;
   errors: number; truncated: boolean; message: string | null;
 };
+export type PurgeResult = {
+  docs_deleted: number;
+  acl_cleared: number | null;
+  activity_cleared: number | null;
+  errors: string[];
+};
 
 export const getStats = () => call<AdminStats>("/admin/stats");
 export const getConnections = () => call<Connection[]>("/admin/connections");
@@ -74,3 +80,5 @@ export const disconnect = (id: string) =>
 export const connectProvider = (provider: string) =>
   call<{ auth_url: string }>(`/admin/connections/oauth/connect?provider=${encodeURIComponent(provider)}`, { method: "POST" });
 export const getJob = (id: string) => call<SyncJob>(`/admin/connections/${id}/job`);
+export const purgeEverything = () =>
+  call<PurgeResult>("/admin/purge", { method: "POST" });

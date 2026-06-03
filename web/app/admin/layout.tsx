@@ -58,22 +58,6 @@ const NAV = [
       },
     ],
   },
-  {
-    group: "Build",
-    items: [
-      {
-        href: "/admin/developer",
-        label: "Developer",
-        icon: (
-          <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m8 9-3 3 3 3"/>
-            <path d="m16 9 3 3-3 3"/>
-            <path d="m13.5 7-3 10"/>
-          </svg>
-        ),
-      },
-    ],
-  },
 ];
 
 function Gate({ onUnlock, error }: { onUnlock: () => void; error?: boolean }) {
