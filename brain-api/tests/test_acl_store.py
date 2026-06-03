@@ -58,6 +58,38 @@ def test_recheck_falls_back_to_index_acl_on_key_miss() -> None:
     assert kept == {"doc-x"}  # index-time ACL allows g-sales on doc-x only
 
 
+def test_no_redis_host_noops_and_falls_back_to_index_acl(monkeypatch) -> None:
+    """India deploy has no Redis: the ACL store must no-op (every lookup a
+    key-miss → index-time ACL fallback) instead of building a live client that
+    hangs per-candidate and fail-closes every doc. Mirrors RedisCache.
+    """
+    import asyncio
+    from types import SimpleNamespace
+
+    import app.acl.store as store_mod
+
+    fake = SimpleNamespace(
+        azure_redis_host=None, azure_redis_port=6380, azure_redis_ssl=True,
+        redis_key=None, acl_fail_closed_on_missing=False,
+    )
+    monkeypatch.setattr(store_mod, "get_settings", lambda: fake)
+
+    store = ACLStore()
+    assert store._r is None  # no client built when host unset
+
+    user = User(user_id="u1", tenant_id="t-test", email="a@b", display_name="A",
+                group_ids={"g-sales"})
+    # Lookups are key-misses (not errors), writes/close are safe no-ops.
+    assert asyncio.run(store.doc_principals(tenant_id="t-test", doc_id="x")) is None
+    asyncio.run(store.set_doc_principals(tenant_id="t-test", doc_id="x", principals=["g-sales"]))
+    asyncio.run(store.aclose())
+
+    # recheck keeps docs whose index-time ACL allows the user (no fail-closed drop).
+    cands = [_candidate("doc-x", ["g-sales"]), _candidate("doc-y", ["g-other"])]
+    kept = {c.chunk.doc_id for c in asyncio.run(store.recheck(candidates=cands, user=user))}
+    assert kept == {"doc-x"}
+
+
 @pytest.mark.integration
 async def test_acl_store_round_trip() -> None:
     store = ACLStore()

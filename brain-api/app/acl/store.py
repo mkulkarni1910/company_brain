@@ -32,20 +32,34 @@ def _doc_key(tenant_id: str, doc_id: str) -> str:
 class ACLStore:
     def __init__(self) -> None:
         s = get_settings()
+        # The live ACL store is optional: with no Redis host configured (e.g. the
+        # India deploy), it no-ops — every doc_principals() is a key-miss, so
+        # recheck() falls back to each chunk's index-time acl_principals (the
+        # documented miss path). Mirrors RedisCache, which is hardened the same
+        # way. socket timeouts cap a configured-but-unreachable Redis so a query
+        # can never block per-candidate on a dead connection (defense in depth).
+        if not s.azure_redis_host:
+            self._r = None
+            return
         self._r = redis.Redis(
             host=s.azure_redis_host,
             port=s.azure_redis_port,
             ssl=s.azure_redis_ssl,
             password=s.redis_key,
             decode_responses=True,
+            socket_connect_timeout=2,
+            socket_timeout=2,
         )
 
     async def aclose(self) -> None:
-        await self._r.aclose()
+        if self._r is not None:
+            await self._r.aclose()
 
     async def set_doc_principals(
         self, *, tenant_id: str, doc_id: str, principals: list[str], ttl_seconds: int | None = None
     ) -> None:
+        if self._r is None:
+            return
         try:
             key = _doc_key(tenant_id, doc_id)
             value = json.dumps(sorted(principals))
@@ -61,6 +75,8 @@ class ACLStore:
 
         Raises ACLStoreError if Redis is unreachable (caller fails closed).
         """
+        if self._r is None:
+            return None  # no store configured: key-miss -> index-time ACL fallback
         try:
             v = await self._r.get(_doc_key(tenant_id, doc_id))
         except (RedisError, ConnectionError, TimeoutError, OSError) as e:
