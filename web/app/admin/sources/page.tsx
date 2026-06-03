@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { getConnections, disconnect, connectProvider, Connection } from "@/lib/adminApi";
+import { getConnections, disconnect, connectProvider, resync, Connection } from "@/lib/adminApi";
 
 // ── Catalog ─────────────────────────────────────────────────────────────────
 
@@ -141,9 +141,10 @@ type RowProps = {
   statusFilter: string;
   onEnable: () => void;
   onDisable: (id: string) => void;
+  onSync: (id: string) => void;
 };
 
-function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, onDisable }: RowProps) {
+function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, onDisable, onSync }: RowProps) {
   // client-side filter matching
   const nameMatch = !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase());
   const effectiveStatus = p.connectable
@@ -193,6 +194,16 @@ function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, on
           : <span className="dash">—</span>}
       </td>
       <td className="c-enable">
+        {p.connectable && conn && (
+          <button
+            className="row-sync"
+            title="Sync now"
+            disabled={conn.status === "syncing"}
+            onClick={() => onSync(conn.connection_id)}
+          >
+            Sync
+          </button>
+        )}
         <Toggle
           connectable={!!p.connectable}
           conn={conn}
@@ -214,13 +225,14 @@ type CatTableProps = {
   statusFilter: string;
   onEnable: (provider: string) => void;
   onDisable: (id: string) => void;
+  onSync: (id: string) => void;
 };
 
 function connOf(p: Provider, connByType: Record<string, Connection>): Connection | null {
   return p.connectable && p.connType ? (connByType[p.connType] ?? null) : null;
 }
 
-function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilter, onEnable, onDisable }: CatTableProps) {
+function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilter, onEnable, onDisable, onSync }: CatTableProps) {
   // hide entire category when catFilter doesn't match
   if (catFilter !== "all" && catFilter !== category.label) return null;
 
@@ -265,6 +277,7 @@ function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilt
                 statusFilter={statusFilter}
                 onEnable={() => onEnable(p.connType ?? "")}
                 onDisable={onDisable}
+                onSync={onSync}
               />
             ))}
           </tbody>
@@ -341,6 +354,13 @@ export default function DataSources() {
     } catch { /* noop */ }
   };
 
+  const onSync = async (id: string) => {
+    try {
+      await resync(id);
+      pollUntilSettled();
+    } catch { /* 403 → layout gate re-prompts */ }
+  };
+
   // Determine if any rows are visible across all categories
   const anyVisible = CATALOG.some((cat) => {
     if (catFilter !== "all" && catFilter !== cat.label) return false;
@@ -410,6 +430,7 @@ export default function DataSources() {
               statusFilter={statusFilter}
               onEnable={onEnable}
               onDisable={onDisable}
+              onSync={onSync}
             />
           ))}
         </div>

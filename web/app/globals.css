@@ -428,6 +428,9 @@
 .btn { display: inline-flex; align-items: center; gap: 7px; background: var(--amber); color: #fff; border: none; border-radius: 9px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn:disabled { opacity: .55; cursor: default; }
 .btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.row-sync { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.row-sync:hover { border-color: #cabd9f; }
+.row-sync:disabled { opacity: .5; cursor: default; }
 .newtok { background: linear-gradient(180deg,#fff8ea,#fffdf8); border: 1px solid #ecd9ad; border-radius: 11px; padding: 13px 15px; margin-bottom: 8px; }
 .newtok-head { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 9px; }
 .newtok-head b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 12.5px; }
