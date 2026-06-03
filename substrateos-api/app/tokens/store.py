@@ -1,6 +1,6 @@
 """Personal Access Tokens stored on Cosmos DB (Gremlin), reusing the people graph.
 
-Mirrors CosmosConnectionStore: vertices `cbrain_token` carry indexed props
+Mirrors CosmosConnectionStore: vertices `sos_token` carry indexed props
 `tid`(=token_id, vertex key), `tenant_id`(partition), `user_id`, `hash`(sha256
 of the plaintext) plus a JSON `data` blob. The plaintext is shown once at
 creation and never stored. Reads degrade to []/None; writes log on failure. The
@@ -22,7 +22,7 @@ from app.domain.token import TokenMeta
 
 logger = logging.getLogger(__name__)
 
-_LABEL = "cbrain_token"
+_LABEL = "sos_token"
 
 
 def _hash(plaintext: str) -> str:

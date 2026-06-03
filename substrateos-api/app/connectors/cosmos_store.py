@@ -21,10 +21,10 @@ from app.connectors.models import ActivityEntry, Connection, SyncJob
 
 logger = logging.getLogger(__name__)
 
-_CONN = "cbrain_connection"
-_JOB = "cbrain_syncjob"
-_ACT = "cbrain_connactivity"
-_OAUTH = "cbrain_oauthstate"
+_CONN = "sos_connection"
+_JOB = "sos_syncjob"
+_ACT = "sos_connactivity"
+_OAUTH = "sos_oauthstate"
 _ACTIVITY_MAX = 50
 
 

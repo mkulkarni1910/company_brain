@@ -208,8 +208,8 @@ class CosmosSubscriptionStore:
     graph (label-separated vertices, JSON `data`, tenant partition). Never raises.
     The Gremlin client is shared/owned elsewhere — not closed here."""
 
-    _SUB = "cbrain_subscription"
-    _DELTA = "cbrain_delta"
+    _SUB = "sos_subscription"
+    _DELTA = "sos_delta"
 
     def __init__(self, graph) -> None:
         self._g = graph  # async submit(query, bindings) -> list (PeopleGraphClient)

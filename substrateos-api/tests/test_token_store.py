@@ -30,7 +30,7 @@ class FakeGraph:
 
     async def submit(self, query: str, bindings=None):
         b = bindings or {}
-        if "addV('cbrain_token')" in query or ".property('data'" in query:
+        if "addV('sos_token')" in query or ".property('data'" in query:
             # upsert: replace any row with same tid, else insert
             self.rows = [r for r in self.rows if r["tid"] != b["k"]]
             self.rows.append(
