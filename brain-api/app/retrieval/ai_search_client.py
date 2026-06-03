@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 
 from azure.identity.aio import DefaultAzureCredential
@@ -14,6 +15,23 @@ from app.domain.search import SearchHit, SearchPage, SourceFacet
 
 # Page size for the purge scan/delete loop; small enough to batch, monkeypatched in tests.
 _DELETE_PAGE = 1000
+
+# Azure AI Search rejects document keys containing dot, slash, or backslash — even
+# with allowUnsafeKeys=true (which only relaxes chars like ',', ':', '#'). Connector
+# doc_ids embed SharePoint hostnames (omkar.sharepoint.com) and email addresses,
+# which contain dots, so any key derived from a doc_id must be normalized.
+_UNSAFE_KEY_CHARS = re.compile(r"[./\\]")
+
+
+def safe_doc_key(key: str) -> str:
+    """Make a string usable as an Azure AI Search document key.
+
+    Only dot/slash/backslash are disallowed (given allowUnsafeKeys on upsert), so
+    those are replaced with underscore; everything else is left intact to keep keys
+    readable and stable across re-syncs. Must be applied at chunk_id creation so the
+    same value is used for upsert, lookup, and delete.
+    """
+    return _UNSAFE_KEY_CHARS.sub("_", key)
 
 
 def _snippet_from(row: dict) -> str:

@@ -6,7 +6,7 @@ from app.acl.store import ACLStore
 from app.domain.chunk import Chunk, SourceDoc
 from app.generation.azure_openai import AzureOpenAIClient
 from app.ingest.chunker import chunk_markdown
-from app.retrieval.ai_search_client import AISearchClient
+from app.retrieval.ai_search_client import AISearchClient, safe_doc_key
 
 
 @dataclass
@@ -34,7 +34,9 @@ class IngestPipeline:
         vectors = await self._embedder.embed_batch([p.content for p in pieces])
         chunks = [
             Chunk(
-                chunk_id=f"{doc.doc_id}#chunk-{p.chunk_index}",
+                # The chunk_id is the Search document KEY, which forbids dot/slash/
+                # backslash — sanitize it (doc_id keeps the original, dots and all).
+                chunk_id=safe_doc_key(f"{doc.doc_id}#chunk-{p.chunk_index}"),
                 doc_id=doc.doc_id,
                 tenant_id=doc.tenant_id,
                 source=doc.source,
