@@ -129,12 +129,6 @@ def _build_app(monkeypatch, **state):
     return app
 
 
-@pytest.fixture(autouse=True)
-def _clear_settings_cache():
-    yield
-    get_settings.cache_clear()
-
-
 class _FakeSearch:
     async def delete_tenant_docs(self, *, tenant_id):
         assert tenant_id == "t-eval"

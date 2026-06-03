@@ -304,7 +304,8 @@ async def purge_everything(
     except Exception as e:  # noqa: BLE001 - report, don't fail the purge
         errors.append(f"activity: {e}")
     finally:
-        await store.aclose()
+        with contextlib.suppress(Exception):
+            await store.aclose()
 
     return PurgeResult(
         docs_deleted=docs_deleted,
