@@ -236,6 +236,13 @@ class SeedActivityRequest(BaseModel):
     events_per_doc: int = 6
 
 
+class PurgeResult(BaseModel):
+    docs_deleted: int
+    acl_cleared: int | None
+    activity_cleared: int | None
+    errors: list[str] = []
+
+
 @router.post("/seed-activity")
 async def seed_activity(body: SeedActivityRequest) -> dict:
     """Seed synthetic engagement across real corpus docs so the Discover surface and
@@ -265,6 +272,46 @@ async def seed_activity(body: SeedActivityRequest) -> dict:
         return {"tenant_id": tenant, "events_written": written, "docs": len(ids)}
     finally:
         await store.aclose()
+
+
+@router.post("/purge", response_model=PurgeResult)
+async def purge_everything(
+    ai_search=Depends(get_ai_search),
+    acl_store=Depends(get_acl_store),
+) -> PurgeResult:
+    """Tenant-scoped purge: index docs (primary) + best-effort ACL + activity.
+    Connections are intentionally kept so sources can be re-synced. Partial
+    failures are reported in `errors`, never hidden."""
+    tenant = get_settings().brain_tenant_id
+    errors: list[str] = []
+
+    # Primary: index documents. If this raises, the whole request 500s.
+    docs_deleted = await ai_search.delete_tenant_docs(tenant_id=tenant)
+
+    # Best-effort: live ACL entries (no-op without Redis).
+    acl_cleared: int | None = None
+    if acl_store is not None:
+        try:
+            acl_cleared = await acl_store.clear_tenant(tenant_id=tenant)
+        except Exception as e:  # noqa: BLE001 - report, don't fail the purge
+            errors.append(f"acl: {e}")
+
+    # Best-effort: activity events (ADX; may be unreachable / lack MI grant).
+    activity_cleared: int | None = None
+    store = ActivityStore()
+    try:
+        activity_cleared = await store.purge_tenant(tenant_id=tenant)
+    except Exception as e:  # noqa: BLE001 - report, don't fail the purge
+        errors.append(f"activity: {e}")
+    finally:
+        await store.aclose()
+
+    return PurgeResult(
+        docs_deleted=docs_deleted,
+        acl_cleared=acl_cleared,
+        activity_cleared=activity_cleared,
+        errors=errors,
+    )
 
 
 @router.get("/stats")

@@ -1,9 +1,15 @@
 import asyncio
 import fnmatch
 
+import pytest
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
+
 import app.retrieval.ai_search_client as aisc
 from app.acl.store import ACLStore
 from app.activity.store import ActivityStore
+from app.api.admin import router
+from app.config import get_settings
 
 
 class _FakeSearchCli:
@@ -105,3 +111,85 @@ def test_purge_tenant_noop_without_cluster():
     store._client = None
     store._db = "brain"
     assert asyncio.run(store.purge_tenant(tenant_id="t-eval")) is None
+
+
+# ---------------------------------------------------------------------------
+# POST /admin/purge  (Task 4)
+# ---------------------------------------------------------------------------
+
+
+def _build_app(monkeypatch, **state):
+    monkeypatch.setenv("ADMIN_API_KEY", "k")
+    monkeypatch.setenv("BRAIN_TENANT_ID", "t-eval")
+    get_settings.cache_clear()
+    app = FastAPI()
+    app.include_router(router)
+    for key, val in state.items():
+        setattr(app.state, key, val)
+    return app
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache():
+    yield
+    get_settings.cache_clear()
+
+
+class _FakeSearch:
+    async def delete_tenant_docs(self, *, tenant_id):
+        assert tenant_id == "t-eval"
+        return 6
+
+
+class _FakeACL:
+    async def clear_tenant(self, *, tenant_id):
+        return None
+
+
+@pytest.mark.asyncio
+async def test_purge_returns_summary(monkeypatch):
+    class _ActivityOK:
+        async def purge_tenant(self, *, tenant_id):
+            return 12
+
+        async def aclose(self):
+            return None
+
+    monkeypatch.setattr("app.api.admin.ActivityStore", lambda: _ActivityOK())
+    app = _build_app(monkeypatch, ai_search=_FakeSearch(), acl_store=_FakeACL())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/purge", headers={"x-admin-key": "k"})
+    assert r.status_code == 200
+    b = r.json()
+    assert b["docs_deleted"] == 6
+    assert b["acl_cleared"] is None
+    assert b["activity_cleared"] == 12
+    assert b["errors"] == []
+
+
+@pytest.mark.asyncio
+async def test_purge_isolates_activity_failure(monkeypatch):
+    class _ActivityBoom:
+        async def purge_tenant(self, *, tenant_id):
+            raise RuntimeError("adx down")
+
+        async def aclose(self):
+            return None
+
+    monkeypatch.setattr("app.api.admin.ActivityStore", lambda: _ActivityBoom())
+    app = _build_app(monkeypatch, ai_search=_FakeSearch(), acl_store=_FakeACL())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/purge", headers={"x-admin-key": "k"})
+    assert r.status_code == 200
+    b = r.json()
+    assert b["docs_deleted"] == 6
+    assert b["activity_cleared"] is None
+    assert any("activity" in e for e in b["errors"])
+
+
+@pytest.mark.asyncio
+async def test_purge_requires_admin_key(monkeypatch):
+    app = _build_app(monkeypatch, ai_search=_FakeSearch(), acl_store=_FakeACL())
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/admin/purge")
+    assert r.status_code == 403
