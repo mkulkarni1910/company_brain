@@ -47,13 +47,18 @@ verify() {
   local name="$1" rev="$2" state code fqdn i
   echo "==> Waiting for revision '$rev' to be healthy..."
   for i in $(seq 1 36); do
+    # `-o tsv` on an array projection returns one value per line, so collapse BOTH
+    # tabs and newlines to single spaces (a bare `tr -d '\n'` would glue the fields
+    # into "ProvisionedRunning100" and never match the check below).
     state="$(az containerapp revision show -n "$name" -g "$RG" --revision "$rev" \
       --query "[properties.provisioningState, properties.runningState, properties.trafficWeight]" \
-      -o tsv 2>/dev/null | tr '\t' ' ' | tr -d '\n')"
+      -o tsv 2>/dev/null | tr '\t\n' '  ' | sed 's/  */ /g; s/ *$//')"
     echo "    [$i] $state"
+    # Healthy = Provisioned + a Running* state (Azure reports both "Running" and
+    # "RunningAtMaxScale"); trafficWeight is informational, not part of the gate.
     case "$state" in
-      *"Provisioned Running 100"*) break ;;
-      *Failed*) echo "ABORT: revision '$rev' reported Failed." >&2; exit 1 ;;
+      "Provisioned Running"*) break ;;
+      *Failed*|*Degraded*) echo "ABORT: revision '$rev' state: $state" >&2; exit 1 ;;
     esac
     sleep 5
   done
