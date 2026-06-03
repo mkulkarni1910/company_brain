@@ -306,6 +306,7 @@
   .admin th.c-status,.admin td.c-status{width:150px}
   .admin th.c-items,.admin td.c-items{width:90px}
   .admin th.c-sync,.admin td.c-sync{width:120px}
+  .admin th.c-manual-sync,.admin td.c-manual-sync{width:120px;text-align:center}
   .admin th.c-enable,.admin td.c-enable{width:120px;text-align:right}
   /* source cell */
   .src-cell{display:flex;align-items:center;gap:13px}
@@ -430,9 +431,11 @@
 .btn.ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
 .btn.danger { background: #b42318; color: #fff; border: none; }
 .btn.danger:hover { background: #9a1c12; }
-.row-sync { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.row-sync { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .row-sync:hover { border-color: #cabd9f; }
 .row-sync:disabled { opacity: .5; cursor: default; }
+.admin-actions-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 18px; }
+.admin-actions .cat-label { color: #b42318; }
 .newtok { background: linear-gradient(180deg,#fff8ea,#fffdf8); border: 1px solid #ecd9ad; border-radius: 11px; padding: 13px 15px; margin-bottom: 8px; }
 .newtok-head { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 9px; }
 .newtok-head b { color: var(--ink); text-transform: none; letter-spacing: 0; font-size: 12.5px; }

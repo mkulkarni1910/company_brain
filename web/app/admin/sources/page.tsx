@@ -193,17 +193,19 @@ function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, on
           ? <span className="sync-v">{relTime(conn.last_sync)}</span>
           : <span className="dash">—</span>}
       </td>
+      <td className="c-manual-sync">
+        {p.connectable && conn
+          ? <button
+              className="row-sync"
+              title="Sync now"
+              disabled={conn.status === "syncing"}
+              onClick={() => onSync(conn.connection_id)}
+            >
+              Sync
+            </button>
+          : <span className="dash">—</span>}
+      </td>
       <td className="c-enable">
-        {p.connectable && conn && (
-          <button
-            className="row-sync"
-            title="Sync now"
-            disabled={conn.status === "syncing"}
-            onClick={() => onSync(conn.connection_id)}
-          >
-            Sync
-          </button>
-        )}
         <Toggle
           connectable={!!p.connectable}
           conn={conn}
@@ -264,6 +266,7 @@ function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilt
               <th className="c-status">Status</th>
               <th className="c-items">Items</th>
               <th className="c-sync">Last Sync</th>
+              <th className="c-manual-sync">Manual Sync</th>
               <th className="c-enable">Enable Sync</th>
             </tr>
           </thead>
@@ -405,12 +408,9 @@ export default function DataSources() {
   return (
     <div className="ds-page">
       <div className="wrap">
-        <div className="head" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-          <div>
-            <h1>Data Sources</h1>
-            <p>Connect sources to bring their content into the intelligence layer.</p>
-          </div>
-          <button className="btn danger" onClick={() => setPurgeOpen(true)}>Purge Everything</button>
+        <div className="head">
+          <h1>Data Sources</h1>
+          <p>Connect sources to bring their content into the intelligence layer.</p>
         </div>
 
         {banner && <div className="admin-note" style={{ marginTop: 16 }}>{banner}</div>}
@@ -464,6 +464,22 @@ export default function DataSources() {
         {!anyVisible && (
           <div className="ds-empty show">No sources match your search.</div>
         )}
+
+        {/* Admin Actions — destructive maintenance, kept at the bottom away from
+            the routine connect/sync controls so it isn't triggered by accident. */}
+        <section className="cat admin-actions">
+          <div className="cat-label">Admin Actions</div>
+          <div className="ds-card admin-actions-card">
+            <div>
+              <b>Purge everything</b>
+              <p className="muted" style={{ marginTop: 4, maxWidth: 560 }}>
+                Permanently deletes all indexed documents (and any activity/ACL data) for
+                this workspace. Connected sources are kept — you can re-sync them afterward.
+              </p>
+            </div>
+            <button className="btn danger" onClick={() => setPurgeOpen(true)}>Purge Everything</button>
+          </div>
+        </section>
 
         {purgeOpen && (
           <div className="admin-modal" onClick={() => !purging && setPurgeOpen(false)}>
