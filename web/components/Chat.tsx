@@ -399,8 +399,8 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
               <CodeBlock text={mcpJson} />
               <div className="lbl">Tools your assistant gets</div>
               <div className="toollist">
-                <div className="tool"><span className="tn">ask_company_brain</span><span className="td">— grounded answer with citations for a question</span></div>
-                <div className="tool"><span className="tn">search_company_brain</span><span className="td">— ranked context/results across connected sources</span></div>
+                <div className="tool"><span className="tn">ask_substrateos</span><span className="td">— grounded answer with citations for a question</span></div>
+                <div className="tool"><span className="tn">search_substrateos</span><span className="td">— ranked context/results across connected sources</span></div>
               </div>
               <TokenManager />
             </>

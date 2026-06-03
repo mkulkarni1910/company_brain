@@ -1,7 +1,7 @@
-"""Remote MCP server (FastMCP, Streamable HTTP) for the company brain.
+"""Remote MCP server (FastMCP, Streamable HTTP) for SubStrateOS.
 
-Mounted at /mcp on the FastAPI app. Two tools — ask_company_brain and
-search_company_brain — resolve to the PAT owner via TokenStore and run through
+Mounted at /mcp on the FastAPI app. Two tools — ask_substrateos and
+search_substrateos — resolve to the PAT owner via TokenStore and run through
 the same ACL-scoped stack as the browser. Collaborators are bound at lifespan
 startup (mcp_bind); per-request auth is handled by AuthMiddleware, which stashes
 the resolved User in a ContextVar the tool wrappers read.
@@ -57,7 +57,7 @@ async def _search(query: str, user: User, *, search) -> str:
 
 
 @mcp.tool()
-async def ask_company_brain(query: str) -> str:
+async def ask_substrateos(query: str) -> str:
     """Answer a question using the company's grounded knowledge (ACL-scoped to you)."""
     user = _current_user.get()
     if user is None:
@@ -70,7 +70,7 @@ async def ask_company_brain(query: str) -> str:
 
 
 @mcp.tool()
-async def search_company_brain(query: str) -> str:
+async def search_substrateos(query: str) -> str:
     """Search company documents (ACL-scoped to you). Returns titles, snippets, URLs."""
     user = _current_user.get()
     if user is None:
