@@ -155,7 +155,7 @@ def test_parse_messages_doc_id_format():
     assert docs[0].doc_id == "teams:team-1:chan-2:msg-abc"
 
 
-def test_parse_messages_acl_uses_brain_tenant():
+def test_parse_messages_acl_uses_substrateos_tenant():
     data = {
         "value": [
             {

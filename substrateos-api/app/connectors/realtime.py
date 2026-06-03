@@ -85,8 +85,8 @@ async def ingest_notifications(
     """Process a Graph notification batch. Verifies clientState; fetches each changed
     resource and ingests it (ACL-union). Returns count ingested. Never raises."""
     expected = get_settings().graph_webhook_client_state
-    brain_tenant = get_settings().substrateos_tenant_id
-    conns = await conn_store.list_connections(brain_tenant)
+    substrateos_tenant = get_settings().substrateos_tenant_id
+    conns = await conn_store.list_connections(substrateos_tenant)
     processed = 0
     for note in payload.get("value", []):
         try:
@@ -134,10 +134,10 @@ async def run_maintenance(
     from datetime import UTC, datetime, timedelta
 
     s = get_settings()
-    brain_tenant = s.substrateos_tenant_id
+    substrateos_tenant = s.substrateos_tenant_id
     summary = {"renewed": 0, "created": 0, "deleted": 0, "ingested": 0}
     try:
-        conns = [c for c in await conn_store.list_connections(brain_tenant) if c.type in _OUTLOOK]
+        conns = [c for c in await conn_store.list_connections(substrateos_tenant) if c.type in _OUTLOOK]
     except Exception as e:  # noqa: BLE001
         logger.warning("maintenance: list_connections failed: %s", e)
         return summary
@@ -150,7 +150,7 @@ async def run_maintenance(
         except Exception:  # noqa: BLE001
             users = []
         user_ids = {u["user_id"] for u in users}
-        subs = [x for x in await sub_store.list(brain_tenant) if x.provider == conn.type]
+        subs = [x for x in await sub_store.list(substrateos_tenant) if x.provider == conn.type]
         have = {x.user_id for x in subs}
 
         # renew near-expiry subs
@@ -164,13 +164,13 @@ async def run_maintenance(
             # leaver cleanup
             if x.user_id not in user_ids:
                 await delete_subscription(x.subscription_id, conn.connected_tenant_id)
-                await sub_store.delete(brain_tenant, x.subscription_id)
+                await sub_store.delete(substrateos_tenant, x.subscription_id)
                 summary["deleted"] += 1
 
         # joiner subscriptions
         for uid in user_ids - have:
             rec = await create_subscription(
-                tenant_id=brain_tenant, connection_id=conn.connection_id,
+                tenant_id=substrateos_tenant, connection_id=conn.connection_id,
                 provider=conn.type, user_id=uid, connected_tenant_id=conn.connected_tenant_id,
             )
             if rec is not None:
@@ -180,7 +180,7 @@ async def run_maintenance(
         # delta sweep (authoritative reconcile / safety net)
         res = resource_for(conn.type, "{uid}")  # template label for the delta key
         for uid in user_ids:
-            token = await sub_store.get_delta(brain_tenant, conn.connection_id, uid, res)
+            token = await sub_store.get_delta(substrateos_tenant, conn.connection_id, uid, res)
             docs, link = await connector.delta(uid, token)
             for doc in docs:
                 try:
@@ -189,5 +189,5 @@ async def run_maintenance(
                 except Exception as e:  # noqa: BLE001
                     logger.warning("delta ingest failed for %s: %s", doc.doc_id, e)
             if link:
-                await sub_store.set_delta(brain_tenant, conn.connection_id, uid, res, link)
+                await sub_store.set_delta(substrateos_tenant, conn.connection_id, uid, res, link)
     return summary

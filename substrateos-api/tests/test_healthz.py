@@ -7,4 +7,4 @@ def test_healthz_returns_ok() -> None:
     client = TestClient(app)
     resp = client.get("/healthz")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok", "service": "brain-api"}
+    assert resp.json() == {"status": "ok", "service": "substrateos-api"}

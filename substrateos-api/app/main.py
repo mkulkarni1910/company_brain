@@ -176,7 +176,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.token_store.aclose()
 
 
-app = FastAPI(title="brain-api", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="substrateos-api", version="0.1.0", lifespan=lifespan)
 
 # CORS origins are configurable via CORS_ALLOW_ORIGINS (comma-separated).
 app.add_middleware(
@@ -206,4 +206,4 @@ if get_settings().mcp_enabled:
 
 @app.get("/healthz")
 async def healthz() -> dict[str, str]:
-    return {"status": "ok", "service": "brain-api"}
+    return {"status": "ok", "service": "substrateos-api"}

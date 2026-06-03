@@ -1,4 +1,4 @@
-# brain-api
+# substrateos-api
 
 Zone 4 intelligence layer monolith. FastAPI + Semantic Kernel + Azure AI Search
 + Azure OpenAI + Redis.

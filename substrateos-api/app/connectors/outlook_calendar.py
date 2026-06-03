@@ -67,7 +67,7 @@ def _event_body(ev: dict) -> str:
     return "\n".join(parts).strip()
 
 
-def _parse_events(data: dict, owner_oid: str, brain_tenant: str) -> list:  # -> list[SourceDoc]
+def _parse_events(data: dict, owner_oid: str, substrateos_tenant: str) -> list:  # -> list[SourceDoc]
     """Parse a /calendarView (or delta) response → list[SourceDoc], ACL'd to owner_oid.
     Skips empty events and @removed delta tombstones."""
     from app.domain.chunk import SourceDoc
@@ -89,7 +89,7 @@ def _parse_events(data: dict, owner_oid: str, brain_tenant: str) -> list:  # -> 
 
         docs.append(SourceDoc(
             doc_id=f"outlookcal:{ical}",
-            tenant_id=brain_tenant,
+            tenant_id=substrateos_tenant,
             source="outlook_calendar",
             source_url=ev.get("webLink", ""),
             title=(ev.get("subject") or "(no subject)").strip() or "(no subject)",
@@ -162,7 +162,7 @@ class OutlookCalendarConnector:
     async def collect_documents(self, cap: int):  # -> CollectResult
         from app.connectors.sync import CollectResult
 
-        brain_tenant = get_settings().substrateos_tenant_id
+        substrateos_tenant = get_settings().substrateos_tenant_id
         by_id: dict = {}
         skipped = 0
         truncated = False
@@ -173,7 +173,7 @@ class OutlookCalendarConnector:
                     break
                 owner = u["user_id"]
                 raw = await self._list_events_raw(owner)
-                parsed = _parse_events(raw, owner, brain_tenant)
+                parsed = _parse_events(raw, owner, substrateos_tenant)
                 skipped += len(raw.get("value", [])) - len(parsed)
                 for doc in parsed:
                     if doc.doc_id not in by_id and len(by_id) >= cap:
@@ -186,7 +186,7 @@ class OutlookCalendarConnector:
 
     async def delta(self, user_id: str, token: str | None = None):
         """Incremental events for one calendar. Returns (docs, new_delta_link)."""
-        brain_tenant = get_settings().substrateos_tenant_id
+        substrateos_tenant = get_settings().substrateos_tenant_id
         if token:
             url = token
         else:
@@ -201,7 +201,7 @@ class OutlookCalendarConnector:
         try:
             while url and pages < _PAGE_LIMIT:
                 data = await self._get_json(url)
-                docs.extend(_parse_events(data, user_id, brain_tenant))
+                docs.extend(_parse_events(data, user_id, substrateos_tenant))
                 nxt = data.get("@odata.nextLink")
                 if nxt:
                     url = nxt
@@ -214,7 +214,7 @@ class OutlookCalendarConnector:
         return docs, delta_link
 
     async def fetch_event(self, user_id: str, event_id: str):  # -> SourceDoc | None
-        brain_tenant = get_settings().substrateos_tenant_id
+        substrateos_tenant = get_settings().substrateos_tenant_id
         try:
             data = await self._get_json(
                 f"{GRAPH}/users/{user_id}/events/{event_id}?{_EVENT_SELECT}"
@@ -222,5 +222,5 @@ class OutlookCalendarConnector:
         except Exception as e:  # noqa: BLE001
             logger.warning("fetch_event failed for %s/%s: %s", user_id, event_id, e)
             return None
-        docs = _parse_events({"value": [data]}, user_id, brain_tenant)
+        docs = _parse_events({"value": [data]}, user_id, substrateos_tenant)
         return docs[0] if docs else None

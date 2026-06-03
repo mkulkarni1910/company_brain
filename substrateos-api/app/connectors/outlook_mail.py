@@ -30,7 +30,7 @@ _MSG_SELECT = (
 )
 
 
-def _parse_messages(data: dict, owner_oid: str, brain_tenant: str) -> list:  # -> list[SourceDoc]
+def _parse_messages(data: dict, owner_oid: str, substrateos_tenant: str) -> list:  # -> list[SourceDoc]
     """Parse a /messages (or delta) response → list[SourceDoc], ACL'd to owner_oid.
     Skips messages that have neither subject nor body. Skips @removed delta tombstones."""
     from app.domain.chunk import SourceDoc
@@ -56,7 +56,7 @@ def _parse_messages(data: dict, owner_oid: str, brain_tenant: str) -> list:  # -
 
         docs.append(SourceDoc(
             doc_id=f"outlookmail:{imid}",
-            tenant_id=brain_tenant,
+            tenant_id=substrateos_tenant,
             source="outlook_mail",
             source_url=msg.get("webLink", ""),
             title=subject or "(no subject)",
@@ -132,7 +132,7 @@ class OutlookMailConnector:
         """BFS users → messages → deduped SourceDocs (ACL union). Caps unique docs."""
         from app.connectors.sync import CollectResult
 
-        brain_tenant = get_settings().substrateos_tenant_id
+        substrateos_tenant = get_settings().substrateos_tenant_id
         by_id: dict = {}
         skipped = 0
         truncated = False
@@ -143,7 +143,7 @@ class OutlookMailConnector:
                     break
                 owner = u["user_id"]
                 raw = await self._list_messages_raw(owner)
-                parsed = _parse_messages(raw, owner, brain_tenant)
+                parsed = _parse_messages(raw, owner, substrateos_tenant)
                 skipped += len(raw.get("value", [])) - len(parsed)
                 # respect cap on *new* unique docs (collisions only union ACLs)
                 for doc in parsed:
@@ -158,7 +158,7 @@ class OutlookMailConnector:
     async def delta(self, user_id: str, token: str | None = None):
         """Incremental messages for one mailbox. Returns (docs, new_delta_link).
         `token` is a previously stored @odata.deltaLink (a full URL) or None."""
-        brain_tenant = get_settings().substrateos_tenant_id
+        substrateos_tenant = get_settings().substrateos_tenant_id
         url = token or f"{GRAPH}/users/{user_id}/mailFolders('inbox')/messages/delta?{_MSG_SELECT}"
         docs: list = []
         delta_link: str | None = None
@@ -166,7 +166,7 @@ class OutlookMailConnector:
         try:
             while url and pages < _PAGE_LIMIT:
                 data = await self._get_json(url)
-                docs.extend(_parse_messages(data, user_id, brain_tenant))
+                docs.extend(_parse_messages(data, user_id, substrateos_tenant))
                 nxt = data.get("@odata.nextLink")
                 if nxt:
                     url = nxt
@@ -180,7 +180,7 @@ class OutlookMailConnector:
 
     async def fetch_message(self, user_id: str, message_id: str):  # -> SourceDoc | None
         """Fetch a single message (used by the realtime webhook). None on error/empty."""
-        brain_tenant = get_settings().substrateos_tenant_id
+        substrateos_tenant = get_settings().substrateos_tenant_id
         try:
             data = await self._get_json(
                 f"{GRAPH}/users/{user_id}/messages/{message_id}?{_MSG_SELECT}"
@@ -188,5 +188,5 @@ class OutlookMailConnector:
         except Exception as e:  # noqa: BLE001
             logger.warning("fetch_message failed for %s/%s: %s", user_id, message_id, e)
             return None
-        docs = _parse_messages({"value": [data]}, user_id, brain_tenant)
+        docs = _parse_messages({"value": [data]}, user_id, substrateos_tenant)
         return docs[0] if docs else None

@@ -59,7 +59,7 @@ def _parse_messages(
     channel: str,
     team_name: str,
     channel_name: str,
-    brain_tenant: str,
+    substrateos_tenant: str,
 ) -> list:  # list[SourceDoc]
     """Parse /messages response → list[SourceDoc]. Skips system/empty messages."""
     from app.domain.chunk import SourceDoc
@@ -86,13 +86,13 @@ def _parse_messages(
 
         docs.append(SourceDoc(
             doc_id=f"teams:{team}:{channel}:{msg_id}",
-            tenant_id=brain_tenant,
+            tenant_id=substrateos_tenant,
             source="teams",
             source_url=msg.get("webUrl", ""),
             title=f"{team_name} / {channel_name}",
             body=text,
             author_id=author,
-            acl_principals=[f"{brain_tenant}:everyone"],
+            acl_principals=[f"{substrateos_tenant}:everyone"],
             created_at=_dt(msg.get("createdDateTime")) or now,
             modified_at=_dt(msg.get("lastModifiedDateTime")) or now,
             mime="text/plain",
@@ -158,7 +158,7 @@ class TeamsConnector:
         Caps at `cap` docs. Degrades to CollectResult() on any error (never raises)."""
         from app.connectors.sync import CollectResult
 
-        brain_tenant = get_settings().substrateos_tenant_id
+        substrateos_tenant = get_settings().substrateos_tenant_id
         docs = []
         skipped = 0
         truncated = False
@@ -180,7 +180,7 @@ class TeamsConnector:
                     channel_name = channel["name"]
                     raw = await self._list_messages_raw(team_id, channel_id)
                     parsed = _parse_messages(
-                        raw, team_id, channel_id, team_name, channel_name, brain_tenant
+                        raw, team_id, channel_id, team_name, channel_name, substrateos_tenant
                     )
                     # Count system/empty messages as skipped
                     total_in_page = len(raw.get("value", []))

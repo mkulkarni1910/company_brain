@@ -1,4 +1,4 @@
-# Company Brain
+# SubStrateOS
 
 Production-grade intelligence layer for unified enterprise search and LLM
 orchestration on Microsoft Azure. See `docs/superpowers/specs/` for the

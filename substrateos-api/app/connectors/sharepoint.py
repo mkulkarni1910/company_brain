@@ -127,7 +127,7 @@ class SharePointConnector:
         from app.connectors.sync import CollectResult
         from app.domain.chunk import SourceDoc
 
-        brain_tenant = get_settings().substrateos_tenant_id
+        substrateos_tenant = get_settings().substrateos_tenant_id
         docs: list[SourceDoc] = []
         skipped = 0
         truncated = False
@@ -155,13 +155,13 @@ class SharePointConnector:
                 now = datetime.now(UTC)
                 doc = SourceDoc(
                     doc_id=f"sp:{site_id}:{f.item_id}",
-                    tenant_id=brain_tenant,
+                    tenant_id=substrateos_tenant,
                     source="sharepoint",
                     source_url=f.web_url,
                     title=f.name,
                     body=text,
                     author_id=f.author_id,
-                    acl_principals=[f"{brain_tenant}:everyone"],
+                    acl_principals=[f"{substrateos_tenant}:everyone"],
                     created_at=f.created_at or now,
                     modified_at=f.modified_at or now,
                     mime=f.mime or "text/plain",

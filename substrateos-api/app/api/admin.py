@@ -95,15 +95,15 @@ async def oauth_callback(
     web = s.web_base_url.rstrip("/")
     state_result = await store.consume_oauth_state(state) if state else None
     if state_result is None:
-        brain_tenant, provider = None, None
+        substrateos_tenant, provider = None, None
     else:
-        brain_tenant, provider = state_result
-    ok = admin_consent.lower() == "true" and bool(tenant) and brain_tenant is not None and not error
+        substrateos_tenant, provider = state_result
+    ok = admin_consent.lower() == "true" and bool(tenant) and substrateos_tenant is not None and not error
     if not ok:
         return RedirectResponse(url=f"{web}/admin/sources?error=oauth", status_code=302)
     display = _DISPLAY.get(provider, provider or "Source")
     conn = Connection(
-        connection_id=uuid.uuid4().hex, tenant_id=brain_tenant, type=provider,
+        connection_id=uuid.uuid4().hex, tenant_id=substrateos_tenant, type=provider,
         site_id=tenant, name=f"{display} · {tenant[:8]}", web_url="",
         connected_tenant_id=tenant, status="syncing",
     )
@@ -185,15 +185,15 @@ async def sharepoint_callback(
     web = s.web_base_url.rstrip("/")
     state_result = await store.consume_oauth_state(state) if state else None
     if state_result is None:
-        brain_tenant, provider = None, "sharepoint"
+        substrateos_tenant, provider = None, "sharepoint"
     else:
-        brain_tenant, provider = state_result
-    ok = admin_consent.lower() == "true" and bool(tenant) and brain_tenant is not None and not error
+        substrateos_tenant, provider = state_result
+    ok = admin_consent.lower() == "true" and bool(tenant) and substrateos_tenant is not None and not error
     if not ok:
         return RedirectResponse(url=f"{web}/admin/sources?error=oauth", status_code=302)
     display = _DISPLAY.get(provider, provider or "Source")
     conn = Connection(
-        connection_id=uuid.uuid4().hex, tenant_id=brain_tenant, type=provider,
+        connection_id=uuid.uuid4().hex, tenant_id=substrateos_tenant, type=provider,
         site_id=tenant, name=f"{display} · {tenant[:8]}", web_url="",
         connected_tenant_id=tenant, status="syncing",
     )

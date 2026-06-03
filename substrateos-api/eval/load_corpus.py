@@ -1,4 +1,4 @@
-"""Walk eval/corpus/ and POST each .md file to /admin/ingest on a running brain-api."""
+"""Walk eval/corpus/ and POST each .md file to /admin/ingest on a running substrateos-api."""
 
 from __future__ import annotations
 
