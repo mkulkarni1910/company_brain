@@ -189,6 +189,32 @@ def test_strip_bot_mention_extra_spaces():
     assert strip_bot_mention("<@UABC>   hello world") == "hello world"
 
 
+# ── post_slack_reply error surfacing ─────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_post_slack_reply_returns_error_on_ok_false(respx_mock):
+    import httpx
+    from app.bots.slack import post_slack_reply
+    from app.domain.query import Answer
+    respx_mock.post("https://slack.com/api/chat.postMessage").mock(
+        return_value=httpx.Response(200, json={"ok": False, "error": "not_in_channel"})
+    )
+    err = await post_slack_reply("xoxb-t", "C123", None, Answer(text="hi", citations=[], query_id="q"))
+    assert err == "not_in_channel"
+
+
+@pytest.mark.asyncio
+async def test_post_slack_reply_returns_none_on_success(respx_mock):
+    import httpx
+    from app.bots.slack import post_slack_reply
+    from app.domain.query import Answer
+    respx_mock.post("https://slack.com/api/chat.postMessage").mock(
+        return_value=httpx.Response(200, json={"ok": True})
+    )
+    err = await post_slack_reply("xoxb-t", "C123", None, Answer(text="hi", citations=[], query_id="q"))
+    assert err is None
+
+
 # ── build_manifest_zip ───────────────────────────────────────────────────────
 
 def test_manifest_zip_structure():

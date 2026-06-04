@@ -32,8 +32,13 @@ def strip_bot_mention(text: str) -> str:
 
 async def post_slack_reply(
     token: str, channel: str, thread_ts: str | None, answer: Answer
-) -> None:
-    """Post a formatted Slack message with answer text and source links."""
+) -> str | None:
+    """Post a formatted Slack message with answer text and source links.
+
+    Returns the Slack API error string on failure, None on success. Slack returns
+    HTTP 200 even for API errors (not_in_channel, missing_scope, …) — the real
+    outcome is the `ok` field in the JSON body, so it must be checked and logged.
+    """
     blocks: list[dict] = [
         {"type": "section", "text": {"type": "mrkdwn", "text": answer.text[:3000]}},
     ]
@@ -45,16 +50,25 @@ async def post_slack_reply(
             "type": "context",
             "elements": [{"type": "mrkdwn", "text": f"Sources: {links}"}],
         })
-    payload: dict = {"channel": channel, "blocks": blocks}
+    # `text` fallback keeps notifications working and satisfies clients that
+    # reject blocks-only messages.
+    payload: dict = {"channel": channel, "blocks": blocks, "text": answer.text[:3000]}
     if thread_ts:
         payload["thread_ts"] = thread_ts
     try:
         async with httpx.AsyncClient() as client:
-            await client.post(
+            resp = await client.post(
                 "https://slack.com/api/chat.postMessage",
                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
                 json=payload,
                 timeout=10.0,
             )
+        body = resp.json()
+        if not body.get("ok"):
+            error = body.get("error", "unknown_error")
+            logger.warning("Slack chat.postMessage failed: %s (channel=%s)", error, channel)
+            return error
+        return None
     except Exception:  # noqa: BLE001
         logger.exception("Slack post_message failed")
+        return "request_failed"
