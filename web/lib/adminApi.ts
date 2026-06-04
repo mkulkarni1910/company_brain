@@ -65,6 +65,12 @@ export type PurgeResult = {
   activity_cleared: number | null;
   errors: string[];
 };
+export type SurfaceConfig = {
+  name: string;
+  enabled: boolean;
+  installed: boolean;
+  workspace_name: string | null;
+};
 
 export const getStats = () => call<AdminStats>("/admin/stats");
 export const getConnections = () => call<Connection[]>("/admin/connections");
@@ -82,3 +88,9 @@ export const connectProvider = (provider: string) =>
 export const getJob = (id: string) => call<SyncJob>(`/admin/connections/${id}/job`);
 export const purgeEverything = () =>
   call<PurgeResult>("/admin/purge", { method: "POST" });
+export const getSurfaces = () => call<SurfaceConfig[]>("/admin/surfaces");
+export const patchSurface = (name: string, enabled: boolean) =>
+  call<SurfaceConfig>(`/admin/surfaces/${name}`, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
