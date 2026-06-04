@@ -1,10 +1,13 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { postQuery, postFeedback, getConversations, getConversation, logClick, postSearch,
   listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources,
   Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource } from "@/lib/api";
+import { getSkills, SkillSummary } from "@/lib/skillsApi";
+import SkillsPage from "@/app/skills/page";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
@@ -411,12 +414,15 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
 export default function Chat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
-  const [view, setView] = useState<"ask" | "discover" | "history">("ask");
+  const [view, setView] = useState<"ask" | "discover" | "history" | "skills">("ask");
   const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
   const [connectSurface, setConnectSurface] = useState<Surface | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [surfaceMap, setSurfaceMap] = useState<Record<string, boolean>>({});
   const [connectedSources, setConnectedSources] = useState<ConnectedSource[]>([]);
+  const [skills, setSkills] = useState<SkillSummary[]>([]);
+  const [autocomplete, setAutocomplete] = useState<SkillSummary[]>([]);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     getSurfaces().then((list) => {
@@ -426,6 +432,21 @@ export default function Chat() {
     });
     getConnectedSources().then(setConnectedSources);
   }, []);
+
+  useEffect(() => { getSkills().then(setSkills); }, []);
+
+  useEffect(() => {
+    const prefill = searchParams.get("prefill");
+    if (prefill) setInput(prefill);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!input.startsWith("/")) { setAutocomplete([]); return; }
+    const q = input.slice(1).toLowerCase();
+    setAutocomplete(skills.filter(
+      (s) => s.slug.includes(q) || s.name.toLowerCase().includes(q)
+    ).slice(0, 5));
+  }, [input, skills]);
 
   // Fail-open: if surfaces haven't loaded yet (or fetch failed), treat as enabled.
   const surfaceEnabled = (name: string) => surfaceMap[name] !== false;
@@ -466,7 +487,7 @@ export default function Chat() {
   }
 
   return (
-    <div className={"app" + (view === "ask" ? "" : " app--norail")}>
+    <div className={"app" + (view === "ask" ? "" : " app--norail") }>
       {/* LEFT RAIL */}
       <aside className="rail">
         <div className="brand">
@@ -484,6 +505,12 @@ export default function Chat() {
             </button>
             <button className={view === "history" ? "active" : ""} onClick={() => setView("history")}>
               <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>History
+            </button>
+            <button className={view === "skills" ? "active" : ""} onClick={() => setView("skills")}>
+              <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+              </svg>
+              Skills
             </button>
           </nav>
           <button className="newchat" onClick={newChat}>
@@ -513,6 +540,7 @@ export default function Chat() {
       </aside>
 
       {/* HISTORY / DISCOVER / ASK views */}
+      {view === "skills" && <SkillsPage />}
       {view === "history" && <ConversationsView onOpen={async (id) => {
         const conv = await getConversation(id);
         if (!conv) return;
@@ -570,6 +598,9 @@ export default function Chat() {
                       ))}
                     </div>
                     <div className="a-body"><AnswerText text={t.answer.text} citations={t.answer.citations} /></div>
+                    {t.answer.skill_used && (
+                      <div className="skill-used-badge">▶ via {t.answer.skill_used.name}</div>
+                    )}
                     {t.answer.citations.length > 0 && (
                       <div className="cites">
                         <div className="lbl">Sources</div>
@@ -594,6 +625,20 @@ export default function Chat() {
         </div>
 
         <div className="composer">
+          {autocomplete.length > 0 && (
+            <div className="skill-autocomplete">
+              {autocomplete.map((s) => (
+                <button
+                  key={s.id}
+                  className="skill-ac-item"
+                  onMouseDown={(e) => { e.preventDefault(); setInput(`/${s.slug} `); setAutocomplete([]); }}
+                >
+                  <span className="skill-ac-name">/{s.slug}</span>
+                  <span className="skill-ac-desc">{s.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <form className="box" onSubmit={(e) => { e.preventDefault(); ask(input); }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.8"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /><circle cx="12" cy="12" r="3.2" /></svg>
             <input placeholder="Ask anything across SharePoint, Teams, and live sources…" value={input} onChange={(e) => setInput(e.target.value)} />
