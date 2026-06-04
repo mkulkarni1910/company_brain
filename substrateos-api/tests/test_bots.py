@@ -238,6 +238,19 @@ def test_manifest_zip_app_id():
     assert "api.example.com" in manifest["validDomains"]
 
 
+def test_manifest_conforms_to_v117_schema():
+    # Teams rejected the package with "Manifest parsing error": the v1.17
+    # schema has no packageName and spells the scope groupChat (camelCase).
+    import json
+
+    from app.bots.manifest import build_manifest_zip
+    raw = build_manifest_zip("my-app-id-123", "api.example.com")
+    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+        manifest = json.loads(zf.read("manifest.json"))
+    assert "packageName" not in manifest
+    assert manifest["bots"][0]["scopes"] == ["personal", "team", "groupChat"]
+
+
 def test_manifest_zip_icons_are_valid_png():
     from app.bots.manifest import build_manifest_zip
     _PNG_SIG = b"\x89PNG\r\n\x1a\n"

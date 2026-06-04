@@ -35,7 +35,6 @@ def build_manifest_zip(app_id: str, api_host: str) -> bytes:
         "manifestVersion": "1.17",
         "version": "1.0.0",
         "id": app_id,
-        "packageName": "ai.substrateos.bot",
         "developer": {
             "name": "SubStrateOS",
             "websiteUrl": f"https://{api_host}",
@@ -55,7 +54,7 @@ def build_manifest_zip(app_id: str, api_host: str) -> bytes:
         "accentColor": "#C35A13",
         "bots": [{
             "botId": app_id,
-            "scopes": ["personal", "team", "groupchat"],
+            "scopes": ["personal", "team", "groupChat"],
             "isNotificationOnly": False,
         }],
         "permissions": ["identity", "messageTeamMembers"],
