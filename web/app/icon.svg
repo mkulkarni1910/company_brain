@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- SVG rendition of the .glyph brand mark (globals.css):
+       radial-gradient(circle at 30% 25%, #ffcf7e, #b06e0d 60%, #9a5e0e)
+       + inner glossy orb highlight -->
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="25%" r="110%">
+      <stop offset="0%" stop-color="#ffd98f"/>
+      <stop offset="55%" stop-color="#c47a16"/>
+      <stop offset="100%" stop-color="#9a5e0e"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="38%" cy="33%" r="70%">
+      <stop offset="0%" stop-color="#fff3d6" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#ffe2a6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="19" fill="url(#bg)"/>
+  <circle cx="32" cy="32" r="19" fill="url(#orb)"/>
+</svg>

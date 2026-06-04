@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- SubStrateOS brand mark at 512px — same artwork as app/icon.svg, scaled 8x.
+       radial-gradient(circle at 30% 25%, #ffd98f, #c47a16 55%, #9a5e0e)
+       + inner glossy orb highlight -->
+  <defs>
+    <radialGradient id="bg" cx="30%" cy="25%" r="110%">
+      <stop offset="0%" stop-color="#ffd98f"/>
+      <stop offset="55%" stop-color="#c47a16"/>
+      <stop offset="100%" stop-color="#9a5e0e"/>
+    </radialGradient>
+    <radialGradient id="orb" cx="38%" cy="33%" r="70%">
+      <stop offset="0%" stop-color="#fff3d6" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#ffe2a6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="152" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="152" fill="url(#orb)"/>
+</svg>
