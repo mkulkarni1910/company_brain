@@ -179,6 +179,7 @@ export default function Surfaces() {
 
   return (
     <div className="admin-page">
+    <div className="admin-wrap">
       <header className="admin-head">
         <h1>Surfaces</h1>
         <p>Where SubStrateOS shows up — enable surfaces and install integrations for your team.</p>
@@ -196,6 +197,7 @@ export default function Surfaces() {
           />
         ))}
       </div>
+    </div>
     </div>
   );
 }

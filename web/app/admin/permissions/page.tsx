@@ -1,6 +1,7 @@
 export default function Permissions() {
   return (
     <div className="admin-page">
+    <div className="admin-wrap">
       <div className="perm-hero">
         <div className="perm-shield">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -123,6 +124,7 @@ export default function Permissions() {
           <strong>Fine-grained access control is coming.</strong> For now, the admin key gates all admin actions and Easy Auth controls who can reach the app. Source-level ACLs from SharePoint and Microsoft 365 are already respected at query time — user-facing permission management will build on that foundation.
         </p>
       </div>
+    </div>
     </div>
   );
 }

@@ -337,7 +337,8 @@
   .ds-empty{display:none;padding:48px 20px;text-align:center;color:var(--ink-faint);font-size:14px}
   .ds-empty.show{display:block}
   /* other admin shared styles */
-  .admin-page{max-width:1120px;margin:0 auto;padding:34px 40px 70px;display:flex;flex-direction:column;gap:26px}
+  .admin-page{width:100%}
+  .admin-wrap{max-width:1120px;margin:0 auto;padding:34px 40px 70px;display:flex;flex-direction:column;gap:26px}
   .admin-head h1{font-family:var(--font-fraunces),serif;font-size:30px;font-weight:600;margin:0}
   .admin-head p{color:var(--ink-faint);margin:4px 0 0}
   .admin-note{background:var(--amber-bg);border:1px solid #e7cd96;border-radius:12px;padding:11px 14px;font-size:13px}

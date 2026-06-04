@@ -28,6 +28,7 @@ export default function Overview() {
   }, []);
   return (
     <div className="admin-page">
+    <div className="admin-wrap">
       <header className="admin-head">
         <h1>Overview</h1>
         <p>Your work context layer at a glance.</p>
@@ -65,6 +66,7 @@ export default function Overview() {
           </div>
         ))}
       </section>
+    </div>
     </div>
   );
 }
