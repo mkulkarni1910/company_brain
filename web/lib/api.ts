@@ -225,3 +225,15 @@ export async function revokeToken(tokenId: string): Promise<boolean> {
     return false;
   }
 }
+
+export type SurfaceStatus = { name: string; enabled: boolean };
+
+export async function getSurfaces(): Promise<SurfaceStatus[]> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/surfaces`);
+    if (!resp.ok) return [];
+    return (await resp.json()) as SurfaceStatus[];
+  } catch {
+    return [];
+  }
+}
