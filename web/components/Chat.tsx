@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { postQuery, postFeedback, getConversations, getConversation, logClick, postSearch,
-  listTokens, createToken, revokeToken, apiBaseUrl,
+  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces,
   Answer, Citation, ConversationSummary, SearchResponse, TokenMeta } from "@/lib/api";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
@@ -235,7 +235,7 @@ function AnswerText({ text, citations }: { text: string; citations: Citation[] }
   );
 }
 
-type Surface = "Web" | "Teams" | "Slack" | "API" | "MCP";
+type Surface = "Web" | "API" | "MCP";
 
 function relAge(iso: string | null | undefined): string {
   return iso ? relTime(iso) : "never";
@@ -333,17 +333,14 @@ function TokenManager() {
 }
 
 const SURFACE_META: Record<Surface, { icon: string; title: string; sub: string }> = {
-  Web:   { icon: "🌐", title: "Use SubStrateOS on the web", sub: "You're using it right now" },
-  API:   { icon: "🔌", title: "Use SubStrateOS via API", sub: "Grounded company context for your own apps & agents" },
-  MCP:   { icon: "🧩", title: "Use SubStrateOS via MCP", sub: "Connect your AI assistant to SubStrateOS" },
-  Slack: { icon: "💬", title: "Use SubStrateOS in Slack", sub: "Ask SubStrateOS without leaving your channels" },
-  Teams: { icon: "💬", title: "Use SubStrateOS in Teams", sub: "Ask SubStrateOS without leaving your channels" },
+  Web: { icon: "🌐", title: "Use SubStrateOS on the web", sub: "You're using it right now" },
+  API: { icon: "🔌", title: "Use SubStrateOS via API", sub: "Grounded company context for your own apps & agents" },
+  MCP: { icon: "🧩", title: "Use SubStrateOS via MCP", sub: "Connect your AI assistant to SubStrateOS" },
 };
 
 function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => void }) {
   const base = apiBaseUrl();
   const meta = SURFACE_META[surface];
-  const soon = surface === "Slack" || surface === "Teams";
 
   const curl = `curl -s ${base}/context \\
   -H "Authorization: Bearer $SUBSTRATE_TOKEN" \\
@@ -367,12 +364,11 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
 
   return (
     <div className="cx-backdrop" onClick={onClose}>
-      <div className={"modal" + (soon ? " narrow" : "")} onClick={(e) => e.stopPropagation()}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="m-head">
           <div className="m-icon">{meta.icon}</div>
           <div><div className="m-title">{meta.title}</div><div className="m-sub">{meta.sub}</div></div>
-          {soon && <span className="pill-soon">soon</span>}
-          <button className="m-x" onClick={onClose} style={soon ? { marginLeft: 12 } : undefined}>✕</button>
+          <button className="m-x" onClick={onClose}>✕</button>
         </div>
         <div className="m-body">
           {surface === "API" && (
@@ -406,12 +402,6 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
             </>
           )}
 
-          {soon && (
-            <div className="soon-wrap">
-              <div className="big">{surface} app — coming soon</div>
-              <div>You&apos;ll add the SubStrateOS {surface} app, then <code>/ask</code> SubStrateOS or @mention it in any channel. Answers stay scoped to each user&apos;s access.</div>
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -425,6 +415,18 @@ export default function Chat() {
   const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
   const [connectSurface, setConnectSurface] = useState<Surface | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [surfaceMap, setSurfaceMap] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    getSurfaces().then((list) => {
+      const map: Record<string, boolean> = {};
+      for (const s of list) map[s.name] = s.enabled;
+      setSurfaceMap(map);
+    });
+  }, []);
+
+  // Fail-open: if surfaces haven't loaded yet (or fetch failed), treat as enabled.
+  const surfaceEnabled = (name: string) => surfaceMap[name] !== false;
 
   function newChat() { setConversationId(crypto.randomUUID()); setTurns([]); setInput(""); setView("ask"); }
 
@@ -447,6 +449,18 @@ export default function Chat() {
     } catch (e: any) {
       setTurns((t) => t.map((x) => (x.id === id ? { ...x, error: String(e?.message ?? e), loading: false } : x)));
     }
+  }
+
+  if (surfaceMap["web"] === false) {
+    return (
+      <div className="app app--norail" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
+        <div style={{ textAlign: "center", maxWidth: 400 }}>
+          <div className="glyph big" style={{ margin: "0 auto 24px" }} />
+          <h2 style={{ marginBottom: 12 }}>Web app disabled</h2>
+          <p style={{ color: "var(--ink-faint)" }}>Your admin has disabled access to the SubStrateOS web interface. Contact your administrator to re-enable it.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -505,7 +519,7 @@ export default function Chat() {
           <span className="tenant">tenant · contoso</span>
           <div className="surfaces">
             <button className="chip on" onClick={() => setConnectSurface(null)}><span className="d" />Web</button>
-            {(["Teams", "Slack", "API", "MCP"] as Surface[]).map((s) => (
+            {(["API", "MCP"] as Surface[]).filter((s) => surfaceEnabled(s.toLowerCase())).map((s) => (
               <button key={s} className={"chip" + (connectSurface === s ? " sel" : "")} onClick={() => setConnectSurface(s)}>{s}</button>
             ))}
           </div>
