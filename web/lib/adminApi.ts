@@ -44,7 +44,7 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export type SourceHealth = { name: string; type: string; status: string; items: number };
 export type ActivityItem = { ts: string; actor: string; text: string; kind: string };
-export type NeedsItem = { text: string; where: string; severity?: "error" | "warning" | "ok" };
+export type NeedsItem = { text: string; where: string; severity: "error" | "warning" | "ok" };
 export type AdminStats = {
   active_users: number | null; queries_7d: number | null;
   items_indexed: number | null; sources_live: number;
