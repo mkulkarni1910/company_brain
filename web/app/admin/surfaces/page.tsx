@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSurfaces, patchSurface, SurfaceConfig } from "@/lib/adminApi";
+import {
+  getBotStatus, getSurfaces, patchSurface, downloadTeamsManifest,
+  BotStatus, SurfaceConfig,
+} from "@/lib/adminApi";
 
 type SurfaceMeta = {
   name: string;
@@ -87,16 +90,118 @@ function BlockedIcon() {
   );
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
+function TeamsInstallModal({ onClose }: { onClose: () => void }) {
+  const [downloading, setDownloading] = useState(false);
+  const [dlErr, setDlErr] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true); setDlErr(false);
+    try { await downloadTeamsManifest(); }
+    catch { setDlErr(true); }
+    finally { setDownloading(false); }
+  };
+
+  return (
+    <div className="admin-modal" onClick={onClose}>
+      <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+        <h3>Install SubStrateOS in Microsoft Teams</h3>
+        <ol style={{ paddingLeft: 18, margin: "0 0 16px", lineHeight: 1.7, fontSize: 13 }}>
+          <li>In <b>Azure Portal</b>, create an <b>Azure Bot</b> resource. Set the messaging endpoint to:<br />
+            <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
+              {API_URL}/bot/teams
+            </code>
+          </li>
+          <li>Copy the <b>App ID</b> and <b>App Password</b>, then set in your server environment:<br />
+            <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
+              TEAMS_BOT_APP_ID=… TEAMS_BOT_APP_PASSWORD=…
+            </code>
+            &nbsp;and restart the API.
+          </li>
+          <li>Download the manifest package and upload it in <b>Teams Admin Center → Apps → Manage apps → Upload an app</b>.</li>
+          <li>Done — this card will show Active on next load.</li>
+        </ol>
+        {dlErr && <p style={{ color: "var(--rose)", fontSize: 12, margin: "0 0 8px" }}>Download failed — check that TEAMS_BOT_APP_ID is set and the API is running.</p>}
+        <div className="modal-foot">
+          <button className="modal-close" onClick={onClose}>Close</button>
+          <button className="surf-install-btn btn-teams" onClick={handleDownload} disabled={downloading}>
+            {downloading ? "Preparing…" : "Download manifest.zip"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SlackInstallModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="admin-modal" onClick={onClose}>
+      <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+        <h3>Install SubStrateOS in Slack</h3>
+        <ol style={{ paddingLeft: 18, margin: "0 0 16px", lineHeight: 1.7, fontSize: 13 }}>
+          <li>Go to <b>api.slack.com/apps</b> → <b>Create new app</b> → From scratch → name it <b>SubStrateOS</b>.</li>
+          <li>Under <b>OAuth &amp; Permissions</b>, add bot scopes: <code>app_mentions:read</code>, <code>chat:write</code>, <code>im:read</code>, <code>im:write</code>.</li>
+          <li>Under <b>Event Subscriptions</b> → enable → set Request URL to:<br />
+            <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
+              {API_URL}/bot/slack
+            </code>
+            <br />Subscribe to <code>app_mention</code> and <code>message.im</code>.
+          </li>
+          <li><b>Install to workspace</b>, copy the <b>Bot User OAuth Token</b> and <b>Signing Secret</b>.</li>
+          <li>Set in your server environment:<br />
+            <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
+              SLACK_BOT_TOKEN=xoxb-… SLACK_SIGNING_SECRET=…
+            </code>
+            &nbsp;and restart the API — the card will show Active.
+          </li>
+        </ol>
+        <div className="modal-foot">
+          <button className="modal-close" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type CardProps = {
   meta: SurfaceMeta;
   config: SurfaceConfig;
   onToggle: (enabled: boolean) => void;
   onInstall: () => void;
-  installing: boolean;
+  botConfigured: boolean;
 };
 
-function SurfaceCard({ meta, config, onToggle, onInstall, installing }: CardProps) {
+function SurfaceCard({ meta, config, onToggle, onInstall, botConfigured }: CardProps) {
   const { enabled, installed, workspace_name } = config;
+
+  const footer = meta.installable ? (
+    installed ? (
+      <div className="surf-installed">
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", display: "inline-block", flexShrink: 0 }} />
+        Installed in {workspace_name ?? "your workspace"}
+      </div>
+    ) : botConfigured && meta.name === "teams" ? (
+      <button
+        className="surf-install-btn btn-teams"
+        onClick={onInstall}
+        disabled={!enabled}
+      >
+        Download manifest.zip
+      </button>
+    ) : (
+      <button
+        className={`surf-install-btn btn-${meta.name}`}
+        onClick={onInstall}
+        disabled={!enabled}
+      >
+        Install to {meta.label}
+      </button>
+    )
+  ) : (
+    meta.endpoint ? <span className="surf-url">{meta.endpoint}</span> : <span />
+  );
+
   return (
     <div className={`surf-card${enabled ? "" : " surf-off"}`}>
       <div className="surf-top">
@@ -119,24 +224,7 @@ function SurfaceCard({ meta, config, onToggle, onInstall, installing }: CardProp
         {meta.blockedMsg}
       </div>
       <div className="surf-foot">
-        {meta.installable ? (
-          installed ? (
-            <div className="surf-installed">
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", display: "inline-block", flexShrink: 0 }} />
-              Installed in {workspace_name ?? "your workspace"}
-            </div>
-          ) : (
-            <button
-              className={`surf-install-btn btn-${meta.name}`}
-              onClick={onInstall}
-              disabled={!enabled || installing}
-            >
-              {installing ? "Installing…" : `Install to ${meta.label}`}
-            </button>
-          )
-        ) : (
-          meta.endpoint ? <span className="surf-url">{meta.endpoint}</span> : <span />
-        )}
+        {footer}
         <span className="surf-scope">{meta.scope}</span>
       </div>
     </div>
@@ -145,36 +233,47 @@ function SurfaceCard({ meta, config, onToggle, onInstall, installing }: CardProp
 
 export default function Surfaces() {
   const [configs, setConfigs] = useState<SurfaceConfig[]>([]);
-  const [installing, setInstalling] = useState<string | null>(null);
+  const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
+  const [installModal, setInstallModal] = useState<"teams" | "slack" | null>(null);
   const [err, setErr] = useState(false);
 
   useEffect(() => {
-    getSurfaces().then(setConfigs).catch(() => setErr(true));
+    Promise.all([getSurfaces(), getBotStatus()])
+      .then(([surfaces, status]) => {
+        setConfigs(surfaces);
+        setBotStatus(status);
+        // Auto-heal: if bot is configured but not yet marked installed, sync DB.
+        const heal = (name: string, wsName: string, configured: boolean) => {
+          const cfg = surfaces.find((s) => s.name === name);
+          if (configured && cfg && !cfg.installed) {
+            patchSurface(name, cfg.enabled, { installed: true, workspace_name: wsName })
+              .then((updated) =>
+                setConfigs((prev) => prev.map((c) => (c.name === name ? updated : c)))
+              )
+              .catch(() => {});
+          }
+        };
+        heal("teams", "Microsoft Teams", status.teams.configured);
+        heal("slack", "Slack", status.slack.configured);
+      })
+      .catch(() => setErr(true));
   }, []);
 
   const configOf = (name: string): SurfaceConfig =>
     configs.find((c) => c.name === name) ?? { name, enabled: true, installed: false, workspace_name: null };
 
   const handleToggle = async (name: string, enabled: boolean) => {
-    setConfigs((prev) => prev.map((c) => c.name === name ? { ...c, enabled } : c));
+    setConfigs((prev) => prev.map((c) => (c.name === name ? { ...c, enabled } : c)));
     try {
       const updated = await patchSurface(name, enabled);
-      setConfigs((prev) => prev.map((c) => c.name === name ? updated : c));
+      setConfigs((prev) => prev.map((c) => (c.name === name ? updated : c)));
     } catch {
-      setConfigs((prev) => prev.map((c) => c.name === name ? { ...c, enabled: !enabled } : c));
+      setConfigs((prev) => prev.map((c) => (c.name === name ? { ...c, enabled: !enabled } : c)));
     }
   };
 
-  const handleInstall = async (name: string) => {
-    setInstalling(name);
-    try {
-      await patchSurface(name, true);
-      setConfigs((prev) => prev.map((c) =>
-        c.name === name ? { ...c, enabled: true, installed: true, workspace_name: "Your workspace" } : c
-      ));
-    } finally {
-      setInstalling(null);
-    }
+  const handleInstall = (name: string) => {
+    if (name === "teams" || name === "slack") setInstallModal(name);
   };
 
   return (
@@ -186,17 +285,24 @@ export default function Surfaces() {
       </header>
       {err && <div className="admin-note">Couldn&apos;t load surface config. Check the admin key / API.</div>}
       <div className="surf-grid">
-        {SURFACES.map((meta) => (
-          <SurfaceCard
-            key={meta.name}
-            meta={meta}
-            config={configOf(meta.name)}
-            onToggle={(enabled) => handleToggle(meta.name, enabled)}
-            onInstall={() => handleInstall(meta.name)}
-            installing={installing === meta.name}
-          />
-        ))}
+        {SURFACES.map((meta) => {
+          const bc =
+            meta.name === "teams" ? (botStatus?.teams.configured ?? false) :
+            meta.name === "slack" ? (botStatus?.slack.configured ?? false) : false;
+          return (
+            <SurfaceCard
+              key={meta.name}
+              meta={meta}
+              config={configOf(meta.name)}
+              onToggle={(enabled) => handleToggle(meta.name, enabled)}
+              onInstall={() => handleInstall(meta.name)}
+              botConfigured={bc}
+            />
+          );
+        })}
       </div>
+      {installModal === "teams" && <TeamsInstallModal onClose={() => setInstallModal(null)} />}
+      {installModal === "slack" && <SlackInstallModal onClose={() => setInstallModal(null)} />}
     </div>
     </div>
   );
