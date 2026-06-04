@@ -23,6 +23,8 @@ from app.api.search import router as search_router
 from app.api.sources import router as sources_router
 from app.api.surfaces import router as surfaces_router
 from app.api.tokens import router as tokens_router
+from app.api.skills import admin_router as skills_admin_router
+from app.api.skills import router as skills_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
 from app.connectors.cosmos_store import CosmosConnectionStore
@@ -205,6 +207,8 @@ app.include_router(bots_router)
 app.include_router(surfaces_router)
 app.include_router(tokens_router)
 app.include_router(context_router)
+app.include_router(skills_router)
+app.include_router(skills_admin_router)
 
 if get_settings().mcp_enabled:
     app.mount("/mcp", build_mcp_asgi())
