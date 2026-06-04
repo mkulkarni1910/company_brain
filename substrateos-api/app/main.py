@@ -39,6 +39,8 @@ from app.history.store import HistoryStore
 from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.mcp.server import build_mcp_asgi, mcp_bind, run_session_manager
 from app.metrics.store import MetricsStore
+from app.skills.store import SkillStore
+from app.skills.service import SkillRouter as SkillRouterSvc
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.orchestrator.planner import QueryPlanner
 from app.people.graph_client import PeopleGraphClient
@@ -146,6 +148,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         app.state.token_store = NullTokenStore()
     app.state.metrics_store = MetricsStore()
+    app.state.skill_store = SkillStore()
+    app.state.skill_router_svc = SkillRouterSvc(
+        skill_store=app.state.skill_store,
+        llm=app.state.llm,
+    )
     # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
     # configured (e.g. India has no Redis), else Redis (no-op without a host).
     if _s.cosmos_gremlin_endpoint and _s.cosmos_gremlin_key:
@@ -178,6 +185,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.connection_store.aclose()
         await app.state.subscription_store.aclose()
         await app.state.metrics_store.aclose()
+        await app.state.skill_store.aclose()
         await app.state.token_store.aclose()
 
 

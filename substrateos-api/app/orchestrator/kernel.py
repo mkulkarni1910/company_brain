@@ -6,6 +6,7 @@ import logging
 import time
 import uuid
 
+from app.domain.skill import ResolvedSkill
 from app.acl.store import ACLStore
 from app.activity.signal import ActivitySignal
 from app.cache.redis_cache import RedisCache
@@ -153,14 +154,16 @@ class SemanticKernelOrchestrator:
         return ranked
 
     async def answer(
-        self, request: QueryRequest, *, user: User, user_token: str | None = None
+        self, request: QueryRequest, *, user: User, user_token: str | None = None,
+        skill_context: ResolvedSkill | None = None,
     ) -> Answer:
         query_id = str(uuid.uuid4())
         timer = StageTimer(query_id=query_id)
         t0 = time.perf_counter()
         try:
             return await self._answer(
-                request, user=user, user_token=user_token, timer=timer, query_id=query_id
+                request, user=user, user_token=user_token, timer=timer,
+                query_id=query_id, skill_context=skill_context,
             )
         finally:
             total_ms = round((time.perf_counter() - t0) * 1000, 1)
@@ -174,6 +177,7 @@ class SemanticKernelOrchestrator:
         user_token: str | None,
         timer: StageTimer,
         query_id: str,
+        skill_context: ResolvedSkill | None = None,
     ) -> Answer:
         key = _cache_key(user, request.query)
         # Skip the cache lookup for debug requests so we always compute fresh
@@ -195,7 +199,10 @@ class SemanticKernelOrchestrator:
             )
 
         candidates = [r.candidate for r in ranked]
-        messages = build_grounded_messages(query=request.query, candidates=candidates[:5])
+        messages = build_grounded_messages(
+            query=request.query, candidates=candidates[:5],
+            skill_prompt=skill_context.system_prompt if skill_context else None,
+        )
         async with timer.stage("generate"):
             text = await self._llm.complete(messages=messages, temperature=0.0, max_tokens=800)
         citations = parse_citations_from_answer(text, candidates[:5])
@@ -214,7 +221,14 @@ class SemanticKernelOrchestrator:
                 "related_author_ids": cited_author_ids,
                 "timings_ms": dict(timer.timings_ms),
             }
-        answer = Answer(text=text, citations=citations, query_id=query_id, debug=debug)
+        answer = Answer(
+            text=text,
+            citations=citations,
+            query_id=query_id,
+            skill_used={"id": skill_context.id, "slug": skill_context.slug, "name": skill_context.name}
+            if skill_context else None,
+            debug=debug,
+        )
 
         cache_blob = answer.model_dump()
         cache_blob.pop("query_id", None)
