@@ -191,6 +191,64 @@
   @media(max-width:1180px){.view-ask{grid-template-columns:1fr}.rail--right{display:none}.view-discover .grid{grid-template-columns:1fr}.facets{display:none}}
   @media(max-width:880px){.app{grid-template-columns:1fr}.rail{display:none}}
 
+  /* ── Skills view ── */
+  .view-skills{grid-template-columns:1fr}
+  .main--skills{display:block;height:100vh;overflow:auto;padding:36px}
+  .skills-pg-head{margin-bottom:28px}
+  .skills-eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:10px}
+  .skills-pg-head h1{font-family:"Fraunces",serif;font-size:28px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em}
+  .skills-pg-head p{color:var(--ink-dim);font-size:14.5px;margin:0}
+  .skills-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+  .filter-chip{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.04em;padding:6px 13px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--ink-dim);cursor:pointer;transition:.15s;text-transform:uppercase}
+  .filter-chip:hover{border-color:var(--ink-dim)}
+  .filter-chip.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .skills-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1100px}
+  @media(max-width:900px){.skills-grid{grid-template-columns:repeat(2,1fr)}}
+  .sk-card{border:1px solid var(--line-soft);border-radius:14px;background:var(--surface);padding:20px;cursor:pointer;position:relative;transition:.18s;overflow:hidden}
+  .sk-card:hover{transform:translateY(-2px);border-color:#cabd9f;box-shadow:var(--shadow)}
+  .sk-card-team{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:20px;display:inline-block;margin-bottom:12px}
+  .tc-eng{background:#e0ede8;color:#1f5c4d}
+  .tc-prod{background:#f4e3da;color:#9a3b1f}
+  .tc-hr{background:#ece2f0;color:#6b3f7a}
+  .tc-mkt{background:#f6ecd2;color:#946112}
+  .tc-biz{background:#dce8ee;color:#2a5a72}
+  .sk-card h3{font-family:"Fraunces",serif;font-size:17px;font-weight:600;line-height:1.25;margin:0 0 7px}
+  .sk-card p{font-size:13px;color:var(--ink-dim);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:0}
+  .sk-card-foot{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-soft);font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint)}
+  .sk-rating{color:var(--amber);font-weight:600}
+  .sk-runs{margin-left:auto}
+  .sk-star-badge{position:absolute;top:15px;right:15px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--amber)}
+  /* skill detail modal */
+  .sk-modal-bg{position:fixed;inset:0;background:rgba(26,22,17,.5);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:24px;z-index:90}
+  .sk-modal-bg.show{display:flex}
+  .sk-modal{background:var(--paper);border-radius:16px;max-width:560px;width:100%;max-height:86vh;overflow:auto;border:1px solid var(--line);box-shadow:0 30px 80px -20px rgba(0,0,0,.45)}
+  .sk-modal-head{padding:22px 24px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px}
+  .sk-modal-head h3{font-family:"Fraunces",serif;font-size:21px;font-weight:600;flex:1;margin:0}
+  .sk-modal-x{cursor:pointer;font-family:"JetBrains Mono",monospace;font-size:14px;color:var(--ink-dim);border:1px solid var(--line);width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:none;flex:none}
+  .sk-modal-body{padding:22px 24px}
+  .sk-modal-lbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin:18px 0 9px}
+  .sk-modal-lbl:first-child{margin-top:0}
+  .sk-steps{list-style:none;padding:0;margin:0}
+  .sk-steps li{display:flex;gap:11px;font-size:13.5px;margin-bottom:8px}
+  .sk-steps .n{font-family:"JetBrains Mono",monospace;font-size:10px;background:var(--ink);color:var(--paper);width:20px;height:20px;border-radius:6px;display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+  .sk-feeds{display:flex;flex-wrap:wrap;gap:7px}
+  .sk-feed{font-family:"JetBrains Mono",monospace;font-size:11px;border:1px solid var(--line);background:var(--surface);padding:5px 10px;border-radius:20px;color:var(--ink-dim)}
+  .sk-modal-foot{display:flex;gap:9px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft)}
+  .sk-run-btn{font-family:"JetBrains Mono",monospace;font-size:12px;padding:10px 18px;border-radius:9px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;transition:.15s}
+  .sk-run-btn:hover{background:#2a2520}
+  .sk-close-btn{font-family:"JetBrains Mono",monospace;font-size:12px;padding:10px 18px;border-radius:9px;background:transparent;color:var(--ink-dim);border:1px solid var(--line);cursor:pointer}
+  /* autocomplete */
+  .composer-wrap{position:relative}
+  .sk-autocomplete{position:absolute;bottom:100%;left:0;right:0;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:8px;display:none}
+  .sk-autocomplete.show{display:block}
+  .sk-ac-item{display:flex;align-items:baseline;gap:10px;width:100%;padding:10px 14px;background:none;border:none;text-align:left;cursor:pointer;transition:.12s;border-bottom:1px solid var(--line-soft);font-family:inherit}
+  .sk-ac-item:last-child{border-bottom:none}
+  .sk-ac-item:hover{background:var(--paper-2)}
+  .sk-ac-name{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--amber);font-weight:600}
+  .sk-ac-desc{font-size:12.5px;color:var(--ink-dim)}
+  /* skill used badge */
+  .skill-used-badge{display:inline-flex;align-items:center;gap:6px;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--teal);background:var(--teal-bg);border:1px solid rgba(15,137,126,.25);padding:3px 10px;border-radius:20px;margin-bottom:12px;margin-left:36px}
+
   /* ── discover (search) view ─────────────────────────────────────── */
   .main--discover{display:block;height:100vh;overflow:auto}
   .searchwrap{position:sticky;top:0;z-index:5;background:rgba(254,253,251,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line-soft);padding:20px 36px 14px}
@@ -331,6 +389,7 @@
         <a class="active" href="#" data-view="ask"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Ask</a>
         <a href="#" data-view="discover"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>Discover</a>
         <a href="#" data-view="history"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
+        <a href="#" data-view="skills"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Skills</a>
       </nav>
       <button class="newchat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>New chat</button>
     </div>
@@ -408,10 +467,49 @@
             <span class="cached">340 ms · cache miss · feedback → activity pillar</span>
           </div>
         </section>
+
+        <div class="user-row"><div class="user-msg">/write-prd for the new mobile checkout feature</div></div>
+
+        <section class="answer" style="animation-delay:.1s">
+          <div class="a-head">
+            <div class="a-glyph"></div>
+            <div class="a-name">SubStrate<b>OS</b></div>
+            <div class="badge-fresh"><span class="pulse"></span>skill · grounded · 4 sources</div>
+          </div>
+          <div class="skill-used-badge">▶ via Write a PRD</div>
+          <div class="trace">
+            <span class="step done"><span class="num">✓</span>skill match</span><span class="arrow"></span>
+            <span class="step done"><span class="num">✓</span>retrieve</span><span class="arrow"></span>
+            <span class="step done"><span class="num">✓</span>acl re-check</span><span class="arrow"></span>
+            <span class="step done"><span class="num">✓</span>ground</span>
+          </div>
+          <div class="a-body">
+            <p class="lead">Draft PRD — <strong>Mobile Checkout v2</strong></p>
+            <p><strong>Problem.</strong> Our current checkout flow is optimised for desktop; conversion on mobile is 14 pp lower. Users abandon at the payment step due to form friction.<cite-ref>1</cite-ref></p>
+            <p><strong>Goal &amp; metric.</strong> Lift mobile checkout conversion by ≥ 10 pp within 60 days of launch. Success measured via p95 checkout time &lt; 3 s and abandonment rate at payment step.<cite-ref>2</cite-ref></p>
+            <p><strong>Scope.</strong> Guest + logged-in checkout, async fraud check, saved payment methods. Out of scope: loyalty points integration (fast-follow).</p>
+          </div>
+          <div class="cites">
+            <div class="lbl">Sources</div>
+            <a class="cite" href="#"><span class="n">[1]</span><div><div class="c-title">Mobile Conversion Report — Q2</div><div class="c-snip">Mobile checkout abandonment rate is 38%, vs 24% on desktop. The payment step accounts for 60% of drop-off…</div><div class="c-src"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>sharepoint · /sites/analytics/q2-mobile.md</div></div></a>
+            <a class="cite" href="#"><span class="n">[2]</span><div><div class="c-title">Checkout v2 — Success Metrics Doc</div><div class="c-snip">Target: p95 checkout time under 3 seconds, abandonment at payment step below 22%…</div><div class="c-src"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>notion · /product/checkout-v2-metrics</div></div></a>
+          </div>
+          <div class="fb">
+            <button class="up"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1zM7 11l4-7a2 2 0 0 1 2 2v3h5a2 2 0 0 1 2 2.3l-1.3 7A2 2 0 0 1 16.7 20H7"/></svg>Helpful</button>
+            <button class="down"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 13V4h3a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1zM17 13l-4 7a2 2 0 0 1-2-2v-3H6a2 2 0 0 1-2-2.3l1.3-7A2 2 0 0 1 7.3 4H17"/></svg>Not quite</button>
+            <div class="sep"></div>
+            <span class="cached">510 ms · skill: write-prd · cache miss</span>
+          </div>
+        </section>
       </div>
     </div>
 
     <div class="composer">
+      <div class="sk-autocomplete" id="sk-ac">
+        <button class="sk-ac-item" onmousedown="selectSkill('/write-prd ')"><span class="sk-ac-name">/write-prd</span><span class="sk-ac-desc">Write a PRD</span></button>
+        <button class="sk-ac-item" onmousedown="selectSkill('/deploy-to-production ')"><span class="sk-ac-name">/deploy-to-production</span><span class="sk-ac-desc">Deploy to Production</span></button>
+        <button class="sk-ac-item" onmousedown="selectSkill('/onboard-new-hire ')"><span class="sk-ac-name">/onboard-new-hire</span><span class="sk-ac-desc">Onboard a New Hire</span></button>
+      </div>
       <div class="box">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.8"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3.2"/></svg>
         <input placeholder="Ask anything across SharePoint, Teams, and live sources…" />
@@ -560,6 +658,71 @@
   </section>
 </div>
 
+  <!-- ══ SKILLS VIEW ════════════════════════════════════════════════════ -->
+  <section class="view view-skills">
+  <main class="main main--skills">
+    <div class="skills-pg-head">
+      <div class="skills-eyebrow">Org Skills</div>
+      <h1>Your team's proven workflows</h1>
+      <p>Reusable skills distilled from how your org does recurring tasks. Run with <code style="font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--panel);padding:2px 6px;border-radius:5px">/skill-name</code> in chat or click Run below.</p>
+    </div>
+
+    <div class="skills-filter">
+      <button class="filter-chip active" onclick="filterSkills(this,'All')">All</button>
+      <button class="filter-chip" onclick="filterSkills(this,'Engineering')">Engineering</button>
+      <button class="filter-chip" onclick="filterSkills(this,'Product')">Product</button>
+      <button class="filter-chip" onclick="filterSkills(this,'HR')">HR / People</button>
+      <button class="filter-chip" onclick="filterSkills(this,'Marketing')">Marketing</button>
+      <button class="filter-chip" onclick="filterSkills(this,'Business')">Business / Ops</button>
+    </div>
+
+    <div class="skills-grid" id="skills-grid">
+      <div class="sk-card" data-team="Engineering" onclick="openSkillDetail(0)">
+        <span class="sk-star-badge">★ 4.8</span>
+        <span class="sk-card-team tc-eng">Engineering</span>
+        <h3>Deploy to Production</h3>
+        <p>Our exact release path — pre-flight checks, feature flags, canary %, rollback runbook, and who to page.</p>
+        <div class="sk-card-foot"><span class="sk-rating">★★★★★ 4.8</span><span class="sk-runs">312 runs</span></div>
+      </div>
+      <div class="sk-card" data-team="Product" onclick="openSkillDetail(1)">
+        <span class="sk-star-badge">★ 4.6</span>
+        <span class="sk-card-team tc-prod">Product</span>
+        <h3>Write a PRD</h3>
+        <p>Generates a PRD in our house format — problem, metrics, scope cuts, and the eng-readiness checklist.</p>
+        <div class="sk-card-foot"><span class="sk-rating">★★★★★ 4.6</span><span class="sk-runs">198 runs</span></div>
+      </div>
+      <div class="sk-card" data-team="HR" onclick="openSkillDetail(2)">
+        <span class="sk-star-badge">★ 4.9</span>
+        <span class="sk-card-team tc-hr">HR / People</span>
+        <h3>Onboard a New Hire</h3>
+        <p>Builds a role-specific 30-day plan, access requests, buddy assignment, and required policy reads.</p>
+        <div class="sk-card-foot"><span class="sk-rating">★★★★★ 4.9</span><span class="sk-runs">87 runs</span></div>
+      </div>
+      <div class="sk-card" data-team="Marketing" onclick="openSkillDetail(3)">
+        <span class="sk-star-badge">★ 4.5</span>
+        <span class="sk-card-team tc-mkt">Marketing</span>
+        <h3>Launch Campaign Brief</h3>
+        <p>Assembles positioning, channel plan, and asset checklist using past winning campaigns as priors.</p>
+        <div class="sk-card-foot"><span class="sk-rating">★★★★☆ 4.5</span><span class="sk-runs">64 runs</span></div>
+      </div>
+      <div class="sk-card" data-team="Business" onclick="openSkillDetail(4)">
+        <span class="sk-star-badge">★ 4.7</span>
+        <span class="sk-card-team tc-biz">Business / Ops</span>
+        <h3>Build a QBR Deck</h3>
+        <p>Pulls live metrics from the brain, fills our QBR template, flags the numbers that moved most.</p>
+        <div class="sk-card-foot"><span class="sk-rating">★★★★★ 4.7</span><span class="sk-runs">141 runs</span></div>
+      </div>
+      <div class="sk-card" data-team="Engineering" onclick="openSkillDetail(5)">
+        <span class="sk-star-badge">★ 4.4</span>
+        <span class="sk-card-team tc-eng">Engineering</span>
+        <h3>Incident Postmortem</h3>
+        <p>Drafts a blameless postmortem from the incident channel, timeline, and PagerDuty data.</p>
+        <div class="sk-card-foot"><span class="sk-rating">★★★★☆ 4.4</span><span class="sk-runs">53 runs</span></div>
+      </div>
+    </div>
+  </main>
+  </section>
+
 <!-- ── CONNECT PANELS (open from the topbar surface chips) ─────────── -->
 <div class="cx-backdrop" id="cx" hidden>
 
@@ -681,11 +844,33 @@
 
 </div>
 
+<!-- Skill detail modal -->
+<div class="sk-modal-bg" id="sk-detail-bg">
+  <div class="sk-modal">
+    <div class="sk-modal-head">
+      <h3 id="sk-detail-title"></h3>
+      <button class="sk-modal-x" onclick="closeSkillDetail()">✕</button>
+    </div>
+    <div class="sk-modal-body">
+      <div class="sk-modal-lbl">What this skill does</div>
+      <p id="sk-detail-desc" style="font-size:14px;color:var(--ink-dim);line-height:1.55;margin:0"></p>
+      <div class="sk-modal-lbl">Steps it runs</div>
+      <ol class="sk-steps" id="sk-detail-steps"></ol>
+      <div class="sk-modal-lbl">Data it reads (ACL-scoped)</div>
+      <div class="sk-feeds" id="sk-detail-feeds"></div>
+      <div class="sk-modal-foot">
+        <button class="sk-run-btn" onclick="runSkill()">▶ Run skill</button>
+        <button class="sk-close-btn" onclick="closeSkillDetail()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   // ── view switching (Ask / Discover) via left-nav ──────────────────
   var navLinks = document.querySelectorAll('.nav a[data-view]');
-  var views = { ask: document.querySelector('.view-ask'), discover: document.querySelector('.view-discover') };
+  var views = { ask: document.querySelector('.view-ask'), discover: document.querySelector('.view-discover'), skills: document.querySelector('.view-skills') };
   navLinks.forEach(function(a){
     a.addEventListener('click', function(e){
       e.preventDefault();
@@ -758,6 +943,88 @@
       setTimeout(function(){ b.textContent = prev; }, 1200);
     });
   });
+  // ── Skills view ───────────────────────────────────────────────────────
+  var SKILLS = [
+    {title:'Deploy to Production',slug:'deploy-to-production',desc:'Runs our exact release procedure — pre-flight checks, feature flags, canary %, rollback runbook.',steps:['Run pre-flight checks (tests green, migrations reviewed)','Confirm feature-flag state with owner','Deploy canary at 5%, watch error rate 10 min','Promote to 100% or auto-rollback on SLO breach','Post release note + notify PM'],feeds:['checkout-svc repo','CI/CD status','PagerDuty on-call','SLO dashboard']},
+    {title:'Write a PRD',slug:'write-prd',desc:'Drafts a PRD in our house format, pre-filled from the brain so you start at 70% not zero.',steps:['Pull related past PRDs + their outcomes','Draft problem, goals, and success metrics','Auto-add the eng-readiness checklist','Flag any metric that lacks instrumentation','Share draft + tag the assigned engineer'],feeds:['Past PRDs','Roadmap deck','Metrics doc','#product-*']},
+    {title:'Onboard a New Hire',slug:'onboard-new-hire',desc:'Builds a personalized 30-day onboarding plan for a specific role and team.',steps:['Read the role + team from HR system','Generate role-specific 30/60/90 plan','File access requests for required tools','Assign an onboarding buddy','List mandatory policy reads + track completion'],feeds:['HR system','Team graph','Policy library','Access catalog']},
+    {title:'Launch Campaign Brief',slug:'launch-campaign-brief',desc:'Assembles a launch brief grounded in what worked for past campaigns.',steps:['Retrieve top past campaigns + their metrics','Draft positioning and key messages','Propose channel mix with budget split','Generate the asset checklist','Route to brand for review'],feeds:['Past campaigns','Brand guidelines','Analytics','#marketing']},
+    {title:'Build a QBR Deck',slug:'build-qbr-deck',desc:'Produces a quarterly business review deck from live data in our template.',steps:['Pull current-quarter metrics from the brain','Fill the QBR template slide by slide','Highlight the 3 numbers that moved most','Draft the narrative + risks section','Export to slides + share with leadership'],feeds:['Metrics warehouse','Last QBR deck','Finance data','OKR tracker']},
+    {title:'Incident Postmortem',slug:'incident-postmortem',desc:'Drafts a blameless postmortem straight from incident artifacts.',steps:['Reconstruct timeline from incident channel','Pull PagerDuty + deploy history','Draft root cause + contributing factors','Propose action items with owners','Share draft for team review'],feeds:['#incident channel','PagerDuty','Deploy log','Monitoring']}
+  ];
+
+  filterSkills = function(btn, team) {
+    document.querySelectorAll('.filter-chip').forEach(function(c){ c.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.sk-card').forEach(function(c){
+      c.style.display = (team === 'All' || c.dataset.team === team) ? '' : 'none';
+    });
+  };
+
+  openSkillDetail = function(i) {
+    var s = SKILLS[i];
+    document.getElementById('sk-detail-title').textContent = s.title;
+    document.getElementById('sk-detail-desc').textContent = s.desc;
+    var stepsEl = document.getElementById('sk-detail-steps');
+    stepsEl.innerHTML = '';
+    s.steps.forEach(function(step, idx){
+      var li = document.createElement('li');
+      li.innerHTML = '<span class="n">'+(idx+1)+'</span><div>'+step+'</div>';
+      stepsEl.appendChild(li);
+    });
+    var feedsEl = document.getElementById('sk-detail-feeds');
+    feedsEl.innerHTML = s.feeds.map(function(f){ return '<span class="sk-feed">'+f+'</span>'; }).join('');
+    document.getElementById('sk-detail-bg').classList.add('show');
+    document.getElementById('sk-detail-bg')._slug = s.slug;
+  };
+
+  closeSkillDetail = function() {
+    document.getElementById('sk-detail-bg').classList.remove('show');
+  };
+
+  runSkill = function() {
+    var slug = document.getElementById('sk-detail-bg')._slug || '';
+    closeSkillDetail();
+    // Switch to ask view and prefill input
+    document.querySelectorAll('.nav a[data-view]').forEach(function(a){ a.classList.remove('active'); });
+    document.querySelector('.nav a[data-view="ask"]').classList.add('active');
+    document.querySelector('.view-ask').classList.add('active');
+    document.querySelector('.view-skills').classList.remove('active');
+    var inp = document.querySelector('.composer input');
+    if(inp){ inp.value = '/'+slug+' '; inp.focus(); checkAutocomplete(inp); }
+  };
+
+  document.getElementById('sk-detail-bg').addEventListener('click', function(e){ if(e.target===this) closeSkillDetail(); });
+
+  // ── /autocomplete ─────────────────────────────────────────────────────
+  var composerInput = document.querySelector('.composer input');
+  var acBox = document.getElementById('sk-ac');
+
+  checkAutocomplete = function(inp) {
+    var val = inp.value;
+    if(!val.startsWith('/')) { acBox.classList.remove('show'); return; }
+    var q = val.slice(1).toLowerCase();
+    var items = acBox.querySelectorAll('.sk-ac-item');
+    var any = false;
+    items.forEach(function(item){
+      var name = item.querySelector('.sk-ac-name').textContent.slice(1);
+      var show = name.includes(q) || item.querySelector('.sk-ac-desc').textContent.toLowerCase().includes(q);
+      item.style.display = show ? '' : 'none';
+      if(show) any = true;
+    });
+    acBox.classList.toggle('show', any);
+  };
+
+  if(composerInput) {
+    composerInput.addEventListener('input', function(){ checkAutocomplete(this); });
+    composerInput.addEventListener('blur', function(){ setTimeout(function(){ acBox.classList.remove('show'); }, 150); });
+  }
+
+  selectSkill = function(slug) {
+    if(composerInput){ composerInput.value = slug; composerInput.focus(); }
+    acBox.classList.remove('show');
+  };
+
 })();
 </script>
 </body>
