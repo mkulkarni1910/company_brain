@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class SearchService:
-    """Glean-style search: a fast faceted result page + people/authors resolved from
+    """Enterprise search: a fast faceted result page + people/authors resolved from
     result authors. The AI Overview is intentionally NOT produced here — the client
     requests it separately (via /query) so the slow LLM call never blocks the result
     list. Every part degrades independently; the endpoint never 500s on a data-layer

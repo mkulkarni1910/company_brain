@@ -1,4 +1,4 @@
-# Discover → Glean-style Search — Design Spec
+# Discover → Enterprise Search — Design Spec
 
 **Date:** 2026-05-31
 **Status:** Approved (brainstorming) — mockup `mockups/user-web-chat.html (Discover view — `.view-discover`)`
@@ -6,7 +6,7 @@
 
 ## Goal
 
-Turn **Discover** into an enterprise **search** surface (Glean-style): a query box + filters, a ranked result list with rich snippets and source facets, and a grounded **AI Overview** on top — all ACL-trimmed to the signed-in user. Reuses existing infrastructure: AI Search (hybrid + facets + highlights), the grounded-answer orchestrator (→ AI Overview), and the People graph (→ "people who work on this").
+Turn **Discover** into an enterprise **search** surface: a query box + filters, a ranked result list with rich snippets and source facets, and a grounded **AI Overview** on top — all ACL-trimmed to the signed-in user. Reuses existing infrastructure: AI Search (hybrid + facets + highlights), the grounded-answer orchestrator (→ AI Overview), and the People graph (→ "people who work on this").
 
 ## Decisions (locked)
 - **Placement:** replaces the Discover nav item. Nav stays Ask · Discover(search) · History.

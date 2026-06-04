@@ -1,8 +1,8 @@
-# Discover → Glean-style Search Implementation Plan
+# Discover → Enterprise Search Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
-**Goal:** Replace the Discover surface with a Glean-style enterprise search — query box + filters, ranked results with source facets, and an always-on grounded AI Overview — all ACL-trimmed.
+**Goal:** Replace the Discover surface with an enterprise search — query box + filters, ranked results with source facets, and an always-on grounded AI Overview — all ACL-trimmed.
 
 **Architecture:** `POST /search` runs, concurrently, `AISearchClient.search_page` (faceted result page) and `orchestrator.answer` (grounded AI Overview), then resolves "people who work on this" from result authors via the People graph. Frontend replaces the Discover view with a SearchView.
 
@@ -524,7 +524,7 @@ logger = logging.getLogger(__name__)
 
 
 class SearchService:
-    """Glean-style search: faceted result page + grounded AI Overview + people-from-authors.
+    """Enterprise search: faceted result page + grounded AI Overview + people-from-authors.
     Each part degrades independently; the endpoint never 500s on a data-layer failure."""
 
     def __init__(self, *, embedder, search, orchestrator, people) -> None:
@@ -900,7 +900,7 @@ Change the Discover branch in `Chat`'s return from `<DiscoverView .../>` to `<Se
 - [ ] **Step 4: Commit**
 ```bash
 git add web/components/Chat.tsx web/app/globals.css
-git commit -m "feat(web): SearchView (Glean-style) replaces Discover trending view"
+git commit -m "feat(web): SearchView replaces Discover trending view"
 ```
 
 ---

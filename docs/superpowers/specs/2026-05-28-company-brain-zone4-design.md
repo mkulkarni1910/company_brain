@@ -12,7 +12,7 @@
 
 ### Goals
 
-- Stand up a **demoable Glean-class intelligence layer** on real Azure services in ~6 working days (hackathon pace, single developer + AI pair).
+- Stand up a **demoable enterprise intelligence layer** on real Azure services in ~6 working days (hackathon pace, single developer + AI pair).
 - Implement the full Zone 4 component set from the PDF: three pillars (Content / People / Activity), Semantic Kernel orchestrator, hybrid retrieval, Live Fetch, double-enforcement ACLs, personalized ranker, Azure OpenAI generation with citations, Redis caching.
 - Ground every claim with a citation; refuse out-of-corpus questions explicitly.
 - Demonstrate personalization: same query, different ranking for two personas with different group memberships and activity history.

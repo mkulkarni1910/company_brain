@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from app.activity.store import ActivityStore
 from app.config import get_settings
 from app.connectors.factory import connector_for
-from app.connectors.models import Connection
+from app.connectors.models import Connection, SurfaceConfig
 from app.connectors.oauth import admin_consent_url
 from app.connectors.realtime import (
     bootstrap_subscriptions,
@@ -243,6 +243,10 @@ class PurgeResult(BaseModel):
     errors: list[str] = []
 
 
+class SurfacePatch(BaseModel):
+    enabled: bool
+
+
 @router.post("/seed-activity")
 async def seed_activity(body: SeedActivityRequest) -> dict:
     """Seed synthetic engagement across real corpus docs so the Discover surface and
@@ -272,6 +276,36 @@ async def seed_activity(body: SeedActivityRequest) -> dict:
         return {"tenant_id": tenant, "events_written": written, "docs": len(ids)}
     finally:
         await store.aclose()
+
+
+_VALID_SURFACES = {"slack", "teams", "web", "api", "mcp"}
+
+
+@router.get("/surfaces")
+async def list_surfaces(
+    store: ConnectionStore = Depends(get_connection_store),
+) -> list[dict]:
+    tenant = get_settings().substrateos_tenant_id
+    surfaces = await store.list_surfaces(tenant)
+    return [s.model_dump() for s in surfaces]
+
+
+@router.patch("/surfaces/{name}")
+async def patch_surface(
+    name: str,
+    body: SurfacePatch,
+    store: ConnectionStore = Depends(get_connection_store),
+) -> dict:
+    if name not in _VALID_SURFACES:
+        raise HTTPException(status_code=400, detail=f"unknown surface: {name!r}")
+    tenant = get_settings().substrateos_tenant_id
+    surfaces = await store.list_surfaces(tenant)
+    surface = next((s for s in surfaces if s.name == name), None)
+    if surface is None:
+        surface = SurfaceConfig(name=name)
+    surface.enabled = body.enabled
+    await store.put_surface(tenant, surface)
+    return surface.model_dump()
 
 
 @router.post("/purge", response_model=PurgeResult)
