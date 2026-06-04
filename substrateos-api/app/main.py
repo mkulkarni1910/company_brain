@@ -23,6 +23,8 @@ from app.api.search import router as search_router
 from app.api.sources import router as sources_router
 from app.api.surfaces import router as surfaces_router
 from app.api.tokens import router as tokens_router
+from app.api.skills import admin_router as skills_admin_router
+from app.api.skills import router as skills_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
 from app.connectors.cosmos_store import CosmosConnectionStore
@@ -37,6 +39,8 @@ from app.history.store import HistoryStore
 from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.mcp.server import build_mcp_asgi, mcp_bind, run_session_manager
 from app.metrics.store import MetricsStore
+from app.skills.store import SkillStore
+from app.skills.service import SkillRouter as SkillRouterSvc
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.orchestrator.planner import QueryPlanner
 from app.people.graph_client import PeopleGraphClient
@@ -144,6 +148,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     else:
         app.state.token_store = NullTokenStore()
     app.state.metrics_store = MetricsStore()
+    app.state.skill_store = SkillStore()
+    app.state.skill_router_svc = SkillRouterSvc(
+        skill_store=app.state.skill_store,
+        llm=app.state.llm,
+    )
     # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
     # configured (e.g. India has no Redis), else Redis (no-op without a host).
     if _s.cosmos_gremlin_endpoint and _s.cosmos_gremlin_key:
@@ -176,6 +185,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.connection_store.aclose()
         await app.state.subscription_store.aclose()
         await app.state.metrics_store.aclose()
+        await app.state.skill_store.aclose()
         await app.state.token_store.aclose()
 
 
@@ -205,6 +215,8 @@ app.include_router(bots_router)
 app.include_router(surfaces_router)
 app.include_router(tokens_router)
 app.include_router(context_router)
+app.include_router(skills_router)
+app.include_router(skills_admin_router)
 
 if get_settings().mcp_enabled:
     app.mount("/mcp", build_mcp_asgi())

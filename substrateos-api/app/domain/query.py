@@ -41,4 +41,5 @@ class Answer(BaseModel):
     text: str
     citations: list[Citation]
     query_id: str
+    skill_used: dict | None = None
     debug: dict | None = None

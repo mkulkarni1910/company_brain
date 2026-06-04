@@ -530,3 +530,84 @@
 .soon-wrap { text-align: center; padding: 26px 10px; color: var(--ink-faint); }
 .soon-wrap .big { font-family: "Fraunces", serif; font-size: 18px; color: var(--ink); margin-bottom: 6px; }
 .soon-wrap code { font-family: "JetBrains Mono", monospace; font-size: 12px; background: var(--panel,#f5f1e8); border: 1px solid var(--line-soft); border-radius: 5px; padding: 1px 6px; }
+
+  /* ── Skills catalog ── */
+  .skills-page{padding:40px 0 60px}
+  .skills-header{margin-bottom:28px}
+  .skills-header h1{font-family:var(--font-fraunces),serif;font-size:28px;font-weight:600;letter-spacing:-.01em;margin:0 0 6px}
+  .skills-header p{color:var(--ink-dim);font-size:14.5px;margin:0}
+  .skills-filter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+  .filter-chip{font-family:var(--font-mono),monospace;font-size:11px;letter-spacing:.04em;padding:6px 13px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--ink-dim);cursor:pointer;transition:.15s;text-transform:uppercase}
+  .filter-chip:hover{border-color:var(--ink-dim)}
+  .filter-chip.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .skills-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:900px){.skills-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.skills-grid{grid-template-columns:1fr}}
+  .skill-card{border:1px solid var(--line-soft);border-radius:14px;background:var(--surface);padding:20px;cursor:pointer;position:relative;transition:.18s;overflow:hidden}
+  .skill-card:hover{transform:translateY(-2px);border-color:var(--ink-dim);box-shadow:var(--shadow)}
+  .skill-team{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:20px;display:inline-block;margin-bottom:12px}
+  .t-engineering{background:#e0ede8;color:#1f5c4d}
+  .t-product{background:#f4e3da;color:#9a3b1f}
+  .t-hr{background:#ece2f0;color:#6b3f7a}
+  .t-marketing{background:#f6ecd2;color:#946112}
+  .t-business{background:#dce8ee;color:#2a5a72}
+  .t-default{background:var(--amber-bg);color:var(--amber)}
+  .skill-card h3{font-family:var(--font-fraunces),serif;font-size:17px;font-weight:600;line-height:1.25;margin:0 0 7px}
+  .skill-card p{font-size:13px;color:var(--ink-dim);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:0}
+  .skill-card-foot{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-soft);font-family:var(--font-mono),monospace;font-size:11px;color:var(--ink-faint)}
+  .skill-rating{color:var(--amber);font-weight:600}
+  .skill-runs{margin-left:auto}
+  .skill-card .star-badge{position:absolute;top:15px;right:16px;font-size:11px;font-family:var(--font-mono),monospace;color:var(--amber)}
+  .skill-modal-bg{position:fixed;inset:0;background:rgba(26,22,17,.5);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px;z-index:90}
+  .skill-modal{background:var(--paper);border-radius:16px;max-width:580px;width:100%;max-height:86vh;overflow:auto;border:1px solid var(--line);box-shadow:0 30px 80px -20px rgba(0,0,0,.45)}
+  .skill-modal-head{padding:22px 24px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px}
+  .skill-modal-head h3{font-family:var(--font-fraunces),serif;font-size:21px;font-weight:600;flex:1;margin:0}
+  .skill-modal-x{cursor:pointer;font-family:var(--font-mono),monospace;font-size:16px;color:var(--ink-dim);border:1px solid var(--line);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;background:none}
+  .skill-modal-body{padding:22px 24px}
+  .skill-modal-label{font-family:var(--font-mono),monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin:18px 0 9px}
+  .skill-modal-label:first-child{margin-top:0}
+  .skill-steps{list-style:none;padding:0;margin:0}
+  .skill-steps li{display:flex;gap:11px;font-size:13.5px;margin-bottom:8px}
+  .skill-steps .n{font-family:var(--font-mono),monospace;font-size:10px;background:var(--ink);color:var(--paper);width:20px;height:20px;border-radius:6px;display:grid;place-items:center;flex-shrink:0;margin-top:1px}
+  .skill-feeds{display:flex;flex-wrap:wrap;gap:7px}
+  .skill-feed{font-family:var(--font-mono),monospace;font-size:11px;border:1px solid var(--line);background:var(--surface);padding:5px 10px;border-radius:20px;color:var(--ink-dim)}
+  .skill-modal-foot{display:flex;gap:9px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft)}
+  .skill-btn-primary{font-family:var(--font-mono),monospace;font-size:12px;padding:10px 18px;border-radius:9px;background:var(--ink);color:var(--paper);border:none;cursor:pointer;transition:.15s}
+  .skill-btn-primary:hover{background:#2a2520}
+  .skill-btn-ghost{font-family:var(--font-mono),monospace;font-size:12px;padding:10px 18px;border-radius:9px;background:transparent;color:var(--ink-dim);border:1px solid var(--line);cursor:pointer;transition:.15s}
+  .skill-btn-ghost:hover{background:var(--paper-2)}
+  .skills-empty{padding:60px 0;text-align:center;color:var(--ink-faint);font-size:14px}
+  .skill-autocomplete{position:absolute;bottom:100%;left:0;right:0;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:6px;z-index:20}
+  .skill-ac-item{display:flex;align-items:baseline;gap:10px;width:100%;padding:10px 14px;background:none;border:none;text-align:left;cursor:pointer;transition:.12s;border-bottom:1px solid var(--line-soft)}
+  .skill-ac-item:last-child{border-bottom:none}
+  .skill-ac-item:hover{background:var(--paper-2)}
+  .skill-ac-name{font-family:var(--font-mono),monospace;font-size:12px;color:var(--amber);font-weight:600}
+  .skill-ac-desc{font-size:12.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .skill-used-badge{display:inline-block;font-family:var(--font-mono),monospace;font-size:10.5px;color:var(--teal);background:var(--teal-bg);border:1px solid rgba(15,137,126,.25);padding:3px 10px;border-radius:20px;margin-bottom:10px}
+
+  /* ── Admin skills table ── */
+  .skills-table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .skills-table th{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:10px 14px;text-align:left;border-bottom:1px solid var(--line-soft);font-weight:500}
+  .skills-table td{padding:12px 14px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+  .skills-table tr:last-child td{border-bottom:none}
+  .skill-row-name{font-weight:600;color:var(--ink)}
+  .skill-row-slug{font-family:var(--font-mono),monospace;font-size:11px;color:var(--ink-faint);display:block;margin-top:2px}
+  .skill-row-actions{display:flex;gap:8px}
+  .skill-action-btn{font-family:var(--font-mono),monospace;font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--ink-dim);cursor:pointer;transition:.15s}
+  .skill-action-btn:hover{background:var(--paper-2);border-color:var(--ink-dim)}
+  .skill-action-btn.del{color:var(--rose);border-color:var(--rose)}
+  .skill-action-btn.del:hover{background:#fdf0f2}
+  .skill-form-modal{position:fixed;inset:0;background:rgba(26,22,17,.5);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px;z-index:90}
+  .skill-form-card{background:var(--paper);border-radius:16px;max-width:620px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--line);box-shadow:0 30px 80px -20px rgba(0,0,0,.45);padding:28px}
+  .skill-form-card h3{font-family:var(--font-fraunces),serif;font-size:20px;font-weight:600;margin:0 0 20px}
+  .skill-form-row{margin-bottom:16px}
+  .skill-form-label{font-family:var(--font-mono),monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px;display:block}
+  .skill-form-input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:13.5px;background:var(--surface);color:var(--ink);outline:none;transition:.15s;box-sizing:border-box}
+  .skill-form-input:focus{border-color:var(--amber)}
+  .skill-form-textarea{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-family:var(--font-mono),monospace;font-size:12.5px;background:var(--surface);color:var(--ink);outline:none;resize:vertical;transition:.15s;box-sizing:border-box}
+  .skill-form-textarea:focus{border-color:var(--amber)}
+  .skill-form-foot{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+  .skill-list-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+  .skill-list-row input{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--surface);color:var(--ink)}
+  .skill-list-remove{font-size:14px;color:var(--ink-faint);cursor:pointer;background:none;border:none;padding:4px}
+  .skill-list-add{font-family:var(--font-mono),monospace;font-size:11px;color:var(--teal);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline}

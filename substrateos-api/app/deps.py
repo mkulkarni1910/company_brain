@@ -83,3 +83,11 @@ def get_metrics_store(request: Request):
 
 def get_sharepoint(request: Request):
     return request.app.state.sharepoint
+
+
+def get_skill_store(request: Request):
+    return getattr(request.app.state, "skill_store", None)
+
+
+def get_skill_router_svc(request: Request):
+    return getattr(request.app.state, "skill_router_svc", None)

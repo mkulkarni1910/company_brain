@@ -12,7 +12,12 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_grounded_messages(*, query: str, candidates: list[Candidate]) -> list[dict[str, str]]:
+def build_grounded_messages(
+    *, query: str, candidates: list[Candidate], skill_prompt: str | None = None
+) -> list[dict[str, str]]:
+    system = SYSTEM_PROMPT
+    if skill_prompt:
+        system = f"{skill_prompt}\n\n{system}"
     blocks: list[str] = []
     for i, c in enumerate(candidates, start=1):
         blocks.append(
@@ -20,7 +25,7 @@ def build_grounded_messages(*, query: str, candidates: list[Candidate]) -> list[
         )
     user = f"QUESTION: {query}\n\nCONTEXT:\n" + "\n\n".join(blocks)
     return [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
 

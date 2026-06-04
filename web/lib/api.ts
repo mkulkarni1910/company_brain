@@ -12,8 +12,9 @@ export type AnswerDebug = {
   signals: Signals; final_score: number; candidates_ranked: number; live_used: boolean;
   related_people?: RelatedPerson[];
 };
+export type SkillUsed = { id: string; slug: string; name: string };
 export type Answer = {
-  query_id: string; text: string; citations: Citation[]; debug?: AnswerDebug | null;
+  query_id: string; text: string; citations: Citation[]; skill_used?: SkillUsed | null; debug?: AnswerDebug | null;
 };
 
 export type HistoryEntry = { query: string; query_id: string; ts: string };
