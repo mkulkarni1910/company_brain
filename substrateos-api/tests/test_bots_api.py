@@ -11,7 +11,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from app.deps import get_orchestrator
+from app.connectors.models import SurfaceConfig
+from app.deps import get_connection_store, get_orchestrator
 from app.domain.query import Answer
 from app.main import app
 
@@ -25,6 +26,19 @@ _SLACK_SECRET = "slack-test-secret"
 class _FakeOrchestrator:
     async def answer(self, request, *, user, user_token=None):
         return Answer(text="Here is the answer.", citations=[], query_id="q1")
+
+
+class _FakeStore:
+    """Connection store stub exposing only list_surfaces."""
+
+    def __init__(self, disabled: set[str] | None = None):
+        self._disabled = disabled or set()
+
+    async def list_surfaces(self, tenant):
+        return [
+            SurfaceConfig(name=n, enabled=n not in self._disabled)
+            for n in ("slack", "teams", "web", "api", "mcp")
+        ]
 
 
 def _slack_sig(secret: str, ts: str, body: bytes) -> str:
@@ -175,4 +189,101 @@ def test_teams_webhook_invalid_jwt(monkeypatch):
                 )
         assert resp.status_code == 401
     finally:
+        get_settings.cache_clear()
+
+
+# ── surface disabled gate ─────────────────────────────────────────────────────
+
+def test_teams_webhook_surface_disabled(monkeypatch):
+    monkeypatch.setenv("TEAMS_BOT_APP_ID", _TEAMS_APP_ID)
+    monkeypatch.setenv("TEAMS_BOT_APP_PASSWORD", _TEAMS_PASSWORD)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore(disabled={"teams"})
+    try:
+        with patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)):
+            with TestClient(app) as client:
+                resp = client.post(
+                    "/bot/teams",
+                    json={
+                        "type": "message",
+                        "text": "<at>SubStrateOS</at> what is PTO?",
+                        "from": {"id": "u1"}, "conversation": {"id": "c1"}, "id": "a1",
+                    },
+                    headers={"Authorization": "Bearer fake-jwt"},
+                )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["type"] == "message"
+        assert "disabled" in body["text"].lower()
+        assert "attachments" not in body  # no answer card — query never ran
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+def test_slack_webhook_surface_disabled(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore(disabled={"slack"})
+    try:
+        body = json.dumps({
+            "type": "event_callback",
+            "event": {"type": "app_mention", "text": "<@U1> hi", "user": "u1",
+                      "channel": "C1", "ts": "1.0"},
+        }).encode()
+        ts = str(int(time.time()))
+        with patch("app.api.bots.post_slack_reply", new=AsyncMock(return_value=None)) as mock_post:
+            with TestClient(app) as client:
+                resp = client.post(
+                    "/bot/slack", content=body,
+                    headers={
+                        "content-type": "application/json",
+                        "x-slack-signature": _slack_sig(_SLACK_SECRET, ts, body),
+                        "x-slack-request-timestamp": ts,
+                    },
+                )
+        assert resp.status_code == 200
+        mock_post.assert_awaited_once()
+        sent_answer = mock_post.await_args.args[3]
+        assert "disabled" in sent_answer.text.lower()
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+def test_slack_webhook_surface_enabled_answers(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
+    try:
+        body = json.dumps({
+            "type": "event_callback",
+            "event": {"type": "app_mention", "text": "<@U1> hi", "user": "u1",
+                      "channel": "C1", "ts": "1.0"},
+        }).encode()
+        ts = str(int(time.time()))
+        with patch("app.api.bots.post_slack_reply", new=AsyncMock(return_value=None)) as mock_post:
+            with TestClient(app) as client:
+                resp = client.post(
+                    "/bot/slack", content=body,
+                    headers={
+                        "content-type": "application/json",
+                        "x-slack-signature": _slack_sig(_SLACK_SECRET, ts, body),
+                        "x-slack-request-timestamp": ts,
+                    },
+                )
+        assert resp.status_code == 200
+        mock_post.assert_awaited_once()
+        sent_answer = mock_post.await_args.args[3]
+        assert sent_answer.text == "Here is the answer."
+    finally:
+        app.dependency_overrides.clear()
         get_settings.cache_clear()

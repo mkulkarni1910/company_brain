@@ -12,7 +12,7 @@ from app.bots.manifest import build_manifest_zip
 from app.bots.slack import post_slack_reply, strip_bot_mention, verify_slack_signature
 from app.bots.teams import build_teams_reply, strip_at_mention, verify_teams_jwt
 from app.config import get_settings
-from app.deps import get_orchestrator
+from app.deps import get_connection_store, get_orchestrator
 from app.domain.identity import User
 from app.domain.query import Answer, QueryRequest
 
@@ -20,6 +20,22 @@ router = APIRouter(tags=["bots"])
 logger = logging.getLogger(__name__)
 
 _ERROR_TEXT = "Sorry, I couldn't find an answer right now. Try rephrasing your question."
+_DISABLED_TEXT = (
+    "SubStrateOS is disabled for {surface} — your admin has turned off this surface. "
+    "Contact your administrator to re-enable it."
+)
+
+
+async def _surface_enabled(store, name: str) -> bool:
+    """Check the admin surface toggle; fail-open so a config-store outage
+    never silences the bots."""
+    try:
+        surfaces = await store.list_surfaces(get_settings().substrateos_tenant_id)
+        cfg = next((s for s in surfaces if s.name == name), None)
+        return cfg.enabled if cfg is not None else True
+    except Exception:  # noqa: BLE001
+        logger.warning("surface check failed for %s; failing open", name)
+        return True
 
 
 def _bot_user() -> User:
@@ -39,6 +55,7 @@ def _bot_user() -> User:
 async def teams_webhook(
     request: Request,
     orchestrator=Depends(get_orchestrator),
+    store=Depends(get_connection_store),
     authorization: str | None = Header(default=None),
 ) -> dict:
     s = get_settings()
@@ -59,6 +76,9 @@ async def teams_webhook(
     if not text:
         return {}
 
+    if not await _surface_enabled(store, "teams"):
+        return {"type": "message", "text": _DISABLED_TEXT.format(surface="Teams")}
+
     try:
         answer = await orchestrator.answer(QueryRequest(query=text), user=_bot_user())
     except Exception:
@@ -73,6 +93,7 @@ async def slack_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
     orchestrator=Depends(get_orchestrator),
+    store=Depends(get_connection_store),
     x_slack_signature: str | None = Header(default=None),
     x_slack_request_timestamp: str | None = Header(default=None),
 ) -> dict:
@@ -103,8 +124,15 @@ async def slack_webhook(
     channel = event.get("channel", "")
     thread_ts = event.get("thread_ts") or event.get("ts")
     slack_token = s.slack_bot_token
+    enabled = await _surface_enabled(store, "slack")
 
     async def _reply() -> None:
+        if not enabled:
+            answer = Answer(
+                text=_DISABLED_TEXT.format(surface="Slack"), citations=[], query_id="disabled"
+            )
+            await post_slack_reply(slack_token, channel, thread_ts, answer)
+            return
         try:
             answer = await orchestrator.answer(QueryRequest(query=text), user=_bot_user())
         except Exception:
