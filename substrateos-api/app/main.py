@@ -18,6 +18,7 @@ from app.api.feedback import router as feedback_router
 from app.api.history import router as history_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
+from app.api.bots import router as bots_router
 from app.api.search import router as search_router
 from app.api.sources import router as sources_router
 from app.api.surfaces import router as surfaces_router
@@ -200,6 +201,7 @@ app.include_router(discover_router)
 app.include_router(search_router)
 app.include_router(conversations_router)
 app.include_router(sources_router)
+app.include_router(bots_router)
 app.include_router(surfaces_router)
 app.include_router(tokens_router)
 app.include_router(context_router)

@@ -245,6 +245,8 @@ class PurgeResult(BaseModel):
 
 class SurfacePatch(BaseModel):
     enabled: bool
+    installed: bool | None = None
+    workspace_name: str | None = None
 
 
 @router.post("/seed-activity")
@@ -304,6 +306,10 @@ async def patch_surface(
     if surface is None:
         surface = SurfaceConfig(name=name)
     surface.enabled = body.enabled
+    if body.installed is not None:
+        surface.installed = body.installed
+    if body.workspace_name is not None:
+        surface.workspace_name = body.workspace_name
     await store.put_surface(tenant, surface)
     return surface.model_dump()
 
