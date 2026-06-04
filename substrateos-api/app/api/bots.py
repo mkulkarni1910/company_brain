@@ -10,7 +10,12 @@ from fastapi.responses import Response
 from app.api.admin import require_admin_key
 from app.bots.manifest import build_manifest_zip
 from app.bots.slack import post_slack_reply, strip_bot_mention, verify_slack_signature
-from app.bots.teams import build_teams_reply, strip_at_mention, verify_teams_jwt
+from app.bots.teams import (
+    build_teams_reply,
+    send_teams_activity,
+    strip_at_mention,
+    verify_teams_jwt,
+)
 from app.config import get_settings
 from app.deps import get_connection_store, get_orchestrator
 from app.domain.identity import User
@@ -77,7 +82,12 @@ async def teams_webhook(
         return {}
 
     if not await _surface_enabled(store, "teams"):
-        return {"type": "message", "text": _DISABLED_TEXT.format(surface="Teams")}
+        await send_teams_activity(
+            incoming=body,
+            activity={"type": "message", "text": _DISABLED_TEXT.format(surface="Teams")},
+            app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+        )
+        return {}
 
     try:
         answer = await orchestrator.answer(QueryRequest(query=text), user=_bot_user())
@@ -85,7 +95,12 @@ async def teams_webhook(
         logger.exception("Teams bot query failed")
         answer = Answer(text=_ERROR_TEXT, citations=[], query_id="err")
 
-    return build_teams_reply(answer)
+    # Teams ignores the webhook response body — reply through the Connector API.
+    await send_teams_activity(
+        incoming=body, activity=build_teams_reply(answer),
+        app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+    )
+    return {}
 
 
 @router.post("/bot/slack")

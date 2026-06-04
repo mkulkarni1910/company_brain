@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+from urllib.parse import quote
 
 import httpx
 from jose import JWTError, jwt
@@ -13,10 +14,15 @@ logger = logging.getLogger(__name__)
 
 _BF_JWKS_URL = "https://login.botframework.com/v1/.well-known/keys"
 _BF_ISSUER = "https://api.botframework.com"
+_BF_TOKEN_URL = "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token"
+_BF_SCOPE = "https://api.botframework.com/.default"
 _JWKS_TTL = 3600.0
 
 _jwks_cache: dict | None = None
 _jwks_cache_ts: float = 0.0
+
+# Connector access token cache: {"token": str | None, "exp": epoch seconds}
+_token_cache: dict = {"token": None, "exp": 0.0}
 
 
 async def _get_jwks() -> dict:
@@ -38,6 +44,73 @@ async def verify_teams_jwt(token: str, app_id: str) -> bool:
         jwt.decode(token, jwks, algorithms=["RS256"], audience=app_id, issuer=_BF_ISSUER)
         return True
     except (JWTError, Exception):  # noqa: BLE001
+        return False
+
+
+async def _connector_token(app_id: str, app_password: str) -> str:
+    """Client-credentials token for the Bot Framework Connector API (cached)."""
+    if _token_cache["token"] and time.time() < _token_cache["exp"] - 60:
+        return _token_cache["token"]
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            _BF_TOKEN_URL,
+            data={
+                "grant_type": "client_credentials",
+                "client_id": app_id,
+                "client_secret": app_password,
+                "scope": _BF_SCOPE,
+            },
+            timeout=10.0,
+        )
+        resp.raise_for_status()
+        d = resp.json()
+    _token_cache["token"] = d["access_token"]
+    _token_cache["exp"] = time.time() + float(d.get("expires_in", 3600))
+    return _token_cache["token"]
+
+
+async def send_teams_activity(
+    *, incoming: dict, activity: dict, app_id: str, app_password: str
+) -> bool:
+    """POST a reply activity to the conversation's serviceUrl.
+
+    Teams ignores activities returned in the webhook's HTTP response body —
+    replies only render when sent through the Connector REST API. Returns
+    False (and logs) on any failure so the webhook never 500s back at Teams.
+    """
+    service_url = (incoming.get("serviceUrl") or "").rstrip("/")
+    conv_id = (incoming.get("conversation") or {}).get("id") or ""
+    reply_to = incoming.get("id") or ""
+    if not service_url or not conv_id:
+        logger.warning("teams reply skipped: missing serviceUrl/conversation.id")
+        return False
+
+    out = {
+        **activity,
+        "from": incoming.get("recipient") or {},   # the bot
+        "recipient": incoming.get("from") or {},   # the human sender
+        "conversation": {"id": conv_id},
+        "replyToId": reply_to,
+    }
+    # conversation ids contain ':' '@' ';' — quote so they survive as one path segment
+    path = f"/v3/conversations/{quote(conv_id, safe='')}/activities"
+    if reply_to:
+        path += f"/{quote(reply_to, safe='')}"
+    try:
+        token = await _connector_token(app_id, app_password)
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{service_url}{path}",
+                json=out,
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=10.0,
+            )
+        if resp.status_code >= 300:
+            logger.error("teams reply failed %s: %s", resp.status_code, resp.text[:300])
+            return False
+        return True
+    except Exception:  # noqa: BLE001 - reply failure must not 500 the webhook
+        logger.exception("teams reply failed")
         return False
 
 
