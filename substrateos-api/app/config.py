@@ -94,6 +94,12 @@ class Settings(BaseSettings):
     mcp_enabled: bool = True
     public_base_url: str | None = None  # substrateos-api URL surfaced to the UI for snippets
 
+    # Bot integrations (Teams + Slack)
+    teams_bot_app_id: str | None = None        # TEAMS_BOT_APP_ID
+    teams_bot_app_password: str | None = None  # TEAMS_BOT_APP_PASSWORD
+    slack_bot_token: str | None = None         # SLACK_BOT_TOKEN
+    slack_signing_secret: str | None = None    # SLACK_SIGNING_SECRET
+
     # ACL store
     acl_doc_ttl_seconds: int | None = None  # None = persistent (live ACL is authoritative)
     acl_fail_closed_on_missing: bool = False  # strict: drop docs with no live ACL entry
