@@ -75,8 +75,7 @@ async def query(
                 pass
     metrics = getattr(request.app.state, "metrics_store", None)
     if metrics is not None:
-        import contextlib as _ctx
-        with _ctx.suppress(Exception):
+        with contextlib.suppress(Exception):
             await metrics.record_query(user.tenant_id, user.user_id)
     if body.conversation_id and conversation_store is not None:
         await conversation_store.append(
