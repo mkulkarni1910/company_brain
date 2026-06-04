@@ -239,6 +239,37 @@ def test_manifest_zip_app_id():
 
 
 @pytest.mark.asyncio
+async def test_connector_token_uses_bot_tenant_when_set(respx_mock):
+    # Single-tenant bot registrations only accept Connector tokens issued by
+    # the bot's own tenant — tokens from the generic botframework.com endpoint
+    # get 401 "Authorization has been denied" from smba.trafficmanager.net.
+    import httpx
+    from app.bots import teams
+    teams._token_cache.update({"token": None, "exp": 0.0})
+    route = respx_mock.post(
+        "https://login.microsoftonline.com/tenant-guid-1/oauth2/v2.0/token"
+    ).mock(return_value=httpx.Response(200, json={"access_token": "tok-1", "expires_in": 3600}))
+    tok = await teams._connector_token("app", "pw", tenant_id="tenant-guid-1")
+    assert tok == "tok-1"
+    assert route.called
+    teams._token_cache.update({"token": None, "exp": 0.0})
+
+
+@pytest.mark.asyncio
+async def test_connector_token_defaults_to_botframework_tenant(respx_mock):
+    import httpx
+    from app.bots import teams
+    teams._token_cache.update({"token": None, "exp": 0.0})
+    route = respx_mock.post(
+        "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token"
+    ).mock(return_value=httpx.Response(200, json={"access_token": "tok-2", "expires_in": 3600}))
+    tok = await teams._connector_token("app", "pw", tenant_id=None)
+    assert tok == "tok-2"
+    assert route.called
+    teams._token_cache.update({"token": None, "exp": 0.0})
+
+
+@pytest.mark.asyncio
 async def test_send_teams_activity_posts_to_service_url(monkeypatch):
     # Teams ignores the webhook's HTTP response body; the reply must be POSTed
     # to {serviceUrl}/v3/conversations/{conv}/activities/{replyToId}.

@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     # Bot integrations (Teams + Slack)
     teams_bot_app_id: str | None = None        # TEAMS_BOT_APP_ID
     teams_bot_app_password: str | None = None  # TEAMS_BOT_APP_PASSWORD
+    # Home tenant of the bot app registration. Required for single-tenant bot
+    # registrations (Dev Portal default) — the Connector rejects tokens from the
+    # generic botframework.com endpoint with 401 for those.
+    teams_bot_tenant_id: str | None = None     # TEAMS_BOT_TENANT_ID
     slack_bot_token: str | None = None         # SLACK_BOT_TOKEN
     slack_signing_secret: str | None = None    # SLACK_SIGNING_SECRET
 

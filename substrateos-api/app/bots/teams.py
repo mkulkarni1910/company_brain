@@ -47,13 +47,25 @@ async def verify_teams_jwt(token: str, app_id: str) -> bool:
         return False
 
 
-async def _connector_token(app_id: str, app_password: str) -> str:
-    """Client-credentials token for the Bot Framework Connector API (cached)."""
+async def _connector_token(
+    app_id: str, app_password: str, tenant_id: str | None = None
+) -> str:
+    """Client-credentials token for the Bot Framework Connector API (cached).
+
+    Single-tenant bot registrations (the Dev Portal default since multi-tenant
+    creation was deprecated) only accept tokens issued by the bot's own tenant —
+    pass tenant_id for those; the botframework.com endpoint serves legacy
+    multi-tenant bots.
+    """
     if _token_cache["token"] and time.time() < _token_cache["exp"] - 60:
         return _token_cache["token"]
+    token_url = (
+        f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+        if tenant_id else _BF_TOKEN_URL
+    )
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            _BF_TOKEN_URL,
+            token_url,
             data={
                 "grant_type": "client_credentials",
                 "client_id": app_id,
@@ -70,7 +82,8 @@ async def _connector_token(app_id: str, app_password: str) -> str:
 
 
 async def send_teams_activity(
-    *, incoming: dict, activity: dict, app_id: str, app_password: str
+    *, incoming: dict, activity: dict, app_id: str, app_password: str,
+    tenant_id: str | None = None,
 ) -> bool:
     """POST a reply activity to the conversation's serviceUrl.
 
@@ -97,7 +110,7 @@ async def send_teams_activity(
     if reply_to:
         path += f"/{quote(reply_to, safe='')}"
     try:
-        token = await _connector_token(app_id, app_password)
+        token = await _connector_token(app_id, app_password, tenant_id=tenant_id)
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{service_url}{path}",

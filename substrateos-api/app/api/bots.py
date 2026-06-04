@@ -86,6 +86,7 @@ async def teams_webhook(
             incoming=body,
             activity={"type": "message", "text": _DISABLED_TEXT.format(surface="Teams")},
             app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+            tenant_id=s.teams_bot_tenant_id,
         )
         return {}
 
@@ -99,6 +100,7 @@ async def teams_webhook(
     await send_teams_activity(
         incoming=body, activity=build_teams_reply(answer),
         app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+        tenant_id=s.teams_bot_tenant_id,
     )
     return {}
 
