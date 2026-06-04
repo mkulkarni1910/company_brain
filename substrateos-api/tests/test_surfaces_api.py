@@ -28,12 +28,29 @@ async def test_surfaces_returns_default_list():
 
 
 @pytest.mark.asyncio
-async def test_surfaces_no_admin_key_required():
-    """Regular users must be able to call this endpoint without an admin key."""
+async def test_surfaces_ignores_admin_key():
+    """Endpoint returns 200 regardless of x-admin-key — it is not admin-gated."""
     app = _build_app(ConnectionStore(client=FakeRedis()))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
-        r = await c.get("/surfaces", headers={"x-debug-bypass-auth": "t-eval,u-demo,t-eval:everyone"})
+        r = await c.get("/surfaces",
+                        headers={"x-debug-bypass-auth": "t-eval,u-demo,t-eval:everyone",
+                                 "x-admin-key": "wrong-key"})
     assert r.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_surfaces_no_redis_fallback():
+    """Endpoint returns default surfaces even when Redis is unavailable."""
+    app = _build_app(ConnectionStore(client=None))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.get("/surfaces",
+                        headers={"x-debug-bypass-auth": "t-eval,u-demo,t-eval:everyone"})
+    assert r.status_code == 200
+    data = r.json()
+    names = [s["name"] for s in data]
+    assert "web" in names
+    assert "api" in names
+    assert "mcp" in names
 
 
 @pytest.mark.asyncio
