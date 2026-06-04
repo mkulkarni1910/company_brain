@@ -238,6 +238,56 @@ def test_manifest_zip_app_id():
     assert "api.example.com" in manifest["validDomains"]
 
 
+@pytest.mark.asyncio
+async def test_send_teams_activity_posts_to_service_url(monkeypatch):
+    # Teams ignores the webhook's HTTP response body; the reply must be POSTed
+    # to {serviceUrl}/v3/conversations/{conv}/activities/{replyToId}.
+    from app.bots import teams
+
+    calls = []
+
+    class FakeResp:
+        status_code = 200
+        text = ""
+
+    class FakeClient:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def post(self, url, **kw):
+            calls.append((url, kw))
+            return FakeResp()
+
+    monkeypatch.setattr(teams.httpx, "AsyncClient", lambda **kw: FakeClient())
+    monkeypatch.setattr(teams, "_connector_token", _async_const("tok-123"))
+
+    incoming = {
+        "serviceUrl": "https://smba.trafficmanager.net/in/",
+        "conversation": {"id": "19:abc@thread.tacv2"},
+        "id": "act1",
+        "from": {"id": "user-1"},
+        "recipient": {"id": "bot-1"},
+    }
+    ok = await teams.send_teams_activity(
+        incoming=incoming, activity={"type": "message", "text": "hi"},
+        app_id="app", app_password="pw",
+    )
+    assert ok is True
+    url, kw = calls[0]
+    assert url.startswith("https://smba.trafficmanager.net/in/v3/conversations/")
+    assert url.endswith("/activities/act1")
+    assert kw["headers"]["Authorization"] == "Bearer tok-123"
+    body = kw["json"]
+    assert body["from"] == {"id": "bot-1"}          # bot speaks as itself
+    assert body["recipient"] == {"id": "user-1"}    # back to the sender
+    assert body["replyToId"] == "act1"
+
+
+def _async_const(value):
+    async def _f(*a, **k):
+        return value
+    return _f
+
+
 def test_manifest_conforms_to_v117_schema():
     # Teams rejected the package with "Manifest parsing error": the v1.17
     # schema has no packageName and spells the scope groupChat (camelCase).

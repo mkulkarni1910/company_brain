@@ -151,24 +151,31 @@ def test_teams_webhook_valid(monkeypatch):
     app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
     try:
         with patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)):
-            with TestClient(app) as client:
-                resp = client.post(
-                    "/bot/teams",
-                    json={
-                        "type": "message",
-                        "text": "<at>SubStrateOS</at> what is PTO?",
-                        "from": {"id": "u1", "aadObjectId": "aad-u1"},
-                        "conversation": {"id": "conv1"},
-                        "id": "act1",
-                        "serviceUrl": "https://smba.trafficmanager.net",
-                        "channelData": {"tenant": {"id": "tenant1"}},
-                    },
-                    headers={"Authorization": "Bearer fake-jwt"},
-                )
+            # Teams ignores activities returned in the webhook response body —
+            # the reply must be POSTed to the serviceUrl via the Connector API.
+            with patch("app.api.bots.send_teams_activity", new=AsyncMock(return_value=True)) as mock_send:
+                with TestClient(app) as client:
+                    resp = client.post(
+                        "/bot/teams",
+                        json={
+                            "type": "message",
+                            "text": "<at>SubStrateOS</at> what is PTO?",
+                            "from": {"id": "u1", "aadObjectId": "aad-u1"},
+                            "conversation": {"id": "conv1"},
+                            "id": "act1",
+                            "serviceUrl": "https://smba.trafficmanager.net",
+                            "channelData": {"tenant": {"id": "tenant1"}},
+                        },
+                        headers={"Authorization": "Bearer fake-jwt"},
+                    )
         assert resp.status_code == 200
-        body = resp.json()
-        assert body["type"] == "message"
-        assert body["attachments"][0]["contentType"] == "application/vnd.microsoft.card.adaptive"
+        assert resp.json() == {}
+        mock_send.assert_awaited_once()
+        kwargs = mock_send.await_args.kwargs
+        assert kwargs["incoming"]["conversation"]["id"] == "conv1"
+        activity = kwargs["activity"]
+        assert activity["type"] == "message"
+        assert activity["attachments"][0]["contentType"] == "application/vnd.microsoft.card.adaptive"
     finally:
         app.dependency_overrides.clear()
         get_settings.cache_clear()
@@ -203,21 +210,24 @@ def test_teams_webhook_surface_disabled(monkeypatch):
     app.dependency_overrides[get_connection_store] = lambda: _FakeStore(disabled={"teams"})
     try:
         with patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)):
-            with TestClient(app) as client:
-                resp = client.post(
-                    "/bot/teams",
-                    json={
-                        "type": "message",
-                        "text": "<at>SubStrateOS</at> what is PTO?",
-                        "from": {"id": "u1"}, "conversation": {"id": "c1"}, "id": "a1",
-                    },
-                    headers={"Authorization": "Bearer fake-jwt"},
-                )
+            with patch("app.api.bots.send_teams_activity", new=AsyncMock(return_value=True)) as mock_send:
+                with TestClient(app) as client:
+                    resp = client.post(
+                        "/bot/teams",
+                        json={
+                            "type": "message",
+                            "text": "<at>SubStrateOS</at> what is PTO?",
+                            "from": {"id": "u1"}, "conversation": {"id": "c1"}, "id": "a1",
+                        },
+                        headers={"Authorization": "Bearer fake-jwt"},
+                    )
         assert resp.status_code == 200
-        body = resp.json()
-        assert body["type"] == "message"
-        assert "disabled" in body["text"].lower()
-        assert "attachments" not in body  # no answer card — query never ran
+        assert resp.json() == {}
+        mock_send.assert_awaited_once()
+        activity = mock_send.await_args.kwargs["activity"]
+        assert activity["type"] == "message"
+        assert "disabled" in activity["text"].lower()
+        assert "attachments" not in activity  # no answer card — query never ran
     finally:
         app.dependency_overrides.clear()
         get_settings.cache_clear()
