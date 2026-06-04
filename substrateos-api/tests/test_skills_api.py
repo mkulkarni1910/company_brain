@@ -171,3 +171,15 @@ def test_rate_skill():
         assert resp.status_code == 200
     finally:
         app.dependency_overrides.clear()
+
+
+def test_run_skill_returns_204():
+    s = _skill()
+    store = _FakeStore([s])
+    app.dependency_overrides[get_skill_store] = lambda: store
+    try:
+        with TestClient(app) as c:
+            resp = c.post(f"/skills/{s.id}/run", headers=_AUTH)
+        assert resp.status_code == 204
+    finally:
+        app.dependency_overrides.clear()
