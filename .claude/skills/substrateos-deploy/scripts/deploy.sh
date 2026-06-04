@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build + deploy the SubStrateOS apps to Azure Container Apps, then verify health.
-# Usage: deploy.sh [brain-api|web|both]   (default: both)
+# Usage: deploy.sh [substrateos-api|web|both]   (default: both)
 #
 # Pre-flight enforces: on `main`, fast-forward pull, warn on dirty tree.
 # Build is local linux/amd64 (server-side ACR builds are disabled on this registry).
@@ -12,8 +12,8 @@ ACR="cbrainindiaacr"
 
 TARGET="${1:-both}"
 case "$TARGET" in
-  brain-api|web|both) ;;
-  *) echo "Usage: $0 [brain-api|web|both]" >&2; exit 2 ;;
+  substrateos-api|web|both) ;;
+  *) echo "Usage: $0 [substrateos-api|web|both]" >&2; exit 2 ;;
 esac
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -66,10 +66,10 @@ verify() {
   fqdn="$(az containerapp show -n "$name" -g "$RG" \
     --query properties.configuration.ingress.fqdn -o tsv)"
 
-  if [ "$name" = "brain-api" ]; then
+  if [ "$name" = "substrateos-api" ]; then
     code="$(curl -s -m 20 -o /tmp/_deploy_health -w '%{http_code}' "https://$fqdn/healthz" || echo 000)"
-    echo "==> brain-api /healthz -> $code $(cat /tmp/_deploy_health 2>/dev/null)"
-    if [ "$code" != "200" ]; then echo "ABORT: brain-api health check failed." >&2; exit 1; fi
+    echo "==> substrateos-api /healthz -> $code $(cat /tmp/_deploy_health 2>/dev/null)"
+    if [ "$code" != "200" ]; then echo "ABORT: substrateos-api health check failed." >&2; exit 1; fi
   else
     # web sits behind Easy Auth: 401 to an anonymous request means it's up.
     code="$(curl -s -m 20 -o /dev/null -w '%{http_code}' "https://$fqdn/" || echo 000)"
@@ -98,8 +98,8 @@ deploy_one() {
 }
 
 # ---- 2-4. Build / push / roll / verify --------------------------------------
-if [ "$TARGET" = "brain-api" ] || [ "$TARGET" = "both" ]; then
-  deploy_one "brain-api" "substrateos-api" "brain-api"
+if [ "$TARGET" = "substrateos-api" ] || [ "$TARGET" = "both" ]; then
+  deploy_one "substrateos-api" "substrateos-api" "substrateos-api"
 fi
 if [ "$TARGET" = "web" ] || [ "$TARGET" = "both" ]; then
   deploy_one "substrateos-web" "web" "substrateos-web"

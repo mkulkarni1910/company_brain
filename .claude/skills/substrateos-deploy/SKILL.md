@@ -1,11 +1,11 @@
 ---
 name: substrateos-deploy
 description: >-
-  Build and deploy the SubStrateOS / company-brain apps — the brain-api backend
-  and/or the substrateos-web frontend — to Azure Container Apps (centralindia).
-  Use this whenever the user wants to deploy, ship, release, roll out, push live,
-  or redeploy either app, e.g. "deploy brain-api", "ship the web app", "push the
-  latest to prod", "redeploy everything", "release the admin changes". Handles the
+  Build and deploy the SubStrateOS apps — the substrateos-api backend and/or the
+  substrateos-web frontend — to Azure Container Apps (centralindia). Use this
+  whenever the user wants to deploy, ship, release, roll out, push live, or
+  redeploy either app, e.g. "deploy substrateos-api", "ship the web app", "push
+  the latest to prod", "redeploy everything", "release the admin changes". Handles the
   full pipeline: pre-flight (must be on main + pull latest), local amd64 image
   build, ACR push, container-app rollout, and post-deploy health verification.
 ---
@@ -17,24 +17,24 @@ Deploys two Azure Container Apps in resource group `rg-company-brain-india`
 
 | App | Source dir | Image repo | Container App | Health check |
 |-----|-----------|-----------|---------------|--------------|
-| Backend | `substrateos-api/` | `brain-api` | `brain-api` | `GET /healthz` → 200 `{"status":"ok"}` |
+| Backend | `substrateos-api/` | `substrateos-api` | `substrateos-api` | `GET /healthz` → 200 `{"status":"ok","service":"substrateos-api"}` |
 | Frontend | `web/` | `substrateos-web` | `substrateos-web` | `GET /` → 401 (behind Easy Auth = reachable) |
 
 Public URLs:
-- brain-api: `https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io`
+- substrateos-api: `https://substrateos-api.redplant-161decbe.centralindia.azurecontainerapps.io`
 - web: `https://substrateos-web.redplant-161decbe.centralindia.azurecontainerapps.io`
 
 ## This is a production action — confirm first
 
 Both container apps are shared production. Before deploying, confirm with the user
-**what to deploy** (`brain-api`, `web`, or `both`) and that they want it live now.
+**what to deploy** (`substrateos-api`, `web`, or `both`) and that they want it live now.
 Azure CLI must be logged in (`az account show`) and Docker running. The
 `az containerapp update` step may also trigger a permission prompt — that's
 expected for a prod rollout.
 
 ## The fast path
 
-Run the bundled script with the target (`brain-api`, `web`, or `both`; default `both`):
+Run the bundled script with the target (`substrateos-api`, `web`, or `both`; default `both`):
 
 ```bash
 .claude/skills/substrateos-deploy/scripts/deploy.sh both
@@ -73,7 +73,7 @@ which creates a new revision and shifts 100% traffic to it.
 ### 4. Verify the rollout
 Poll the new revision until `provisioningState=Provisioned`, `runningState=Running`,
 `trafficWeight=100` (abort on `Failed`), then hit the health endpoint:
-- **brain-api** must return HTTP 200 from `/healthz` (unauthenticated).
+- **substrateos-api** must return HTTP 200 from `/healthz` (unauthenticated).
 - **web** is behind Easy Auth, so an unauthenticated request returns **401** — that
   means the container is up and serving. A `5xx` or a connection failure is the real
   failure signal. (You can't smoke-test the authed UI via curl; confirm Sync/Purge
@@ -93,7 +93,7 @@ calling `localhost:8000` in prod, this is why — the build didn't pick up
 ## Manual fallback (one app)
 
 If the script aborts mid-way or you need to deploy a single app by hand (replace
-`brain-api`/`brain-api` with `substrateos-web`/`web` for the frontend):
+`substrateos-api`/`substrateos-api` with `substrateos-web`/`web` for the frontend):
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -101,11 +101,11 @@ git rev-parse --abbrev-ref HEAD          # must be: main
 git pull --ff-only origin main
 TAG=$(git rev-parse --short HEAD)
 az acr login --name cbrainindiaacr
-docker build --platform linux/amd64 -t cbrainindiaacr.azurecr.io/brain-api:$TAG -f substrateos-api/Dockerfile substrateos-api
-docker push cbrainindiaacr.azurecr.io/brain-api:$TAG
-az containerapp update -n brain-api -g rg-company-brain-india --image cbrainindiaacr.azurecr.io/brain-api:$TAG
+docker build --platform linux/amd64 -t cbrainindiaacr.azurecr.io/substrateos-api:$TAG -f substrateos-api/Dockerfile substrateos-api
+docker push cbrainindiaacr.azurecr.io/substrateos-api:$TAG
+az containerapp update -n substrateos-api -g rg-company-brain-india --image cbrainindiaacr.azurecr.io/substrateos-api:$TAG
 # then verify:
-curl -s -w '\n%{http_code}\n' https://brain-api.redplant-161decbe.centralindia.azurecontainerapps.io/healthz
+curl -s -w '\n%{http_code}\n' https://substrateos-api.redplant-161decbe.centralindia.azurecontainerapps.io/healthz
 ```
 
 ## Notes

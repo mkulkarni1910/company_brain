@@ -345,16 +345,23 @@
   .tile{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px 18px 16px;box-shadow:var(--shadow)}
   .tile-label{font-size:12.5px;color:var(--ink-faint)}
   .tile-value{font-family:var(--font-fraunces),serif;font-size:34px;font-weight:600;line-height:1.1;margin:6px 0 2px}
-  .tile-hint{font-family:var(--font-mono),monospace;font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.6px}
+  .tile-hint{display:none}
   .admin-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow)}
   .card h3{font-family:var(--font-fraunces),serif;font-size:16px;font-weight:600;margin:0 0 14px}
   .muted{color:var(--ink-faint);font-size:13px;margin:0}
-  .attn,.health,.activity{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px dashed var(--line-soft);font-size:13.5px}
-  .attn:last-child,.health:last-child,.activity:last-child{border-bottom:none}
+  .attn{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:10px;font-size:13.5px;margin-bottom:9px}
+  .attn:last-child{margin-bottom:0}
+  .health,.activity{display:flex;align-items:flex-start;gap:11px;padding:12px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px}
+  .health:last-child,.activity:last-child{border-bottom:none}
   .dot{width:9px;height:9px;border-radius:50%;flex:none}
   .dot.green{background:var(--green)}.dot.amber{background:var(--amber)}.dot.rose{background:var(--rose)}
-  .where,.who-when,.status{margin-left:auto;font-family:var(--font-mono),monospace;font-size:10.5px;color:var(--ink-faint)}
+  .where{margin-left:auto;font-family:var(--font-mono),monospace;font-size:10.5px;color:var(--amber);font-weight:600;white-space:nowrap;cursor:pointer}
+  .who-when{font-size:11px;color:var(--ink-faint);margin-top:2px}
+  .status{margin-left:auto;font-family:var(--font-mono),monospace;font-size:10.5px;color:var(--ink-faint)}
+  .activity-body{display:flex;flex-direction:column}
+  .activity-text{font-size:13.5px;line-height:1.45}
+  .activity-meta{font-size:11px;color:var(--ink-faint);margin-top:2px}
   .health .hn{display:flex;flex-direction:column}.health .hn span{font-size:11px;color:var(--ink-faint)}
   .pill{font-family:var(--font-mono),monospace;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:99px;border:1px solid var(--line)}
   .pill.live{color:var(--green);border-color:rgba(63,143,94,.4);background:rgba(63,143,94,.1)}

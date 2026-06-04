@@ -328,12 +328,12 @@ async def stats(
     sources_live = sum(1 for c in conns if c.status == "live")
     needs: list[dict] = []
     if not conns:
-        needs.append({"text": "No data sources connected yet", "where": "Data Sources"})
+        needs.append({"text": "No data sources connected yet", "where": "Data Sources", "severity": "warning"})
     for c in conns:
         if c.status == "syncing":
-            needs.append({"text": f"{c.name} is still indexing", "where": "Data Sources"})
+            needs.append({"text": f"{c.name} is still indexing", "where": "Data Sources", "severity": "warning"})
         if c.status == "error":
-            needs.append({"text": f"{c.name} sync failed: {c.error or 'unknown'}", "where": "Data Sources"})
+            needs.append({"text": f"{c.name} sync failed: {c.error or 'unknown'}", "where": "Data Sources", "severity": "error"})
     return {
         "active_users": await metrics.active_users_7d(tenant),
         "queries_7d": await metrics.queries_last_7d(tenant),
