@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { getConnections, disconnect, connectProvider, resync, purgeEverything, PurgeResult, Connection } from "@/lib/adminApi";
+import { getConnections, disconnect, connectProvider, resync, purgeEverything, purgeSource, PurgeResult, Connection } from "@/lib/adminApi";
 
 // ── Catalog ─────────────────────────────────────────────────────────────────
 
@@ -142,9 +142,10 @@ type RowProps = {
   onEnable: () => void;
   onDisable: (id: string) => void;
   onSync: (id: string) => void;
+  onPurge: (id: string, name: string) => void;
 };
 
-function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, onDisable, onSync }: RowProps) {
+function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, onDisable, onSync, onPurge }: RowProps) {
   // client-side filter matching
   const nameMatch = !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase());
   const effectiveStatus = p.connectable
@@ -193,16 +194,25 @@ function ProviderRow({ provider: p, conn, searchTerm, statusFilter, onEnable, on
           ? <span className="sync-v">{relTime(conn.last_sync)}</span>
           : <span className="dash">—</span>}
       </td>
-      <td className="c-manual-sync">
+      <td className="c-manual-actions">
         {p.connectable && conn
-          ? <button
-              className="row-sync"
-              title="Sync now"
-              disabled={conn.status === "syncing"}
-              onClick={() => onSync(conn.connection_id)}
-            >
-              Sync
-            </button>
+          ? <span className="row-actions">
+              <button
+                className="row-sync"
+                title="Sync now"
+                disabled={conn.status === "syncing"}
+                onClick={() => onSync(conn.connection_id)}
+              >
+                Sync
+              </button>
+              <button
+                className="row-purge"
+                title="Purge indexed data for this source"
+                onClick={() => onPurge(conn.connection_id, p.name)}
+              >
+                Purge
+              </button>
+            </span>
           : <span className="dash">—</span>}
       </td>
       <td className="c-enable">
@@ -228,13 +238,14 @@ type CatTableProps = {
   onEnable: (provider: string) => void;
   onDisable: (id: string) => void;
   onSync: (id: string) => void;
+  onPurge: (id: string, name: string) => void;
 };
 
 function connOf(p: Provider, connByType: Record<string, Connection>): Connection | null {
   return p.connectable && p.connType ? (connByType[p.connType] ?? null) : null;
 }
 
-function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilter, onEnable, onDisable, onSync }: CatTableProps) {
+function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilter, onEnable, onDisable, onSync, onPurge }: CatTableProps) {
   // hide entire category when catFilter doesn't match
   if (catFilter !== "all" && catFilter !== category.label) return null;
 
@@ -266,7 +277,7 @@ function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilt
               <th className="c-status">Sync Status</th>
               <th className="c-items">Items</th>
               <th className="c-sync">Last Sync</th>
-              <th className="c-manual-sync">Manual Sync</th>
+              <th className="c-manual-actions">Manual Actions</th>
               <th className="c-enable">Enable Sync</th>
             </tr>
           </thead>
@@ -281,6 +292,7 @@ function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilt
                 onEnable={() => onEnable(p.connType ?? "")}
                 onDisable={onDisable}
                 onSync={onSync}
+                onPurge={onPurge}
               />
             ))}
           </tbody>
@@ -303,6 +315,8 @@ export default function DataSources() {
   const [purgeOpen, setPurgeOpen] = useState(false);
   const [purgeText, setPurgeText] = useState("");
   const [purging, setPurging] = useState(false);
+  const [sourcePurge, setSourcePurge] = useState<{ id: string; name: string } | null>(null);
+  const [sourcePurging, setSourcePurging] = useState(false);
 
   const aliveRef = useRef(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -365,6 +379,23 @@ export default function DataSources() {
       await resync(id);
       pollUntilSettled();
     } catch { /* 403 → layout gate re-prompts */ }
+  };
+
+  const onPurge = (id: string, name: string) => setSourcePurge({ id, name });
+
+  const confirmSourcePurge = async () => {
+    if (!sourcePurge || sourcePurging) return;
+    setSourcePurging(true);
+    try {
+      const r: PurgeResult = await purgeSource(sourcePurge.id);
+      setBanner(`Purged ${r.docs_deleted} document(s) from ${sourcePurge.name}`);
+      refresh();
+    } catch {
+      setBanner(`Purge failed for ${sourcePurge.name}. Try again.`);
+    } finally {
+      setSourcePurging(false);
+      setSourcePurge(null);
+    }
   };
 
   const confirmPurge = async () => {
@@ -457,6 +488,7 @@ export default function DataSources() {
               onEnable={onEnable}
               onDisable={onDisable}
               onSync={onSync}
+              onPurge={onPurge}
             />
           ))}
         </div>
@@ -480,6 +512,22 @@ export default function DataSources() {
             <button className="btn danger" onClick={() => setPurgeOpen(true)}>Purge Everything</button>
           </div>
         </section>
+
+        {sourcePurge && (
+          <div className="admin-modal" onClick={() => !sourcePurging && setSourcePurge(null)}>
+            <div className="modal narrow" onClick={(e) => e.stopPropagation()}>
+              <h2>Purge {sourcePurge.name}</h2>
+              <p>This permanently deletes all indexed documents for <b>{sourcePurge.name}</b>.
+                The connection is kept — you can re-sync afterward.</p>
+              <div className="modal-foot">
+                <button className="modal-close" onClick={() => setSourcePurge(null)} disabled={sourcePurging}>Cancel</button>
+                <button className="btn danger" onClick={confirmSourcePurge} disabled={sourcePurging}>
+                  {sourcePurging ? "Purging…" : "Purge"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {purgeOpen && (
           <div className="admin-modal" onClick={() => !purging && setPurgeOpen(false)}>

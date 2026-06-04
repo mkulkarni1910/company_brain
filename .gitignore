@@ -36,3 +36,6 @@ Thumbs.db
 
 # Eval reports
 eval/reports/
+
+# Decks
+docs/decks/*

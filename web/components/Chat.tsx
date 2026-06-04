@@ -3,8 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { postQuery, postFeedback, getConversations, getConversation, logClick, postSearch,
-  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces,
-  Answer, Citation, ConversationSummary, SearchResponse, TokenMeta } from "@/lib/api";
+  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources,
+  Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource } from "@/lib/api";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
 
@@ -416,6 +416,7 @@ export default function Chat() {
   const [connectSurface, setConnectSurface] = useState<Surface | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [surfaceMap, setSurfaceMap] = useState<Record<string, boolean>>({});
+  const [connectedSources, setConnectedSources] = useState<ConnectedSource[]>([]);
 
   useEffect(() => {
     getSurfaces().then((list) => {
@@ -423,6 +424,7 @@ export default function Chat() {
       for (const s of list) map[s.name] = s.enabled;
       setSurfaceMap(map);
     });
+    getConnectedSources().then(setConnectedSources);
   }, []);
 
   // Fail-open: if surfaces haven't loaded yet (or fetch failed), treat as enabled.
@@ -489,13 +491,20 @@ export default function Chat() {
           </button>
         </div>
         <div>
-          <h2>Connected sources</h2>
-          <div className="sources">
-            <div className="src"><span className="dot" />SharePoint<span className="meta">live</span></div>
-            <div className="src"><span className="dot" />Teams<span className="meta">live</span></div>
-            <div className="src"><span className="dot idle" />Slack<span className="meta">soon</span></div>
-            <div className="src"><span className="dot idle" />Jira<span className="meta">soon</span></div>
-          </div>
+          {connectedSources.length > 0 && (
+            <>
+              <h2>Connected sources</h2>
+              <div className="sources">
+                {connectedSources.map((s) => (
+                  <div className="src" key={s.type}>
+                    <span className={s.status === "syncing" ? "dot amber" : "dot"} />
+                    {s.name}
+                    <span className="meta">{s.status}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         <div className="foot">
           <div className="avatar">{initials(USER_NAME)}</div>

@@ -112,6 +112,30 @@ class AISearchClient:
             )
         return len(keys)
 
+    async def delete_source_docs(self, *, tenant_id: str, source: str) -> int:
+        """Delete indexed documents for a specific source within the tenant."""
+        safe_t = tenant_id.replace("'", "''")
+        safe_s = source.replace("'", "''")
+        flt = f"tenant_id eq '{safe_t}' and source eq '{safe_s}'"
+        keys: list[str] = []
+        skip = 0
+        while True:
+            res = await self._cli.search(
+                search_text="*", filter=flt, select=["chunk_id"], top=_DELETE_PAGE, skip=skip
+            )
+            batch = [r["chunk_id"] async for r in res]
+            keys.extend(batch)
+            if len(batch) < _DELETE_PAGE:
+                break
+            skip += _DELETE_PAGE
+        if not keys:
+            return 0
+        for i in range(0, len(keys), _DELETE_PAGE):
+            await self._cli.delete_documents(
+                documents=[{"chunk_id": k} for k in keys[i : i + _DELETE_PAGE]]
+            )
+        return len(keys)
+
     async def hybrid_search(
         self, *, query: str, user: User, vector: list[float], top: int = 30
     ) -> list[Chunk]:

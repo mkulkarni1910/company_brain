@@ -226,6 +226,18 @@ export async function revokeToken(tokenId: string): Promise<boolean> {
   }
 }
 
+export type ConnectedSource = { type: string; name: string; status: string };
+
+export async function getConnectedSources(): Promise<ConnectedSource[]> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/sources`);
+    if (!resp.ok) return [];
+    return (await resp.json()) as ConnectedSource[];
+  } catch {
+    return [];
+  }
+}
+
 export type SurfaceStatus = { name: string; enabled: boolean };
 
 export async function getSurfaces(): Promise<SurfaceStatus[]> {

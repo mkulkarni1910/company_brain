@@ -88,6 +88,8 @@ export const connectProvider = (provider: string) =>
 export const getJob = (id: string) => call<SyncJob>(`/admin/connections/${id}/job`);
 export const purgeEverything = () =>
   call<PurgeResult>("/admin/purge", { method: "POST" });
+export const purgeSource = (id: string) =>
+  call<PurgeResult>(`/admin/connections/${id}/purge`, { method: "POST" });
 export const getSurfaces = () => call<SurfaceConfig[]>("/admin/surfaces");
 export const patchSurface = (name: string, enabled: boolean) =>
   call<SurfaceConfig>(`/admin/surfaces/${name}`, {

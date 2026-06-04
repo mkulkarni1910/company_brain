@@ -434,6 +434,22 @@ async def resync(
     return {"connection_id": connection_id, "status": "syncing"}
 
 
+@router.post("/connections/{connection_id}/purge", response_model=PurgeResult)
+async def purge_connection(
+    connection_id: str,
+    store: ConnectionStore = Depends(get_connection_store),
+    ai_search=Depends(get_ai_search),
+) -> PurgeResult:
+    """Purge all indexed documents for this connection's source type.
+    The connection itself is kept so the source can be re-synced afterward."""
+    tenant = get_settings().substrateos_tenant_id
+    conn = await store.get_connection(tenant, connection_id)
+    if not conn:
+        raise HTTPException(status_code=404, detail="connection not found")
+    docs_deleted = await ai_search.delete_source_docs(tenant_id=tenant, source=conn.type)
+    return PurgeResult(docs_deleted=docs_deleted, acl_cleared=None, activity_cleared=None)
+
+
 @router.delete("/connections/{connection_id}")
 async def disconnect(
     connection_id: str,
