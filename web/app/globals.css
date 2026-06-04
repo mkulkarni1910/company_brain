@@ -584,3 +584,30 @@
   .skill-ac-name{font-family:var(--font-mono),monospace;font-size:12px;color:var(--amber);font-weight:600}
   .skill-ac-desc{font-size:12.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .skill-used-badge{display:inline-block;font-family:var(--font-mono),monospace;font-size:10.5px;color:var(--teal);background:var(--teal-bg);border:1px solid rgba(15,137,126,.25);padding:3px 10px;border-radius:20px;margin-bottom:10px}
+
+  /* ── Admin skills table ── */
+  .skills-table{width:100%;border-collapse:collapse;font-size:13.5px}
+  .skills-table th{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:10px 14px;text-align:left;border-bottom:1px solid var(--line-soft);font-weight:500}
+  .skills-table td{padding:12px 14px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+  .skills-table tr:last-child td{border-bottom:none}
+  .skill-row-name{font-weight:600;color:var(--ink)}
+  .skill-row-slug{font-family:var(--font-mono),monospace;font-size:11px;color:var(--ink-faint);display:block;margin-top:2px}
+  .skill-row-actions{display:flex;gap:8px}
+  .skill-action-btn{font-family:var(--font-mono),monospace;font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--ink-dim);cursor:pointer;transition:.15s}
+  .skill-action-btn:hover{background:var(--paper-2);border-color:var(--ink-dim)}
+  .skill-action-btn.del{color:var(--rose);border-color:var(--rose)}
+  .skill-action-btn.del:hover{background:#fdf0f2}
+  .skill-form-modal{position:fixed;inset:0;background:rgba(26,22,17,.5);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px;z-index:90}
+  .skill-form-card{background:var(--paper);border-radius:16px;max-width:620px;width:100%;max-height:90vh;overflow:auto;border:1px solid var(--line);box-shadow:0 30px 80px -20px rgba(0,0,0,.45);padding:28px}
+  .skill-form-card h3{font-family:var(--font-fraunces),serif;font-size:20px;font-weight:600;margin:0 0 20px}
+  .skill-form-row{margin-bottom:16px}
+  .skill-form-label{font-family:var(--font-mono),monospace;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px;display:block}
+  .skill-form-input{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:13.5px;background:var(--surface);color:var(--ink);outline:none;transition:.15s;box-sizing:border-box}
+  .skill-form-input:focus{border-color:var(--amber)}
+  .skill-form-textarea{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-family:var(--font-mono),monospace;font-size:12.5px;background:var(--surface);color:var(--ink);outline:none;resize:vertical;transition:.15s;box-sizing:border-box}
+  .skill-form-textarea:focus{border-color:var(--amber)}
+  .skill-form-foot{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+  .skill-list-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+  .skill-list-row input{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--surface);color:var(--ink)}
+  .skill-list-remove{font-size:14px;color:var(--ink-faint);cursor:pointer;background:none;border:none;padding:4px}
+  .skill-list-add{font-family:var(--font-mono),monospace;font-size:11px;color:var(--teal);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline}
