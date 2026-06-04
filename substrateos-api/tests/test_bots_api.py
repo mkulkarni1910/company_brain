@@ -143,6 +143,125 @@ def test_slack_invalid_hmac(monkeypatch):
 
 # ── POST /bot/teams ───────────────────────────────────────────────────────────
 
+class _ExplodingOrchestrator:
+    """Greetings must never reach the RAG pipeline."""
+
+    async def answer(self, request, *, user, user_token=None):
+        raise AssertionError("orchestrator must not be called for small talk")
+
+
+def _teams_env(monkeypatch):
+    monkeypatch.setenv("TEAMS_BOT_APP_ID", _TEAMS_APP_ID)
+    monkeypatch.setenv("TEAMS_BOT_APP_PASSWORD", _TEAMS_PASSWORD)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    return get_settings
+
+
+def test_teams_webhook_greeting_short_circuits(monkeypatch):
+    get_settings = _teams_env(monkeypatch)
+    app.dependency_overrides[get_orchestrator] = lambda: _ExplodingOrchestrator()
+    try:
+        with patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)):
+            with patch("app.api.bots.send_teams_activity", new=AsyncMock(return_value=True)) as mock_send:
+                with TestClient(app) as client:
+                    resp = client.post(
+                        "/bot/teams",
+                        json={
+                            "type": "message",
+                            "text": "<at>SubStrateOS</at> Hello",
+                            "from": {"id": "u1"}, "conversation": {"id": "c1"}, "id": "a1",
+                        },
+                        headers={"Authorization": "Bearer fake-jwt"},
+                    )
+        assert resp.status_code == 200
+        mock_send.assert_awaited_once()
+        activity = mock_send.await_args.kwargs["activity"]
+        assert "Try asking" in activity["text"]
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+def test_teams_webhook_welcome_on_bot_added(monkeypatch):
+    get_settings = _teams_env(monkeypatch)
+    try:
+        with patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)):
+            with patch("app.api.bots.send_teams_activity", new=AsyncMock(return_value=True)) as mock_send:
+                with TestClient(app) as client:
+                    resp = client.post(
+                        "/bot/teams",
+                        json={
+                            "type": "conversationUpdate",
+                            "membersAdded": [{"id": "28:bot-id"}, {"id": "29:user"}],
+                            "recipient": {"id": "28:bot-id"},
+                            "conversation": {"id": "c1"},
+                            "serviceUrl": "https://smba.trafficmanager.net",
+                        },
+                        headers={"Authorization": "Bearer fake-jwt"},
+                    )
+        assert resp.status_code == 200
+        mock_send.assert_awaited_once()
+        activity = mock_send.await_args.kwargs["activity"]
+        assert "Try asking" in activity["text"]
+    finally:
+        get_settings.cache_clear()
+
+
+def test_teams_webhook_no_welcome_for_other_members(monkeypatch):
+    get_settings = _teams_env(monkeypatch)
+    try:
+        with patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)):
+            with patch("app.api.bots.send_teams_activity", new=AsyncMock(return_value=True)) as mock_send:
+                with TestClient(app) as client:
+                    resp = client.post(
+                        "/bot/teams",
+                        json={
+                            "type": "conversationUpdate",
+                            "membersAdded": [{"id": "29:someone-else"}],
+                            "recipient": {"id": "28:bot-id"},
+                            "conversation": {"id": "c1"},
+                        },
+                        headers={"Authorization": "Bearer fake-jwt"},
+                    )
+        assert resp.status_code == 200
+        mock_send.assert_not_awaited()
+    finally:
+        get_settings.cache_clear()
+
+
+def test_slack_webhook_greeting_short_circuits(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    app.dependency_overrides[get_orchestrator] = lambda: _ExplodingOrchestrator()
+    try:
+        body = json.dumps({
+            "type": "event_callback",
+            "event": {"type": "app_mention", "text": "<@U1> hello", "user": "u1",
+                      "channel": "C1", "ts": "1.0"},
+        }).encode()
+        ts = str(int(time.time()))
+        with patch("app.api.bots.post_slack_reply", new=AsyncMock(return_value=None)) as mock_post:
+            with TestClient(app) as client:
+                resp = client.post(
+                    "/bot/slack", content=body,
+                    headers={
+                        "x-slack-request-timestamp": ts,
+                        "x-slack-signature": _slack_sig(_SLACK_SECRET, ts, body),
+                        "content-type": "application/json",
+                    },
+                )
+        assert resp.status_code == 200
+        mock_post.assert_awaited_once()
+        answer = mock_post.await_args.args[3]
+        assert "Try asking" in answer.text
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
 def test_teams_webhook_valid(monkeypatch):
     monkeypatch.setenv("TEAMS_BOT_APP_ID", _TEAMS_APP_ID)
     monkeypatch.setenv("TEAMS_BOT_APP_PASSWORD", _TEAMS_PASSWORD)
@@ -276,7 +395,8 @@ def test_slack_webhook_surface_enabled_answers(monkeypatch):
     try:
         body = json.dumps({
             "type": "event_callback",
-            "event": {"type": "app_mention", "text": "<@U1> hi", "user": "u1",
+            # a real question — greetings now short-circuit to the intro reply
+            "event": {"type": "app_mention", "text": "<@U1> what is PTO?", "user": "u1",
                       "channel": "C1", "ts": "1.0"},
         }).encode()
         ts = str(int(time.time()))

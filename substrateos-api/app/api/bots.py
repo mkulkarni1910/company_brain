@@ -10,6 +10,7 @@ from fastapi.responses import Response
 from app.api.admin import require_admin_key
 from app.bots.manifest import build_manifest_zip
 from app.bots.slack import post_slack_reply, strip_bot_mention, verify_slack_signature
+from app.bots.smalltalk import WELCOME_TEXT, is_smalltalk
 from app.bots.teams import (
     build_teams_reply,
     send_teams_activity,
@@ -74,6 +75,21 @@ async def teams_webhook(
         raise HTTPException(status_code=401, detail="invalid token")
 
     body = await request.json()
+
+    # Welcome moment: Teams sends conversationUpdate when the bot is installed
+    # or added to a chat — introduce the bot instead of staying silent.
+    if body.get("type") == "conversationUpdate":
+        bot_id = (body.get("recipient") or {}).get("id")
+        added = {m.get("id") for m in body.get("membersAdded") or []}
+        if bot_id and bot_id in added and await _surface_enabled(store, "teams"):
+            await send_teams_activity(
+                incoming=body,
+                activity={"type": "message", "text": WELCOME_TEXT},
+                app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+                tenant_id=s.teams_bot_tenant_id,
+            )
+        return {}
+
     if body.get("type") != "message":
         return {}
 
@@ -85,6 +101,16 @@ async def teams_webhook(
         await send_teams_activity(
             incoming=body,
             activity={"type": "message", "text": _DISABLED_TEXT.format(surface="Teams")},
+            app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+            tenant_id=s.teams_bot_tenant_id,
+        )
+        return {}
+
+    # Greetings retrieve nothing and earn an unhelpful refusal — intro instead.
+    if is_smalltalk(text):
+        await send_teams_activity(
+            incoming=body,
+            activity={"type": "message", "text": WELCOME_TEXT},
             app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
             tenant_id=s.teams_bot_tenant_id,
         )
@@ -148,6 +174,10 @@ async def slack_webhook(
             answer = Answer(
                 text=_DISABLED_TEXT.format(surface="Slack"), citations=[], query_id="disabled"
             )
+            await post_slack_reply(slack_token, channel, thread_ts, answer)
+            return
+        if is_smalltalk(text):
+            answer = Answer(text=WELCOME_TEXT, citations=[], query_id="smalltalk")
             await post_slack_reply(slack_token, channel, thread_ts, answer)
             return
         try:

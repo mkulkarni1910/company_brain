@@ -215,6 +215,22 @@ async def test_post_slack_reply_returns_none_on_success(respx_mock):
     assert err is None
 
 
+# ── small talk ───────────────────────────────────────────────────────────────
+
+def test_is_smalltalk_matches_greetings():
+    from app.bots.smalltalk import is_smalltalk
+    for t in ["Hello", "hi", "Hi!", "hey there", "Good morning", "thanks",
+              "Thank you!", "ok", "bye", "help"]:
+        assert is_smalltalk(t), t
+
+
+def test_is_smalltalk_rejects_real_questions():
+    from app.bots.smalltalk import is_smalltalk
+    for t in ["what is PTO?", "hello world how do I file PTO",
+              "RFP status", "good morning meeting notes from yesterday"]:
+        assert not is_smalltalk(t), t
+
+
 # ── build_manifest_zip ───────────────────────────────────────────────────────
 
 def test_manifest_zip_structure():
