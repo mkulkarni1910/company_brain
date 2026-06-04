@@ -86,6 +86,31 @@ async def test_search_page_degrades_to_empty_on_error() -> None:
 
 
 @pytest.mark.asyncio
+async def test_search_page_logs_swallowed_error(caplog) -> None:
+    # A silently-degraded page must leave a trace — a 400 from the service
+    # (e.g. non-facetable facet field) otherwise looks like "no results".
+    class Boom:
+        async def search(self, **k):
+            raise RuntimeError("search down")
+    c = AISearchClient.__new__(AISearchClient)
+    c._cli = Boom()
+    with caplog.at_level("WARNING"):
+        await c.search_page(query="x", user=_user(), vector=[0.1])
+    assert any("search_page failed" in r.message and "search down" in r.message
+               for r in caplog.records)
+
+
+def test_index_schema_author_id_is_facetable() -> None:
+    # search_page requests facets=["author_id,count:10"]; the service rejects the
+    # whole query with 400 unless the field is facetable in the index schema.
+    from scripts.create_search_index import build_index
+
+    fields = {f.name: f for f in build_index("idx").fields}
+    assert fields["author_id"].facetable is True
+    assert fields["source"].facetable is True
+
+
+@pytest.mark.asyncio
 async def test_date_from_naive_is_coerced_to_utc() -> None:
     from datetime import datetime
     results = FakeResults([], facets={"source": []}, count=0)

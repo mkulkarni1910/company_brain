@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 from datetime import UTC, datetime
 
@@ -12,6 +13,8 @@ from app.config import get_settings
 from app.domain.chunk import Chunk
 from app.domain.identity import User
 from app.domain.search import SearchHit, SearchPage, SourceFacet
+
+logger = logging.getLogger(__name__)
 
 # Page size for the purge scan/delete loop; small enough to batch, monkeypatched in tests.
 _DELETE_PAGE = 1000
@@ -257,7 +260,8 @@ class AISearchClient:
                 )
             facets_raw = await results.get_facets() or {}
             total = await results.get_count() or 0
-        except Exception:  # noqa: BLE001 - search surface degrades to empty
+        except Exception as e:  # noqa: BLE001 - search surface degrades to empty
+            logger.warning("search_page failed (degrading to empty page): %s", e)
             return SearchPage(results=[], facets=[], total=0)
 
         facets = [

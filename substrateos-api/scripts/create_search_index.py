@@ -43,7 +43,9 @@ def build_index(name: str) -> SearchIndex:
             type=SearchFieldDataType.Collection(SearchFieldDataType.String),
             filterable=True,
         ),
-        SimpleField(name="author_id", type=SearchFieldDataType.String, filterable=True),
+        # facetable: search_page requests an author_id facet ("Who from") — a facet
+        # on a non-facetable field 400s the whole query.
+        SimpleField(name="author_id", type=SearchFieldDataType.String, filterable=True, facetable=True),
         SimpleField(
             name="entities",
             type=SearchFieldDataType.Collection(SearchFieldDataType.String),
