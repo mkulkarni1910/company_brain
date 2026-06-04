@@ -180,6 +180,13 @@ function SurfaceCard({ meta, config, onToggle, onInstall, botConfigured }: CardP
       <div className="surf-installed">
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", display: "inline-block", flexShrink: 0 }} />
         Installed in {workspace_name ?? "your workspace"}
+        {/* keep setup reachable: manifest re-download / install steps */}
+        <button
+          onClick={onInstall}
+          style={{ background: "none", border: "none", padding: 0, marginLeft: 8, color: "var(--ink-faint)", fontSize: 12, textDecoration: "underline", cursor: "pointer" }}
+        >
+          {meta.name === "teams" ? "manifest / setup" : "setup"}
+        </button>
       </div>
     ) : botConfigured && meta.name === "teams" ? (
       <button
