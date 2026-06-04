@@ -91,8 +91,35 @@ export const purgeEverything = () =>
 export const purgeSource = (id: string) =>
   call<PurgeResult>(`/admin/connections/${id}/purge`, { method: "POST" });
 export const getSurfaces = () => call<SurfaceConfig[]>("/admin/surfaces");
-export const patchSurface = (name: string, enabled: boolean) =>
+export const patchSurface = (
+  name: string,
+  enabled: boolean,
+  extra?: { installed?: boolean; workspace_name?: string },
+) =>
   call<SurfaceConfig>(`/admin/surfaces/${name}`, {
     method: "PATCH",
-    body: JSON.stringify({ enabled }),
+    body: JSON.stringify({ enabled, ...extra }),
   });
+
+export type BotStatus = {
+  teams: { configured: boolean; app_id: string | null };
+  slack: { configured: boolean };
+};
+
+export const getBotStatus = () => call<BotStatus>("/admin/bot/status");
+
+export async function downloadTeamsManifest(): Promise<void> {
+  const resp = await fetch(`${API_BASE}/admin/bot/teams/manifest`, {
+    headers: await headers(),
+  });
+  if (!resp.ok) throw new Error(`manifest ${resp.status}`);
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "substrateos-teams.zip";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
