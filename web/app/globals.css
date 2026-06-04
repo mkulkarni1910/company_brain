@@ -389,6 +389,35 @@
   .admin-gate-card input{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--paper)}
   .admin-gate-card button{width:100%;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--amber),#9a5e0e);color:#fff;font-weight:600;cursor:pointer}
   .admin-gate-card .gate-err{color:var(--rose);font-size:12.5px;margin:0;text-align:center}
+  /* surfaces */
+  .surf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .surf-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;transition:opacity .2s}
+  .surf-card.surf-off{opacity:.72}
+  .surf-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .surf-head{display:flex;align-items:center;gap:12px}
+  .surf-logo{width:40px;height:40px;border-radius:11px;flex:none;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  .surf-logo svg{width:20px;height:20px;color:#fff}
+  .sl-slack{background:#4A154B}
+  .sl-teams{background:#5059C9}
+  .sl-web{background:radial-gradient(circle at 30% 25%,#ffcf7e,var(--amber) 60%,#9a5e0e)}
+  .sl-api{background:var(--teal)}
+  .sl-mcp{background:#1e1b2e}
+  .surf-name{font-family:var(--font-fraunces),serif;font-size:16px;font-weight:600;line-height:1.2}
+  .surf-chip{font-family:var(--font-mono),monospace;font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-faint);border:1px solid var(--line-soft);border-radius:99px;padding:2px 8px;margin-top:3px;display:inline-block}
+  .surf-desc{font-size:13px;color:var(--ink-faint);line-height:1.56;flex:1}
+  .surf-blocked{display:none;align-items:center;gap:8px;padding:9px 12px;background:#fdf0f2;border:1px solid #f5c6cf;border-radius:9px;font-size:12.5px;color:var(--rose);font-weight:500}
+  .surf-blocked.show{display:flex}
+  .surf-blocked svg{width:14px;height:14px;flex:none}
+  .surf-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto}
+  .surf-scope{font-family:var(--font-mono),monospace;font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-faint)}
+  .surf-install-btn{font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:9px;border:none;cursor:pointer;transition:.15s;white-space:nowrap}
+  .surf-install-btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-slack{background:#4A154B;color:#fff}.btn-slack:hover:not(:disabled){background:#3d1140}
+  .btn-teams{background:#5059C9;color:#fff}.btn-teams:hover:not(:disabled){background:#404db0}
+  .surf-installed{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;color:var(--green)}
+  .surf-url{font-family:var(--font-mono),monospace;font-size:11px;color:var(--ink-faint);background:var(--paper-2);border:1px solid var(--line-soft);border-radius:7px;padding:5px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  @media(max-width:960px){.surf-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){.surf-grid{grid-template-columns:1fr}}
   @media(max-width:880px){.tiles{grid-template-columns:repeat(2,1fr)}.admin-cols{grid-template-columns:1fr}}
 
 /* ---- Connect panels (API / MCP / Slack / Teams) — matches mockups/web-chat-light.html ---- */
