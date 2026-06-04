@@ -17,7 +17,7 @@ import logging
 import time
 
 from app.config import get_settings
-from app.connectors.models import ActivityEntry, Connection, SyncJob
+from app.connectors.models import ActivityEntry, Connection, SurfaceConfig, SyncJob
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,16 @@ _CONN = "sos_connection"
 _JOB = "sos_syncjob"
 _ACT = "sos_connactivity"
 _OAUTH = "sos_oauthstate"
+_SURF = "sos_surface"
 _ACTIVITY_MAX = 50
+
+_DEFAULT_SURFACES: list[SurfaceConfig] = [
+    SurfaceConfig(name="slack"),
+    SurfaceConfig(name="teams"),
+    SurfaceConfig(name="web"),
+    SurfaceConfig(name="api"),
+    SurfaceConfig(name="mcp"),
+]
 
 
 class CosmosConnectionStore:
@@ -149,3 +158,18 @@ class CosmosConnectionStore:
         if int(time.time()) - int(d.get("ts", 0)) > get_settings().oauth_state_ttl_seconds:
             return None
         return (d.get("tenant"), d.get("provider", "sharepoint"))
+
+    # ---- surfaces ----
+
+    async def list_surfaces(self, tenant: str) -> list[SurfaceConfig]:
+        stored: dict[str, SurfaceConfig] = {}
+        for data in await self._values(_SURF, tenant):
+            try:
+                s = SurfaceConfig.model_validate_json(data)
+                stored[s.name] = s
+            except Exception:  # noqa: BLE001
+                continue
+        return [stored.get(s.name, s) for s in _DEFAULT_SURFACES]
+
+    async def put_surface(self, tenant: str, surface: SurfaceConfig) -> None:
+        await self._upsert(_SURF, "sname", surface.name, tenant, surface.model_dump_json())
