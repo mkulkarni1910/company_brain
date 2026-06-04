@@ -98,7 +98,7 @@ function relTime(iso: string | null): string {
 function StatusCell({ conn }: { conn: Connection | null }) {
   if (!conn) return <span className="st disabled"><span className="d" />Disabled</span>;
   if (conn.status === "live") {
-    return <span className="st live"><span className="d" />Live</span>;
+    return <span className="st live"><span className="d" />Success</span>;
   }
   if (conn.status === "syncing") {
     return <span className="st syncing"><span className="d" />Syncing</span>;
@@ -262,8 +262,8 @@ function CategoryTable({ category, connByType, searchTerm, catFilter, statusFilt
         <table>
           <thead>
             <tr>
-              <th className="c-source">Source</th>
-              <th className="c-status">Status</th>
+              <th className="c-source">Data Source</th>
+              <th className="c-status">Sync Status</th>
               <th className="c-items">Items</th>
               <th className="c-sync">Last Sync</th>
               <th className="c-manual-sync">Manual Sync</th>
@@ -437,7 +437,7 @@ export default function DataSources() {
           <div className="filter">
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">All statuses</option>
-              <option value="live">Live</option>
+              <option value="live">Success</option>
               <option value="syncing">Syncing</option>
               <option value="soon">Coming soon</option>
             </select>
