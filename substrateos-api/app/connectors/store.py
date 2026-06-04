@@ -7,7 +7,7 @@ import redis.asyncio as redis
 from redis.exceptions import RedisError
 
 from app.config import get_settings
-from app.connectors.models import ActivityEntry, Connection, SyncJob
+from app.connectors.models import ActivityEntry, Connection, SurfaceConfig, SyncJob
 
 logger = logging.getLogger(__name__)
 _ERRORS = (RedisError, ConnectionError, TimeoutError, OSError)
@@ -18,6 +18,16 @@ _JOB_TTL = 86400
 def _conn_key(tenant: str) -> str: return f"connections:{tenant}"
 def _job_key(tenant: str, job_id: str) -> str: return f"connector:job:{tenant}:{job_id}"
 def _activity_key(tenant: str) -> str: return f"admin:activity:{tenant}"
+
+def _surfaces_key(tenant: str) -> str: return f"surfaces:{tenant}"
+
+_DEFAULT_SURFACES: list[SurfaceConfig] = [
+    SurfaceConfig(name="slack"),
+    SurfaceConfig(name="teams"),
+    SurfaceConfig(name="web"),
+    SurfaceConfig(name="api"),
+    SurfaceConfig(name="mcp"),
+]
 
 
 class ConnectionStore:
@@ -144,3 +154,22 @@ class ConnectionStore:
         else:
             tenant, provider = val, "sharepoint"
         return (tenant, provider)
+
+    async def list_surfaces(self, tenant: str) -> list[SurfaceConfig]:
+        if self._r is None:
+            return list(_DEFAULT_SURFACES)
+        try:
+            raw = await self._r.hgetall(_surfaces_key(tenant))
+            stored = {k: SurfaceConfig.model_validate_json(v) for k, v in raw.items()}
+            return [stored.get(s.name, s) for s in _DEFAULT_SURFACES]
+        except _ERRORS as e:
+            logger.warning("list_surfaces failed: %s", e)
+            return list(_DEFAULT_SURFACES)
+
+    async def put_surface(self, tenant: str, surface: SurfaceConfig) -> None:
+        if self._r is None:
+            return
+        try:
+            await self._r.hset(_surfaces_key(tenant), surface.name, surface.model_dump_json())
+        except _ERRORS as e:
+            logger.warning("put_surface failed: %s", e)

@@ -68,3 +68,10 @@ class ActivityEntry(BaseModel):
     actor: str
     text: str
     kind: Literal["connect", "sync", "disconnect", "system"] = "system"
+
+
+class SurfaceConfig(BaseModel):
+    name: str  # "slack" | "teams" | "web" | "api" | "mcp"
+    enabled: bool = True
+    installed: bool = False
+    workspace_name: str | None = None
