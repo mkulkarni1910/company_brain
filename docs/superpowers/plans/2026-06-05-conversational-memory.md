@@ -837,7 +837,7 @@ def test_teams_memory_load_and_record(monkeypatch):
                         "/bot/teams",
                         json={
                             "type": "message",
-                            "text": "<at>SubStrateOS</at> what is PTO?",
+                            "text": "<at>SubstrateOS</at> what is PTO?",
                             "from": {"id": "u1", "aadObjectId": "aad-u1"},
                             "conversation": {"id": "19:abc"},
                             "id": "act1",

@@ -6,8 +6,8 @@
 
 ## Goal
 
-Turn the 9-page refund prototype into a working SubStrateOS use case: a support
-agent (**Tom Reyes**) asks about a customer refund in Slack, SubStrateOS runs a
+Turn the 9-page refund prototype into a working SubstrateOS use case: a support
+agent (**Tom Reyes**) asks about a customer refund in Slack, SubstrateOS runs a
 **refund skill** grounded in mocked AI Search data, hits a policy rule it cannot
 auto-approve, routes the decision to Tom's manager (**Diana Foster**) as a Slack
 DM with real **Approve / Reject** buttons, then posts the outcome back to the
@@ -28,7 +28,7 @@ the flow live; until then the flow is verified with simulated Slack payloads.
 
 ## Demo script (target behaviour)
 
-1. **Tom** in `#refunds`: `@SubStrateOS customer Priya Sharma is asking for a refund of $1,200 on order #48213. It's been about 45 days. Can we do it?`
+1. **Tom** in `#refunds`: `@SubstrateOS customer Priya Sharma is asking for a refund of $1,200 on order #48213. It's been about 45 days. Can we do it?`
 2. Bot acks: *"On it — pulling up order #48213 and checking the refund policy…"*
 3. Workflow retrieves the order doc + refund policy from AI Search; one LLM call emits a grounded structured decision → over limit.
 4. Bot posts a **"⚠ Needs approval"** card in the channel: WHY ($1,200 > $500, 45d > 30d per refund-policy v3) + WHAT I'M DOING (routed to Diana Foster).

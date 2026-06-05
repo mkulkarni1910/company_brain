@@ -23,7 +23,7 @@ def _debug_user(header: str) -> User:
 
 
 def _apply_pilot_tenant(user: User) -> User:
-    """Single-org pilot: map a real authenticated user onto the pilot SubStrateOS tenant
+    """Single-org pilot: map a real authenticated user onto the pilot SubstrateOS tenant
     and grant the tenant-wide `everyone` group so the loaded corpus is reachable
     without per-user provisioning. No-op unless `pilot_single_tenant` is set."""
     s = get_settings()

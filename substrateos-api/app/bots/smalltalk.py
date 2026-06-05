@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 
 WELCOME_TEXT = (
-    "Hi! 👋 I'm SubStrateOS — I answer questions from your company's connected "
+    "Hi! 👋 I'm SubstrateOS — I answer questions from your company's connected "
     "knowledge (SharePoint, Teams, Outlook and more), scoped to what you can "
     "access.\n\n"
     "Try asking:\n"

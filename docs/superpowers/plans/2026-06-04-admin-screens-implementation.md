@@ -445,7 +445,7 @@ type SurfaceMeta = {
 const SURFACES: SurfaceMeta[] = [
   {
     name: "slack", label: "Slack", tag: "Individual", logoClass: "sl-slack",
-    desc: "SubStrateOS app in Slack — answers questions in any channel or DM, responds to @-mentions. Each reply is scoped to what that user can see.",
+    desc: "SubstrateOS app in Slack — answers questions in any channel or DM, responds to @-mentions. Each reply is scoped to what that user can see.",
     scope: "All employees", installable: true,
     blockedMsg: "Slack surface disabled — all Slack access is blocked.",
   },
@@ -457,7 +457,7 @@ const SURFACES: SurfaceMeta[] = [
   },
   {
     name: "web", label: "Web", tag: "All", logoClass: "sl-web",
-    desc: "First-party chat and search interface at your SubStrateOS URL. Disabling blocks the web app entirely for all users.",
+    desc: "First-party chat and search interface at your SubstrateOS URL. Disabling blocks the web app entirely for all users.",
     scope: "All employees", installable: false,
     blockedMsg: "Web app disabled — users will see a blocked page.",
     endpoint: "app.substrateos.ai",
@@ -609,7 +609,7 @@ export default function Surfaces() {
     <div className="admin-page">
       <header className="admin-head">
         <h1>Surfaces</h1>
-        <p>Where SubStrateOS shows up — enable surfaces and install integrations for your team.</p>
+        <p>Where SubstrateOS shows up — enable surfaces and install integrations for your team.</p>
       </header>
       {err && <div className="admin-note">Couldn&apos;t load surface config. Check the admin key / API.</div>}
       <div className="surf-grid">

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build + deploy the SubStrateOS apps to Azure Container Apps, then verify health.
+# Build + deploy the SubstrateOS apps to Azure Container Apps, then verify health.
 # Usage: deploy.sh [substrateos-api|web|both]   (default: both)
 #
 # Pre-flight enforces: on `main`, fast-forward pull, warn on dirty tree.

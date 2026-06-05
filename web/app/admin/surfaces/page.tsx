@@ -20,7 +20,7 @@ type SurfaceMeta = {
 const SURFACES: SurfaceMeta[] = [
   {
     name: "slack", label: "Slack", tag: "Individual", logoClass: "sl-slack",
-    desc: "SubStrateOS app in Slack — answers questions in any channel or DM, responds to @-mentions. Each reply is scoped to what that user can see.",
+    desc: "SubstrateOS app in Slack — answers questions in any channel or DM, responds to @-mentions. Each reply is scoped to what that user can see.",
     scope: "All employees", installable: true,
     blockedMsg: "Slack surface disabled — all Slack access is blocked.",
   },
@@ -32,7 +32,7 @@ const SURFACES: SurfaceMeta[] = [
   },
   {
     name: "web", label: "Web", tag: "All", logoClass: "sl-web",
-    desc: "First-party chat and search interface at your SubStrateOS URL. Disabling blocks the web app entirely for all users.",
+    desc: "First-party chat and search interface at your SubstrateOS URL. Disabling blocks the web app entirely for all users.",
     scope: "All employees", installable: false,
     blockedMsg: "Web app disabled — users will see a blocked page.",
     endpoint: "app.substrateos.ai",
@@ -106,7 +106,7 @@ function TeamsInstallModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="admin-modal" onClick={onClose}>
       <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-        <h3>Install SubStrateOS in Microsoft Teams</h3>
+        <h3>Install SubstrateOS in Microsoft Teams</h3>
         <ol style={{ paddingLeft: 18, margin: "0 0 16px", lineHeight: 1.7, fontSize: 13 }}>
           <li>In <b>Azure Portal</b>, create an <b>Azure Bot</b> resource. Set the messaging endpoint to:<br />
             <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
@@ -138,9 +138,9 @@ function SlackInstallModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="admin-modal" onClick={onClose}>
       <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-        <h3>Install SubStrateOS in Slack</h3>
+        <h3>Install SubstrateOS in Slack</h3>
         <ol style={{ paddingLeft: 18, margin: "0 0 16px", lineHeight: 1.7, fontSize: 13 }}>
-          <li>Go to <b>api.slack.com/apps</b> → <b>Create new app</b> → From scratch → name it <b>SubStrateOS</b>.</li>
+          <li>Go to <b>api.slack.com/apps</b> → <b>Create new app</b> → From scratch → name it <b>SubstrateOS</b>.</li>
           <li>Under <b>OAuth &amp; Permissions</b>, add bot scopes: <code>app_mentions:read</code>, <code>chat:write</code>, <code>im:read</code>, <code>im:write</code>.</li>
           <li>Under <b>Event Subscriptions</b> → enable → set Request URL to:<br />
             <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
@@ -288,7 +288,7 @@ export default function Surfaces() {
     <div className="admin-wrap">
       <header className="admin-head">
         <h1>Surfaces</h1>
-        <p>Where SubStrateOS shows up — enable surfaces and install integrations for your team.</p>
+        <p>Where SubstrateOS shows up — enable surfaces and install integrations for your team.</p>
       </header>
       {err && <div className="admin-note">Couldn&apos;t load surface config. Check the admin key / API.</div>}
       <div className="surf-grid">

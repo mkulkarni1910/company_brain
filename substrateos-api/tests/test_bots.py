@@ -47,7 +47,7 @@ def _make_token(pem: bytes, app_id: str, *, issuer: str = "https://api.botframew
 
 def test_strip_at_mention_basic():
     from app.bots.teams import strip_at_mention
-    assert strip_at_mention("<at>SubStrateOS</at> what is PTO?") == "what is PTO?"
+    assert strip_at_mention("<at>SubstrateOS</at> what is PTO?") == "what is PTO?"
 
 
 def test_strip_at_mention_newline():

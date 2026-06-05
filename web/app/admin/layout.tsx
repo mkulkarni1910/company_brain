@@ -124,7 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="brand">
           <div className="glyph" />
           <div>
-            <h1>SubStrate<span style={{ color: "var(--amber)" }}>OS</span></h1>
+            <h1>Substrate<span style={{ color: "var(--amber)" }}>OS</span></h1>
             <div className="sub">Admin</div>
           </div>
         </div>

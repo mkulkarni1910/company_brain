@@ -23,7 +23,7 @@ def _make_png(width: int, height: int, r: int, g: int, b: int) -> bytes:
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
 
 
-# SubStrateOS amber (#C35A13) — 192×192 colour icon and 32×32 outline icon
+# SubstrateOS amber (#C35A13) — 192×192 colour icon and 32×32 outline icon
 _COLOR_PNG = _make_png(192, 192, 195, 90, 19)
 _OUTLINE_PNG = _make_png(32, 32, 195, 90, 19)
 
@@ -36,16 +36,16 @@ def build_manifest_zip(app_id: str, api_host: str) -> bytes:
         "version": "1.0.0",
         "id": app_id,
         "developer": {
-            "name": "SubStrateOS",
+            "name": "SubstrateOS",
             "websiteUrl": f"https://{api_host}",
             "privacyUrl": f"https://{api_host}",
             "termsOfUseUrl": f"https://{api_host}",
         },
-        "name": {"short": "SubStrateOS", "full": "SubStrateOS Intelligence Layer"},
+        "name": {"short": "SubstrateOS", "full": "SubstrateOS Intelligence Layer"},
         "description": {
             "short": "Ask your company knowledge base",
             "full": (
-                "SubStrateOS is your company intelligence layer. @-mention it in any channel "
+                "SubstrateOS is your company intelligence layer. @-mention it in any channel "
                 "or chat to get grounded answers drawn from SharePoint, Teams, and connected "
                 "sources — scoped to what you can see."
             ),

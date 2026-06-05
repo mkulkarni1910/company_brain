@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 _ERROR_TEXT = "Sorry, I couldn't find an answer right now. Try rephrasing your question."
 _DISABLED_TEXT = (
-    "SubStrateOS is disabled for {surface} — your admin has turned off this surface. "
+    "SubstrateOS is disabled for {surface} — your admin has turned off this surface. "
     "Contact your administrator to re-enable it."
 )
 
@@ -59,7 +59,7 @@ def _bot_user() -> User:
         user_id="bot",
         tenant_id=tid,
         email="bot@substrateos",
-        display_name="SubStrateOS Bot",
+        display_name="SubstrateOS Bot",
         group_ids={f"{tid}:everyone"},
     )
 

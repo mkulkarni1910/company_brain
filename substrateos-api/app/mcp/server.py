@@ -1,4 +1,4 @@
-"""Remote MCP server (FastMCP, Streamable HTTP) for SubStrateOS.
+"""Remote MCP server (FastMCP, Streamable HTTP) for SubstrateOS.
 
 Mounted at /mcp on the FastAPI app. Two tools — ask_substrateos and
 search_substrateos — resolve to the PAT owner via TokenStore and run through

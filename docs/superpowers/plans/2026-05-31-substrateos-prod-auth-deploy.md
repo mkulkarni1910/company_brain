@@ -1,8 +1,8 @@
-# SubStrateOS — Production: Auth + Azure Deploy + Hardening
+# SubstrateOS — Production: Auth + Azure Deploy + Hardening
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development for the CODE tasks. CONTROLLER-RUN and USER-IN-LOOP tasks are run by the controller / human respectively (like Phase 1b/2b). Steps use checkbox (`- [ ]`).
 
-**Goal:** Take SubStrateOS from a local debug demo to a deployed, Entra-authenticated production app on Azure Container Apps — real per-user identity (no debug bypass), secrets in Key Vault, locked CORS, and per-user OBO so Live Fetch returns each user's own Graph results.
+**Goal:** Take SubstrateOS from a local debug demo to a deployed, Entra-authenticated production app on Azure Container Apps — real per-user identity (no debug bypass), secrets in Key Vault, locked CORS, and per-user OBO so Live Fetch returns each user's own Graph results.
 
 **Architecture:** Two Azure Container Apps in `rg-company-brain-dev` (region `swedencentral`, env `cbrain-lokesh-capp-env`, registry `cbrainlokeshacr`): **brain-api** (FastAPI image) and **substrateos-web** (Next.js standalone image). Both fronted by **Container Apps built-in authentication (Easy Auth)** bound to one Entra app (auto-created by `az containerapp auth microsoft set`). The browser logs in at the platform; brain-api resolves the user from the Easy Auth `X-MS-CLIENT-PRINCIPAL` header (debug header only honored when `ENABLE_DEBUG_AUTH`, which is **false** in prod). Secrets load from Key Vault via the apps' managed identity. Live Fetch uses on-behalf-of with the user's token.
 
@@ -393,7 +393,7 @@ az containerapp auth update -g rg-company-brain-dev -n substrateos-web \
 
 ## Task 9 [VERIFY + USER]: End-to-end production check
 
-- [ ] **Step 1:** Open `https://<web-fqdn>` → redirected to Microsoft sign-in → after login, the SubStrateOS chat loads.
+- [ ] **Step 1:** Open `https://<web-fqdn>` → redirected to Microsoft sign-in → after login, the SubstrateOS chat loads.
 - [ ] **Step 2:** Ask "what is our PTO policy?" → grounded answer + citations + right-rail signals (now for the *real* signed-in user; people/activity reflect that user's graph/activity).
 - [ ] **Step 3:** A freshness query ("what files changed recently") now returns the user's own Graph results via OBO (if their tenant has content).
 - [ ] **Step 4:** Confirm prod safety: `curl https://<brain-api-fqdn>/query` without auth → 401 (Easy Auth) or 401 from resolver; the debug header is ignored (`ENABLE_DEBUG_AUTH=false`). Admin endpoints require the Key Vault admin key.

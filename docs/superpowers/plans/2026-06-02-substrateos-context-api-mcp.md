@@ -1629,7 +1629,7 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
     <div className="cmodal-backdrop" onClick={onClose}>
       <div className="cmodal" onClick={(e) => e.stopPropagation()}>
         <div className="cmodal-head">
-          <h3>Connect to SubStrateOS</h3>
+          <h3>Connect to SubstrateOS</h3>
           <button className="cmodal-x" onClick={onClose}>×</button>
         </div>
         <div className="m-tabs">

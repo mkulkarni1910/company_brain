@@ -23,7 +23,7 @@ workspace" model — then crawl all their SharePoint sites and ingest the conten
 ## Architecture
 
 ### Entra app (infra)
-- App `19487212-e866-4726-a39e-cf55118dd4f3` ("SubStrateOS Connector"), already has
+- App `19487212-e866-4726-a39e-cf55118dd4f3` ("SubstrateOS Connector"), already has
   Graph application perms `Sites.Read.All` + `Files.Read.All` consented in the home
   tenant. Changes:
   - `signInAudience` → `AzureADMultipleOrgs`.

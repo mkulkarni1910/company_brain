@@ -227,20 +227,20 @@ type Surface = "Web" | "API" | "MCP";
 Find the entire `SURFACE_META` const:
 ```typescript
 const SURFACE_META: Record<Surface, { icon: string; title: string; sub: string }> = {
-  Web:   { icon: "🌐", title: "Use SubStrateOS on the web", sub: "You're using it right now" },
-  API:   { icon: "🔌", title: "Use SubStrateOS via API", sub: "Grounded company context for your own apps & agents" },
-  MCP:   { icon: "🧩", title: "Use SubStrateOS via MCP", sub: "Connect your AI assistant to SubStrateOS" },
-  Slack: { icon: "💬", title: "Use SubStrateOS in Slack", sub: "Ask SubStrateOS without leaving your channels" },
-  Teams: { icon: "💬", title: "Use SubStrateOS in Teams", sub: "Ask SubStrateOS without leaving your channels" },
+  Web:   { icon: "🌐", title: "Use SubstrateOS on the web", sub: "You're using it right now" },
+  API:   { icon: "🔌", title: "Use SubstrateOS via API", sub: "Grounded company context for your own apps & agents" },
+  MCP:   { icon: "🧩", title: "Use SubstrateOS via MCP", sub: "Connect your AI assistant to SubstrateOS" },
+  Slack: { icon: "💬", title: "Use SubstrateOS in Slack", sub: "Ask SubstrateOS without leaving your channels" },
+  Teams: { icon: "💬", title: "Use SubstrateOS in Teams", sub: "Ask SubstrateOS without leaving your channels" },
 };
 ```
 
 Replace with:
 ```typescript
 const SURFACE_META: Record<Surface, { icon: string; title: string; sub: string }> = {
-  Web: { icon: "🌐", title: "Use SubStrateOS on the web", sub: "You're using it right now" },
-  API: { icon: "🔌", title: "Use SubStrateOS via API", sub: "Grounded company context for your own apps & agents" },
-  MCP: { icon: "🧩", title: "Use SubStrateOS via MCP", sub: "Connect your AI assistant to SubStrateOS" },
+  Web: { icon: "🌐", title: "Use SubstrateOS on the web", sub: "You're using it right now" },
+  API: { icon: "🔌", title: "Use SubstrateOS via API", sub: "Grounded company context for your own apps & agents" },
+  MCP: { icon: "🧩", title: "Use SubstrateOS via MCP", sub: "Connect your AI assistant to SubstrateOS" },
 };
 ```
 
@@ -257,7 +257,7 @@ Then find and delete the "soon" modal footer block entirely:
           {soon && (
             <div className="soon-wrap">
               <div className="big">{surface} app — coming soon</div>
-              <div>You&apos;ll add the SubStrateOS {surface} app, then <code>/ask</code> SubStrateOS or @mention it in any channel. Answers stay scoped to each user&apos;s access.</div>
+              <div>You&apos;ll add the SubstrateOS {surface} app, then <code>/ask</code> SubstrateOS or @mention it in any channel. Answers stay scoped to each user&apos;s access.</div>
             </div>
           )}
 ```
@@ -346,7 +346,7 @@ Just before the `return (` at the top of the Chat render (around line 452), add:
         <div style={{ textAlign: "center", maxWidth: 400 }}>
           <div className="glyph big" style={{ margin: "0 auto 24px" }} />
           <h2 style={{ marginBottom: 12 }}>Web app disabled</h2>
-          <p style={{ color: "var(--ink-faint)" }}>Your admin has disabled access to the SubStrateOS web interface. Contact your administrator to re-enable it.</p>
+          <p style={{ color: "var(--ink-faint)" }}>Your admin has disabled access to the SubstrateOS web interface. Contact your administrator to re-enable it.</p>
         </div>
       </div>
     );

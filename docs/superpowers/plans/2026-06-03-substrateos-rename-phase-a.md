@@ -1,8 +1,8 @@
-# brain → SubStrateOS Rename — Phase A (Codebase) Implementation Plan
+# brain → SubstrateOS Rename — Phase A (Codebase) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rename every "brain" reference in the repository to "SubStrateOS" — UI copy, MCP tool names, the backend directory, config/env identifiers, storage-key prefixes, and index/semantic names — as one reviewable PR, leaving live Azure resources for Phase B.
+**Goal:** Rename every "brain" reference in the repository to "SubstrateOS" — UI copy, MCP tool names, the backend directory, config/env identifiers, storage-key prefixes, and index/semantic names — as one reviewable PR, leaving live Azure resources for Phase B.
 
 **Architecture:** Pure mechanical refactor verified by the existing pytest suite (`substrateos-api/.venv/bin/pytest`) + `web` build + a final repo-wide grep gate. The backend dir `brain-api/` is `git mv`'d to `substrateos-api/` first so all later edits use the new path. Phase A is **not** deployed to the old `brain-api` container app (its env still sets `BRAIN_*`); Phase B provisions new infra with `SUBSTRATEOS_*` env and deploys this image.
 
@@ -95,7 +95,7 @@ git commit -m "refactor: rename brain-api dir to substrateos-api (paths, CI, dep
 In `substrateos-api/app/mcp/server.py`:
 - `async def ask_company_brain(` → `async def ask_substrateos(`
 - `async def search_company_brain(` → `async def search_substrateos(`
-- Update the module docstring lines 1-4: "company brain" → "SubStrateOS", and `ask_company_brain and search_company_brain` → `ask_substrateos and search_substrateos`.
+- Update the module docstring lines 1-4: "company brain" → "SubstrateOS", and `ask_company_brain and search_company_brain` → `ask_substrateos and search_substrateos`.
 
 Confirm no other references:
 
@@ -151,7 +151,7 @@ In `substrateos-api/app/config.py`:
 - `brain_tenant_id: str = "t-test"` → `substrateos_tenant_id: str = "t-test"`
 - `brain_log_level: str = "INFO"` → `substrateos_log_level: str = "INFO"`
 - `brain_api_base_url: str = "http://localhost:8000"` → `substrateos_api_base_url: str = "http://localhost:8000"`
-- In the comments: `onto \`brain_tenant_id\`` → `onto \`substrateos_tenant_id\``, `<brain_tenant_id>:everyone` → `<substrateos_tenant_id>:everyone`, the `# Brain` section header → `# SubStrateOS`, `(env BRAIN_API_BASE_URL)` → `(env SUBSTRATEOS_API_BASE_URL)`, and `brain-api URL surfaced to the UI` → `substrateos-api URL surfaced to the UI`.
+- In the comments: `onto \`brain_tenant_id\`` → `onto \`substrateos_tenant_id\``, `<brain_tenant_id>:everyone` → `<substrateos_tenant_id>:everyone`, the `# Brain` section header → `# SubstrateOS`, `(env BRAIN_API_BASE_URL)` → `(env SUBSTRATEOS_API_BASE_URL)`, and `brain-api URL surfaced to the UI` → `substrateos-api URL surfaced to the UI`.
 
 - [ ] **Step 2: Update .env.example and the eval script**
 
@@ -343,13 +343,13 @@ grep -rn 'brain' web/components/Chat.tsx web/app/admin/surfaces/page.tsx web/lib
 - [ ] **Step 2: Replace the copy**
 
 In `web/components/Chat.tsx`:
-- "Connect your AI assistant to the company brain" → "...to SubStrateOS"
-- "Ask the brain without leaving your channels" (Slack + Teams) → "Ask SubStrateOS without leaving your channels"
-- "search & ask the company brain — scoped to your access" → "search & ask SubStrateOS — scoped to your access"
-- "`/ask` the brain or @mention it" → "`/ask` SubStrateOS or @mention it"
-- `<div className="title">Ask the brain</div>` → `Ask SubStrateOS`
+- "Connect your AI assistant to the company brain" → "...to SubstrateOS"
+- "Ask the brain without leaving your channels" (Slack + Teams) → "Ask SubstrateOS without leaving your channels"
+- "search & ask the company brain — scoped to your access" → "search & ask SubstrateOS — scoped to your access"
+- "`/ask` the brain or @mention it" → "`/ask` SubstrateOS or @mention it"
+- `<div className="title">Ask the brain</div>` → `Ask SubstrateOS`
 
-In `web/app/admin/surfaces/page.tsx:3`: "Where the brain shows up" → "Where SubStrateOS shows up".
+In `web/app/admin/surfaces/page.tsx:3`: "Where the brain shows up" → "Where SubstrateOS shows up".
 
 In `web/lib/api.ts`: line 85 `\`brain-api ${resp.status}...\`` → `\`substrateos-api ${resp.status}...\``; line 187 comment `The brain-api base URL` → `The substrateos-api base URL`.
 
@@ -365,7 +365,7 @@ Expected: build succeeds.
 
 ```bash
 git add -A
-git commit -m "refactor: rename user-facing brand copy from 'brain' to 'SubStrateOS' in web UI"
+git commit -m "refactor: rename user-facing brand copy from 'brain' to 'SubstrateOS' in web UI"
 ```
 
 ---
@@ -413,7 +413,7 @@ Expected: build succeeds.
 
 ```bash
 git add -A
-git commit -m "refactor: final brain → SubStrateOS sweep (Phase A complete)" || echo "nothing to commit"
+git commit -m "refactor: final brain → SubstrateOS sweep (Phase A complete)" || echo "nothing to commit"
 ```
 
 ---

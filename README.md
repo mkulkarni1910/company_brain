@@ -1,4 +1,4 @@
-# SubStrateOS
+# SubstrateOS
 
 Production-grade intelligence layer for unified enterprise search and LLM
 orchestration on Microsoft Azure. See `docs/superpowers/specs/` for the
@@ -82,7 +82,7 @@ Phase 1 baseline: 1.0 / 1.0 on 10 golden Qs (2026-05-29).
 
 Each gets its own plan in `docs/superpowers/plans/`.
 
-## Run the web chat (SubStrateOS, light)
+## Run the web chat (SubstrateOS, light)
 
 ```
 # terminal 1 — API

@@ -3,7 +3,7 @@ _2026-06-04_
 
 ## Overview
 
-Add real bot handlers for Microsoft Teams and Slack so that users can @-mention SubStrateOS in either platform and get grounded answers via the existing query pipeline. The "Install to Teams" and "Install to Slack" buttons on the admin Surfaces page become functional: they show a guided setup modal with a manifest download (Teams) or step-by-step instructions (Slack), and flip to an "active" state once credentials are configured.
+Add real bot handlers for Microsoft Teams and Slack so that users can @-mention SubstrateOS in either platform and get grounded answers via the existing query pipeline. The "Install to Teams" and "Install to Slack" buttons on the admin Surfaces page become functional: they show a guided setup modal with a manifest download (Teams) or step-by-step instructions (Slack), and flip to an "active" state once credentials are configured.
 
 Bot credentials are managed via env vars only (no admin UI). No OAuth install flow is built — the admin registers the apps manually in Azure / Slack and pastes credentials into the server environment.
 
@@ -111,7 +111,7 @@ slack_signing_secret: str | None = None    # SLACK_SIGNING_SECRET
 | `configured=true` | Green dot · "Active in Slack" |
 
 **Setup modal content:**
-- Step 1: api.slack.com/apps → Create new app → From scratch → name it "SubStrateOS"
+- Step 1: api.slack.com/apps → Create new app → From scratch → name it "SubstrateOS"
 - Step 2: OAuth & Permissions → add bot scopes: `app_mentions:read`, `chat:write`, `im:read`, `im:write`
 - Step 3: Event Subscriptions → enable → Request URL: `https://<api-url>/bot/slack` → subscribe to `app_mention` and `message.im`
 - Step 4: Install to workspace → copy Bot User OAuth Token and Signing Secret
@@ -133,8 +133,8 @@ Generated in memory by `app/bots/manifest.py`, served as a zip from `GET /admin/
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
   "manifestVersion": "1.17",
   "id": "<TEAMS_BOT_APP_ID>",
-  "name": { "short": "SubStrateOS", "full": "SubStrateOS Intelligence Layer" },
-  "description": { "short": "Ask your company knowledge base", "full": "SubStrateOS is your company intelligence layer. @-mention it in any channel or chat to get grounded answers drawn from SharePoint, Teams, and connected sources — scoped to what you can see." },
+  "name": { "short": "SubstrateOS", "full": "SubstrateOS Intelligence Layer" },
+  "description": { "short": "Ask your company knowledge base", "full": "SubstrateOS is your company intelligence layer. @-mention it in any channel or chat to get grounded answers drawn from SharePoint, Teams, and connected sources — scoped to what you can see." },
   "bots": [{ "botId": "<TEAMS_BOT_APP_ID>", "scopes": ["personal", "team", "groupchat"] }],
   "validDomains": ["<api-host-from-config>"]
 }
@@ -168,7 +168,7 @@ The `/bot/teams` and `/bot/slack` endpoints are **not** behind the admin key —
 ### Unit tests (`tests/test_bots.py`)
 - JWT verification: valid token passes, tampered token rejected, wrong audience rejected
 - Slack HMAC: valid signature passes, tampered body rejected, expired timestamp rejected
-- Activity text stripping: `<at>SubStrateOS</at> what is the PTO policy?` → `what is the PTO policy?`
+- Activity text stripping: `<at>SubstrateOS</at> what is the PTO policy?` → `what is the PTO policy?`
 - Mention stripping: `<@U123> what is the PTO policy?` → `what is the PTO policy?`
 - Manifest zip: contains `manifest.json`, `color.png`, `outline.png`; manifest JSON has correct `id` and `botId`
 

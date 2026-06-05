@@ -1,4 +1,4 @@
-# SubStrateOS Admin Panel — Design Spec
+# SubstrateOS Admin Panel — Design Spec
 
 **Date:** 2026-05-31
 **Status:** Approved
@@ -9,7 +9,7 @@
 Give admins a dedicated panel — separate URL, same app — to **connect SharePoint
 files into the intelligence layer** (the existing ingest → AI Search pipeline), plus
 an at-a-glance Overview dashboard. Visual design mirrors the reference "Overview"
-mockup, restyled into the existing SubStrateOS design system.
+mockup, restyled into the existing SubstrateOS design system.
 
 ## Decisions (locked)
 
@@ -137,7 +137,7 @@ purge-indexed-docs-on-disconnect · token streaming.
 ## Known blockers / follow-ups
 
 - **Graph grant:** SharePoint returns zero files until `Sites.Read.All` + `Files.Read.All`
-  are consented on the SubStrateOS app (`b170c2f3-…`). Same blocker as Live Fetch.
+  are consented on the SubstrateOS app (`b170c2f3-…`). Same blocker as Live Fetch.
 - **Durable sync queue** (survive container restart).
 - **Per-file ACL** mapping from SharePoint permissions.
 - **Entra admin RBAC** to replace the shared admin key.

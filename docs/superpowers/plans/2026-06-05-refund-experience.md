@@ -298,7 +298,7 @@ async def test_events_append_and_list_in_order():
     run = await store.create(requester_name="Tom", requester_slack_id=None,
                              channel="C1", thread_ts=None)
     await store.add_event(run.id, step="Request received", detail="Refund $1,200", actor="Tom Reyes")
-    await store.add_event(run.id, step="Facts gathered", detail="Order #48213", actor="SubStrateOS")
+    await store.add_event(run.id, step="Facts gathered", detail="Order #48213", actor="SubstrateOS")
     events = await store.list_events(run.id)
     assert [e.step for e in events] == ["Request received", "Facts gathered"]
     assert events[0].actor == "Tom Reyes"
@@ -648,7 +648,7 @@ logger = logging.getLogger(__name__)
 _POLICY_QUERY = "refund policy auto-approve limits manager approval"
 
 DECISION_PROMPT = (
-    "You are SubStrateOS running the Acme refund playbook (refund_v1). "
+    "You are SubstrateOS running the Acme refund playbook (refund_v1). "
     "Use ONLY the provided context documents (order records and the refund policy) to "
     "evaluate the refund request. Extract the facts and decide whether the refund can be "
     "auto-approved under the policy. Compute the order age in days from the order date "
@@ -1277,7 +1277,7 @@ class RefundFlow:
             run.status = "error"
             await self._store.save(run)
             await self._store.add_event(run.id, step="Error",
-                                        detail="Could not evaluate the request", actor="SubStrateOS")
+                                        detail="Could not evaluate the request", actor="SubstrateOS")
             await self._post(token, channel, thread_ts, text=_ERROR)
             return
 
@@ -1286,7 +1286,7 @@ class RefundFlow:
             run.status = "completed"
             await self._store.save(run)
             await self._store.add_event(run.id, step="Order not found",
-                                        detail=decision.reasoning, actor="SubStrateOS")
+                                        detail=decision.reasoning, actor="SubstrateOS")
             await self._post(token, channel, thread_ts,
                              text=f"I couldn't find that order in our records. {decision.reasoning}")
             return
@@ -1295,7 +1295,7 @@ class RefundFlow:
             run.id, step="Facts gathered",
             detail=(f"Order #{decision.order_id} · ${decision.amount_usd:,.0f} · "
                     f"age {decision.order_age_days} days · customer {decision.customer}"),
-            actor="SubStrateOS",
+            actor="SubstrateOS",
         )
         await self._store.add_event(
             run.id, step="Rule evaluated",
@@ -1314,7 +1314,7 @@ class RefundFlow:
                 run.id, step="Refund issued",
                 detail=(f"${decision.amount_usd:,.0f} refunded to {decision.customer} · "
                         "confirmation sent"),
-                actor="SubStrateOS",
+                actor="SubstrateOS",
             )
             await self._post(token, channel, thread_ts,
                              text="Auto-approved within policy — refund issued.",
@@ -1329,7 +1329,7 @@ class RefundFlow:
         if approver_id:
             approver_label = await self._display_name(token, approver_id) or "Support Manager"
         await self._store.add_event(run.id, step="Routed for approval",
-                                    detail=f"Sent to {approver_label} in Slack", actor="SubStrateOS")
+                                    detail=f"Sent to {approver_label} in Slack", actor="SubstrateOS")
         await self._post(token, channel, thread_ts,
                          text="I can't auto-approve this one — routing for approval.",
                          blocks=needs_approval_blocks(decision, approver_label=approver_label,
@@ -1409,7 +1409,7 @@ class RefundFlow:
             await self._store.add_event(
                 run.id, step="Refund issued",
                 detail=f"${d.amount_usd:,.0f} refunded to {d.customer} · confirmation sent",
-                actor="SubStrateOS",
+                actor="SubstrateOS",
             )
             run.status = "completed"
             await self._store.save(run)
@@ -2013,7 +2013,7 @@ POLICY_BODY = """# Acme Refund Policy (refund-policy v3)
 
 ## Auto-approval rule
 
-A refund may be **auto-approved** by SubStrateOS only when **both** conditions hold:
+A refund may be **auto-approved** by SubstrateOS only when **both** conditions hold:
 
 - Refund amount is **$500 or less**, AND
 - The order was placed **30 days ago or less**.
@@ -2531,7 +2531,7 @@ git commit -m "test(workflows): live e2e integration test for the refund flow"
 
 Not tasks for the executor — needed before the live Slack demo:
 
-1. **Slack app config** (api.slack.com → the SubStrateOS app):
+1. **Slack app config** (api.slack.com → the SubstrateOS app):
    - *Interactivity & Shortcuts* → ON → Request URL `https://<api-host>/bot/slack/interactive`
    - *OAuth scopes* → add `im:write`, `users:read` → reinstall app to workspace
 2. **Create test users** Tom (agent) and Diana (manager) in the Slack workspace; invite the bot + both users to `#refunds`.

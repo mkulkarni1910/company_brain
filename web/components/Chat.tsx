@@ -337,9 +337,9 @@ function TokenManager() {
 }
 
 const SURFACE_META: Record<Surface, { icon: string; title: string; sub: string }> = {
-  Web: { icon: "🌐", title: "Use SubStrateOS on the web", sub: "You're using it right now" },
-  API: { icon: "🔌", title: "Use SubStrateOS via API", sub: "Grounded company context for your own apps & agents" },
-  MCP: { icon: "🧩", title: "Use SubStrateOS via MCP", sub: "Connect your AI assistant to SubStrateOS" },
+  Web: { icon: "🌐", title: "Use SubstrateOS on the web", sub: "You're using it right now" },
+  API: { icon: "🔌", title: "Use SubstrateOS via API", sub: "Grounded company context for your own apps & agents" },
+  MCP: { icon: "🧩", title: "Use SubstrateOS via MCP", sub: "Connect your AI assistant to SubstrateOS" },
 };
 
 function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => void }) {
@@ -392,7 +392,7 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
 
           {surface === "MCP" && (
             <>
-              <p className="lead">SubStrateOS speaks the Model Context Protocol over a hosted HTTP endpoint. Paste the config below into your MCP client (Claude Desktop, Cursor, …) and it can search &amp; ask SubStrateOS — scoped to your access.</p>
+              <p className="lead">SubstrateOS speaks the Model Context Protocol over a hosted HTTP endpoint. Paste the config below into your MCP client (Claude Desktop, Cursor, …) and it can search &amp; ask SubstrateOS — scoped to your access.</p>
               <div className="lbl">MCP server URL</div>
               <CodeBlock text={`${base}/mcp`} />
               <div className="lbl">Config (mcp.json)</div>
@@ -481,7 +481,7 @@ export default function Chat() {
         <div style={{ textAlign: "center", maxWidth: 400 }}>
           <div className="glyph big" style={{ margin: "0 auto 24px" }} />
           <h2 style={{ marginBottom: 12 }}>Web app disabled</h2>
-          <p style={{ color: "var(--ink-faint)" }}>Your admin has disabled access to the SubStrateOS web interface. Contact your administrator to re-enable it.</p>
+          <p style={{ color: "var(--ink-faint)" }}>Your admin has disabled access to the SubstrateOS web interface. Contact your administrator to re-enable it.</p>
         </div>
       </div>
     );
@@ -493,7 +493,7 @@ export default function Chat() {
       <aside className="rail">
         <div className="brand">
           <div className="glyph" />
-          <div><h1>SubStrate<span style={{ color: "var(--amber)" }}>OS</span></h1><div className="sub">Intelligence Layer</div></div>
+          <div><h1>Substrate<span style={{ color: "var(--amber)" }}>OS</span></h1><div className="sub">Intelligence Layer</div></div>
         </div>
         <div>
           <h2>Workspace</h2>
@@ -560,7 +560,7 @@ export default function Chat() {
       {view === "ask" && (
       <main className="main">
         <header className="topbar">
-          <div className="title">Ask SubStrateOS</div>
+          <div className="title">Ask SubstrateOS</div>
           <span className="tenant">tenant · contoso</span>
           <div className="surfaces">
             <button className="chip on" onClick={() => setConnectSurface(null)}><span className="d" />Web</button>
@@ -575,7 +575,7 @@ export default function Chat() {
             {turns.length === 0 && (
               <div className="empty">
                 <div className="glyph big" />
-                <h2 className="empty-h">Ask SubStrateOS anything</h2>
+                <h2 className="empty-h">Ask SubstrateOS anything</h2>
                 <p className="empty-p">Grounded answers across SharePoint, Teams, and live sources — ranked for you.</p>
               </div>
             )}
@@ -584,7 +584,7 @@ export default function Chat() {
                 <div className="user-row"><div className="user-msg">{t.query}</div></div>
                 {t.loading && (
                   <div className="answer">
-                    <div className="a-head"><div className="a-glyph" /><div className="a-name">SubStrate<b>OS</b></div></div>
+                    <div className="a-head"><div className="a-glyph" /><div className="a-name">Substrate<b>OS</b></div></div>
                     <div className="trace">
                       {["plan", "retrieve", "rank", "ground"].map((s, i) => (
                         <span className="step done" key={s} style={{ opacity: 0.5 }}><span className="num">…</span>{s}{i < 3 && <span className="arrow" style={{ marginLeft: 9 }} />}</span>
@@ -597,7 +597,7 @@ export default function Chat() {
                 {t.answer && (
                   <section className="answer">
                     <div className="a-head">
-                      <div className="a-glyph" /><div className="a-name">SubStrate<b>OS</b></div>
+                      <div className="a-glyph" /><div className="a-name">Substrate<b>OS</b></div>
                       <div className="badge-fresh"><span className="pulse" />{t.answer.debug?.live_used ? "live · merged" : `grounded · ${t.answer.citations.length} source${t.answer.citations.length === 1 ? "" : "s"}`}</div>
                     </div>
                     <div className="trace">

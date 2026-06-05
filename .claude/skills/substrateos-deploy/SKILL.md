@@ -1,7 +1,7 @@
 ---
 name: substrateos-deploy
 description: >-
-  Build and deploy the SubStrateOS apps — the substrateos-api backend and/or the
+  Build and deploy the SubstrateOS apps — the substrateos-api backend and/or the
   substrateos-web frontend — to Azure Container Apps (centralindia). Use this
   whenever the user wants to deploy, ship, release, roll out, push live, or
   redeploy either app, e.g. "deploy substrateos-api", "ship the web app", "push
@@ -10,7 +10,7 @@ description: >-
   build, ACR push, container-app rollout, and post-deploy health verification.
 ---
 
-# SubStrateOS Deploy
+# SubstrateOS Deploy
 
 Deploys two Azure Container Apps in resource group `rg-company-brain-india`
 (region centralindia), both from registry `cbrainindiaacr`:

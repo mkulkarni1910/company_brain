@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-31
 **Status:** Approved (brainstorming)
-**Surfaces:** SubStrateOS web chat left-rail (`Ask` exists; `Discover` and `History` are dead links to be built)
+**Surfaces:** SubstrateOS web chat left-rail (`Ask` exists; `Discover` and `History` are dead links to be built)
 
 ## Goal
 

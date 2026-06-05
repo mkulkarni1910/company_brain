@@ -2,7 +2,7 @@
 
 Reads users, groups, group memberships, and manager relationships from Entra
 and writes them into the Cosmos Gremlin graph under a fixed tenant_id partition.
-The Graph tenant's real directory is materialized; tenant_id is SubStrateOS's
+The Graph tenant's real directory is materialized; tenant_id is SubstrateOS's
 logical tenant (Phase 2a uses the single demo tenant 't-test').
 """
 

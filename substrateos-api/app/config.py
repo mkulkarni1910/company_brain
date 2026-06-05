@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     # App Insights (optional in dev)
     applicationinsights_connection_string: str | None = None
 
-    # SubStrateOS
+    # SubstrateOS
     substrateos_tenant_id: str = "t-test"
     substrateos_log_level: str = "INFO"
     enable_debug_auth: bool = False

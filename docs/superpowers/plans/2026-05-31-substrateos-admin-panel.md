@@ -1,10 +1,10 @@
-# SubStrateOS Admin Panel Implementation Plan
+# SubstrateOS Admin Panel Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship an `/admin` panel (Overview dashboard + Data Sources) inside the existing `web/` app that lets admins connect SharePoint sites and auto-ingest their files into the intelligence layer.
 
-**Architecture:** New `app/connectors/` backend module (MS Graph SharePoint enumeration + text extraction + Redis connection/job store + background sync runner that feeds the existing `IngestPipeline`), a small `MetricsStore` for honest Overview tiles, and `/admin/*` API routes guarded by the existing `x-admin-key`. Frontend adds an `/admin` route group reusing the SubStrateOS design tokens, gated by an admin-key prompt on top of Easy Auth.
+**Architecture:** New `app/connectors/` backend module (MS Graph SharePoint enumeration + text extraction + Redis connection/job store + background sync runner that feeds the existing `IngestPipeline`), a small `MetricsStore` for honest Overview tiles, and `/admin/*` API routes guarded by the existing `x-admin-key`. Frontend adds an `/admin` route group reusing the SubstrateOS design tokens, gated by an admin-key prompt on top of Easy Auth.
 
 **Tech Stack:** Python 3.12 / FastAPI / uv / redis.asyncio / azure-search-documents / MS Graph REST / python-docx / pypdf · Next.js 14 / React 18 / TypeScript.
 
@@ -50,16 +50,16 @@
 - Create: `mockups/admin-overview.html`
 - Create: `mockups/admin-data-sources.html`
 
-Restyle the reference "Overview" design into the SubStrateOS system: reuse the exact CSS tokens/classes from `mockups/web-chat-light.html` (`--paper`, `--amber`, `.rail`, `.glyph`, `.nav`, `.card` etc). Left rail groups: `WORKSPACE → Overview`; `CONNECT → Data Sources, Surfaces, Permissions`; `BUILD → Developer`. Add an `ADMIN` mono badge next to the brand. Top-right tenant chip = `t-eval`.
+Restyle the reference "Overview" design into the SubstrateOS system: reuse the exact CSS tokens/classes from `mockups/web-chat-light.html` (`--paper`, `--amber`, `.rail`, `.glyph`, `.nav`, `.card` etc). Left rail groups: `WORKSPACE → Overview`; `CONNECT → Data Sources, Surfaces, Permissions`; `BUILD → Developer`. Add an `ADMIN` mono badge next to the brand. Top-right tenant chip = `t-eval`.
 
 - [ ] **Step 1: Build `admin-overview.html`** — header "Overview / Your work context layer at a glance.", 4 stat tiles (Active users, Sources live, Items indexed, Queries · 7d), two-column NEEDS ATTENTION + SOURCE HEALTH (SharePoint/OneDrive/Teams… with live/syncing bars), RECENT ACTIVITY list. Use static representative values (this is the mockup only).
 - [ ] **Step 2: Build `admin-data-sources.html`** — header "Data Sources", a "Connect a source" row with a prominent **SharePoint** card + others (OneDrive/Teams greyed "soon"), a "Connected sources" table (name · type · status · items · last sync · actions), and a connect modal mock (site picker → Connect). Reuse `.card`, `.nav`, button styles.
-- [ ] **Step 3: Open both in a browser, confirm they match the SubStrateOS look** (fonts load, amber accent, warm bg).
+- [ ] **Step 3: Open both in a browser, confirm they match the SubstrateOS look** (fonts load, amber accent, warm bg).
 - [ ] **Step 4: Commit**
 
 ```bash
 git add mockups/admin-overview.html mockups/admin-data-sources.html
-git commit -m "design(admin): overview + data-sources mockups (SubStrateOS theme)"
+git commit -m "design(admin): overview + data-sources mockups (SubstrateOS theme)"
 ```
 
 **CHECKPOINT:** Get user visual approval on the mockups before porting (Tasks 11-16).
@@ -1551,7 +1551,7 @@ export default function DataSources() {
             {sites === null && <p className="muted">Loading sites…</p>}
             {sites !== null && sites.length === 0 && (
               <p className="muted">No sites available. Connecting is blocked until the
-                <b> Sites.Read.All</b> Graph permission is consented on the SubStrateOS app.</p>)}
+                <b> Sites.Read.All</b> Graph permission is consented on the SubstrateOS app.</p>)}
             {(sites ?? []).map((s) => (
               <button key={s.site_id} className="site-row" onClick={() => onConnect(s)}>
                 <b>{s.name}</b><span>{s.web_url}</span></button>))}
@@ -1672,7 +1672,7 @@ Reuse existing tokens. Port the visual treatment finalized in the Task 1 mockups
 
 ```bash
 git add web/app/globals.css
-git commit -m "feat(web/admin): admin panel styles (SubStrateOS tokens)"
+git commit -m "feat(web/admin): admin panel styles (SubstrateOS tokens)"
 ```
 
 ---

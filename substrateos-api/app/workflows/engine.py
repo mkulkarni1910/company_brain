@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 _POLICY_QUERY = "refund policy auto-approve limits manager approval"
 
 DECISION_PROMPT = (
-    "You are SubStrateOS running the Acme refund playbook (refund_v1). "
+    "You are SubstrateOS running the Acme refund playbook (refund_v1). "
     "Use ONLY the provided context documents (order records and the refund policy) to "
     "evaluate the refund request. Extract the facts and decide whether the refund can be "
     "auto-approved under the policy. Compute the order age in days from the order date "

@@ -24,7 +24,7 @@ POLICY_BODY = """# Acme Refund Policy (refund-policy v3)
 
 ## Auto-approval rule
 
-A refund may be **auto-approved** by SubStrateOS only when **both** conditions hold:
+A refund may be **auto-approved** by SubstrateOS only when **both** conditions hold:
 
 - Refund amount is **$500 or less**, AND
 - The order was placed **30 days ago or less**.

@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-03
 **Status:** Approved (design)
-**Surface:** SubStrateOS web Admin → Data Sources (`/admin/sources`) + brain-api `/admin`
+**Surface:** SubstrateOS web Admin → Data Sources (`/admin/sources`) + brain-api `/admin`
 
 ## Problem
 

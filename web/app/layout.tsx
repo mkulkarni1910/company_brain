@@ -9,7 +9,7 @@ const archivo = Archivo({ subsets: ["latin"], variable: "--font-archivo", displa
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-fraunces", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
-export const metadata = { title: "SubStrateOS — Ask" };
+export const metadata = { title: "SubstrateOS — Ask" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

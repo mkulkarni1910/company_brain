@@ -73,7 +73,7 @@ class RefundFlow:
             run.status = "error"
             await self._store.save(run)
             await self._store.add_event(run.id, step="Error",
-                                        detail="Could not evaluate the request", actor="SubStrateOS")
+                                        detail="Could not evaluate the request", actor="SubstrateOS")
             await self._post(token, channel, thread_ts, text=_ERROR)
             return
 
@@ -82,7 +82,7 @@ class RefundFlow:
             run.status = "completed"
             await self._store.save(run)
             await self._store.add_event(run.id, step="Order not found",
-                                        detail=decision.reasoning, actor="SubStrateOS")
+                                        detail=decision.reasoning, actor="SubstrateOS")
             await self._post(token, channel, thread_ts,
                              text=f"I couldn't find that order in our records. {decision.reasoning}")
             return
@@ -91,7 +91,7 @@ class RefundFlow:
             run.id, step="Facts gathered",
             detail=(f"Order #{decision.order_id} · ${decision.amount_usd:,.0f} · "
                     f"age {decision.order_age_days} days · customer {decision.customer}"),
-            actor="SubStrateOS",
+            actor="SubstrateOS",
         )
         await self._store.add_event(
             run.id, step="Rule evaluated",
@@ -110,7 +110,7 @@ class RefundFlow:
                 run.id, step="Refund issued",
                 detail=(f"${decision.amount_usd:,.0f} refunded to {decision.customer} · "
                         "confirmation sent"),
-                actor="SubStrateOS",
+                actor="SubstrateOS",
             )
             await self._post(token, channel, thread_ts,
                              text="Auto-approved within policy — refund issued.",
@@ -125,7 +125,7 @@ class RefundFlow:
         if approver_id:
             approver_label = await self._display_name(token, approver_id) or "Support Manager"
         await self._store.add_event(run.id, step="Routed for approval",
-                                    detail=f"Sent to {approver_label} in Slack", actor="SubStrateOS")
+                                    detail=f"Sent to {approver_label} in Slack", actor="SubstrateOS")
         await self._post(token, channel, thread_ts,
                          text="I can't auto-approve this one — routing for approval.",
                          blocks=needs_approval_blocks(decision, approver_label=approver_label,
@@ -205,7 +205,7 @@ class RefundFlow:
             await self._store.add_event(
                 run.id, step="Refund issued",
                 detail=f"${d.amount_usd:,.0f} refunded to {d.customer} · confirmation sent",
-                actor="SubStrateOS",
+                actor="SubstrateOS",
             )
             run.status = "completed"
             await self._store.save(run)

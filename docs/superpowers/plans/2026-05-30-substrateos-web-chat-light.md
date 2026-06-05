@@ -1,4 +1,4 @@
-# SubStrateOS — Web Chat (Light) End-to-End Implementation Plan
+# SubstrateOS — Web Chat (Light) End-to-End Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
@@ -291,7 +291,7 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import { Providers } from "./providers";
 
-export const metadata = { title: "SubStrateOS — Ask" };
+export const metadata = { title: "SubstrateOS — Ask" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -464,7 +464,7 @@ export default function Chat() {
             {turns.length === 0 && (
               <div className="empty">
                 <div className="glyph big" />
-                <h2 className="empty-h">Ask SubStrateOS anything</h2>
+                <h2 className="empty-h">Ask SubstrateOS anything</h2>
                 <p className="empty-p">Grounded answers across SharePoint, Teams, and live sources — ranked for you.</p>
               </div>
             )}
@@ -665,7 +665,7 @@ Expected: prints a signals dict with content/people/activity/recency and a candi
 Append to `brain-api/README.md` (or root README) a "Run the web chat" note:
 
 ```markdown
-## Run the web chat (SubStrateOS, light)
+## Run the web chat (SubstrateOS, light)
 
 ```
 # terminal 1 — API
@@ -679,8 +679,8 @@ Open http://localhost:3000. Runs via debug-auth (no SSO); queries the `t-eval` t
 ```bash
 cd /Users/lokesh/Desktop/RFpilot/company_brain
 git add README.md brain-api/README.md
-git commit -m "docs: how to run the SubStrateOS web chat"
-git tag -a web-chat-light-v1 -m "SubStrateOS web chat (light) e2e — grounded answers, signal rail, feedback, multi-turn, debug-auth."
+git commit -m "docs: how to run the SubstrateOS web chat"
+git tag -a web-chat-light-v1 -m "SubstrateOS web chat (light) e2e — grounded answers, signal rail, feedback, multi-turn, debug-auth."
 ```
 
 ---

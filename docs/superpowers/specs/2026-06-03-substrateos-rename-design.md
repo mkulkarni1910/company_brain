@@ -1,4 +1,4 @@
-# Design: brain → SubStrateOS rename
+# Design: brain → SubstrateOS rename
 
 **Date:** 2026-06-03
 **Status:** Approved (design)
@@ -6,7 +6,7 @@
 ## Goal
 
 Replace every "brain" reference in the codebase and infrastructure with
-"SubStrateOS" — user-facing UI copy, MCP tool names, internal code identifiers,
+"SubstrateOS" — user-facing UI copy, MCP tool names, internal code identifiers,
 config/env-var names, and (separately) live Azure resource names. The web
 container app is already named `substrateos-web`, so the brand migration is
 half-done; this completes it.
@@ -47,7 +47,7 @@ memory. Needs live `az` access + a downtime window.
 
 | Category | From | To |
 |---|---|---|
-| UI copy | "the brain", "company brain", "Ask the brain" | "SubStrateOS" |
+| UI copy | "the brain", "company brain", "Ask the brain" | "SubstrateOS" |
 | MCP tools | `ask_company_brain`, `search_company_brain` | `ask_substrateos`, `search_substrateos` |
 | Backend dir / image / container app | `brain-api` | `substrateos-api` |
 | Config fields | `brain_tenant_id`, `brain_api_base_url`, `brain_log_level` | `substrateos_tenant_id`, `substrateos_api_base_url`, `substrateos_log_level` |

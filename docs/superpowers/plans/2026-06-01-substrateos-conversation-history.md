@@ -713,4 +713,4 @@ az cosmosdb gremlin graph create -a cbrain-lokesh-cosmos -g rg-company-brain-dev
 ## Notes
 - The old `/history` + `HistoryStore` + `getHistory` stay in the repo but are no longer wired/used (dormant).
 - All store paths are best-effort; Cosmos being down must never 500 `/query` or block the chat.
-- Keep the SubStrateOS aesthetic; reuse the existing `.hist-row`/`.panel-wrap` styles for the conversation list.
+- Keep the SubstrateOS aesthetic; reuse the existing `.hist-row`/`.panel-wrap` styles for the conversation list.

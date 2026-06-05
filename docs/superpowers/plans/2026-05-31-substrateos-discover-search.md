@@ -927,6 +927,6 @@ az containerapp update -n substrateos-web -g rg-company-brain-dev --image cbrain
 ## Notes for the executor
 - Run backend commands from `brain-api/`. Keep the full non-integration suite green: `uv run pytest -q -m "not integration"`.
 - The `/search` surface must never 500 on data-layer failures (search/overview/people all degrade).
-- Match the SubStrateOS aesthetic already in `globals.css` and `mockups/user-web-chat.html (Discover view — `.view-discover`)`.
+- Match the SubstrateOS aesthetic already in `globals.css` and `mockups/user-web-chat.html (Discover view — `.view-discover`)`.
 - The old trending Discover backend (`DiscoverService`, `/discover`, `ActivityStore.trending/source_breakdown`) stays in place (still tested; `ActivityStore` is used by the ranker) but is no longer surfaced — do not delete it in this plan.
 - **Deferred to a fast-follow:** the **"Who from" (author) filter UI**. The `/search` API already accepts `author_id`, but the dropdown (author facet + name resolution) is not built in v1 — v1 ships **time-range + source facets** only. "Similar results" expansion and doc-granular facet counts are also deferred (v1 uses chunk-level facet counts, labelled "results").

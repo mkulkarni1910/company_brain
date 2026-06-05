@@ -82,7 +82,7 @@ async def test_events_append_and_list_in_order():
     run = await store.create(requester_name="Tom", requester_slack_id=None,
                              channel="C1", thread_ts=None)
     await store.add_event(run.id, step="Request received", detail="Refund $1,200", actor="Tom Reyes")
-    await store.add_event(run.id, step="Facts gathered", detail="Order #48213", actor="SubStrateOS")
+    await store.add_event(run.id, step="Facts gathered", detail="Order #48213", actor="SubstrateOS")
     events = await store.list_events(run.id)
     assert [e.step for e in events] == ["Request received", "Facts gathered"]
     assert events[0].actor == "Tom Reyes"

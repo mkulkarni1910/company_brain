@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add real Teams and Slack bot handlers to SubStrateOS so users can @-mention the bot in either platform and get grounded answers, and make the admin Surfaces page "Install" buttons drive a real setup flow.
+**Goal:** Add real Teams and Slack bot handlers to SubstrateOS so users can @-mention the bot in either platform and get grounded answers, and make the admin Surfaces page "Install" buttons drive a real setup flow.
 
 **Architecture:** New `app/bots/` Python module (teams.py, slack.py, manifest.py) + `app/api/bots.py` router with 4 endpoints. Teams responds synchronously (Adaptive Card in 200 body); Slack acknowledges immediately and replies asynchronously via `chat.postMessage`. Frontend fetches bot status on load and shows three-state (Teams) or two-state (Slack) install UI with modals.
 
@@ -166,7 +166,7 @@ def _make_token(pem: bytes, app_id: str, *, issuer: str = "https://api.botframew
 
 def test_strip_at_mention_basic():
     from app.bots.teams import strip_at_mention
-    assert strip_at_mention("<at>SubStrateOS</at> what is PTO?") == "what is PTO?"
+    assert strip_at_mention("<at>SubstrateOS</at> what is PTO?") == "what is PTO?"
 
 
 def test_strip_at_mention_newline():
@@ -586,7 +586,7 @@ def _make_png(width: int, height: int, r: int, g: int, b: int) -> bytes:
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
 
 
-# SubStrateOS amber (#C35A13) — 192×192 colour icon and 32×32 outline icon
+# SubstrateOS amber (#C35A13) — 192×192 colour icon and 32×32 outline icon
 _COLOR_PNG = _make_png(192, 192, 195, 90, 19)
 _OUTLINE_PNG = _make_png(32, 32, 195, 90, 19)
 
@@ -600,16 +600,16 @@ def build_manifest_zip(app_id: str, api_host: str) -> bytes:
         "id": app_id,
         "packageName": "ai.substrateos.bot",
         "developer": {
-            "name": "SubStrateOS",
+            "name": "SubstrateOS",
             "websiteUrl": f"https://{api_host}",
             "privacyUrl": f"https://{api_host}",
             "termsOfUseUrl": f"https://{api_host}",
         },
-        "name": {"short": "SubStrateOS", "full": "SubStrateOS Intelligence Layer"},
+        "name": {"short": "SubstrateOS", "full": "SubstrateOS Intelligence Layer"},
         "description": {
             "short": "Ask your company knowledge base",
             "full": (
-                "SubStrateOS is your company intelligence layer. @-mention it in any channel "
+                "SubstrateOS is your company intelligence layer. @-mention it in any channel "
                 "or chat to get grounded answers drawn from SharePoint, Teams, and connected "
                 "sources — scoped to what you can see."
             ),
@@ -804,7 +804,7 @@ def test_teams_webhook_valid(monkeypatch):
                     "/bot/teams",
                     json={
                         "type": "message",
-                        "text": "<at>SubStrateOS</at> what is PTO?",
+                        "text": "<at>SubstrateOS</at> what is PTO?",
                         "from": {"id": "u1", "aadObjectId": "aad-u1"},
                         "conversation": {"id": "conv1"},
                         "id": "act1",
@@ -883,7 +883,7 @@ def _bot_user() -> User:
         user_id="bot",
         tenant_id=tid,
         email="bot@substrateos",
-        display_name="SubStrateOS Bot",
+        display_name="SubstrateOS Bot",
         group_ids={f"{tid}:everyone"},
     )
 
@@ -1326,7 +1326,7 @@ function TeamsInstallModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="admin-modal" onClick={onClose}>
       <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-        <h3>Install SubStrateOS in Microsoft Teams</h3>
+        <h3>Install SubstrateOS in Microsoft Teams</h3>
         <ol style={{ paddingLeft: 18, margin: "0 0 16px", lineHeight: 1.7, fontSize: 13 }}>
           <li>In <b>Azure Portal</b>, create an <b>Azure Bot</b> resource. Set the messaging endpoint to:<br />
             <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
@@ -1358,9 +1358,9 @@ function SlackInstallModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="admin-modal" onClick={onClose}>
       <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-        <h3>Install SubStrateOS in Slack</h3>
+        <h3>Install SubstrateOS in Slack</h3>
         <ol style={{ paddingLeft: 18, margin: "0 0 16px", lineHeight: 1.7, fontSize: 13 }}>
-          <li>Go to <b>api.slack.com/apps</b> → <b>Create new app</b> → From scratch → name it <b>SubStrateOS</b>.</li>
+          <li>Go to <b>api.slack.com/apps</b> → <b>Create new app</b> → From scratch → name it <b>SubstrateOS</b>.</li>
           <li>Under <b>OAuth &amp; Permissions</b>, add bot scopes: <code>app_mentions:read</code>, <code>chat:write</code>, <code>im:read</code>, <code>im:write</code>.</li>
           <li>Under <b>Event Subscriptions</b> → enable → set Request URL to:<br />
             <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
@@ -1395,7 +1395,7 @@ Replace the `return` block of `Surfaces`:
     <div className="admin-wrap">
       <header className="admin-head">
         <h1>Surfaces</h1>
-        <p>Where SubStrateOS shows up — enable surfaces and install integrations for your team.</p>
+        <p>Where SubstrateOS shows up — enable surfaces and install integrations for your team.</p>
       </header>
       {err && <div className="admin-note">Couldn&apos;t load surface config. Check the admin key / API.</div>}
       <div className="surf-grid">

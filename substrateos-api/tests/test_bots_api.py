@@ -169,7 +169,7 @@ def test_teams_webhook_greeting_short_circuits(monkeypatch):
                         "/bot/teams",
                         json={
                             "type": "message",
-                            "text": "<at>SubStrateOS</at> Hello",
+                            "text": "<at>SubstrateOS</at> Hello",
                             "from": {"id": "u1"}, "conversation": {"id": "c1"}, "id": "a1",
                         },
                         headers={"Authorization": "Bearer fake-jwt"},
@@ -278,7 +278,7 @@ def test_teams_webhook_valid(monkeypatch):
                         "/bot/teams",
                         json={
                             "type": "message",
-                            "text": "<at>SubStrateOS</at> what is PTO?",
+                            "text": "<at>SubstrateOS</at> what is PTO?",
                             "from": {"id": "u1", "aadObjectId": "aad-u1"},
                             "conversation": {"id": "conv1"},
                             "id": "act1",
@@ -335,7 +335,7 @@ def test_teams_webhook_surface_disabled(monkeypatch):
                         "/bot/teams",
                         json={
                             "type": "message",
-                            "text": "<at>SubStrateOS</at> what is PTO?",
+                            "text": "<at>SubstrateOS</at> what is PTO?",
                             "from": {"id": "u1"}, "conversation": {"id": "c1"}, "id": "a1",
                         },
                         headers={"Authorization": "Bearer fake-jwt"},
@@ -617,7 +617,7 @@ def test_teams_memory_load_and_record(monkeypatch):
                 "/bot/teams",
                 json={
                     "type": "message",
-                    "text": "<at>SubStrateOS</at> what is PTO?",
+                    "text": "<at>SubstrateOS</at> what is PTO?",
                     "from": {"id": "u1", "aadObjectId": "aad-u1"},
                     "conversation": {"id": "19:abc"},
                     "id": "act1",
