@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SubStrateOS — Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fefdfb; --paper-2:#f6f3ec; --surface:#fffefb; --surface-2:#ffffff;
+    --line:#d6cdb9; --line-soft:#e2dac9; --ink:#1a1611; --ink-dim:#4f4839; --ink-faint:#827a67;
+    --amber:#b06e0d; --amber-bg:#f6e7c8; --teal:#0f897e; --teal-bg:#d8efea;
+    --violet:#6a5acd; --violet-bg:#e7e3f7; --rose:#c8546a; --rose-bg:#f6dde2; --green:#3f8f5e; --green-bg:#d9eee0;
+    --radius:16px; --shadow:0 1px 2px rgba(60,50,30,.04), 0 18px 40px -26px rgba(80,60,25,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:
+      radial-gradient(900px 460px at 88% -16%, rgba(196,122,22,.05), transparent 60%),
+      radial-gradient(800px 600px at -8% 116%, rgba(15,137,126,.04), transparent 55%),
+      var(--paper);
+    color:var(--ink);font-family:"Archivo",-apple-system,sans-serif;
+    font-size:15px;line-height:1.6;letter-spacing:.05px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:38px 40px 90px}
+
+  /* header */
+  .top{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:13px}
+  .glyph{width:40px;height:40px;border-radius:11px;flex:none;position:relative;
+    background:radial-gradient(circle at 30% 25%,#ffcf7e,var(--amber) 60%,#9a5e0e);
+    box-shadow:0 0 0 1px rgba(196,122,22,.3),0 8px 18px -8px rgba(196,122,22,.6)}
+  .glyph::before{content:"";position:absolute;inset:8px;border-radius:50%;
+    background:conic-gradient(from 210deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0))}
+  .brand h1{font-family:"Fraunces",serif;font-weight:600;font-size:26px;margin:0;line-height:1.1}
+  .brand h1 span{color:var(--amber)}
+  .brand .tag{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin-top:3px}
+  .theme{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:6px 12px;align-self:center}
+
+  /* view toggle */
+  .toggle{display:inline-flex;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:12px;padding:4px;gap:4px;margin:26px 0 30px}
+  .toggle button{font:inherit;font-size:13px;font-weight:600;border:none;background:none;color:var(--ink-dim);padding:8px 18px;border-radius:9px;cursor:pointer;transition:.16s}
+  .toggle button.active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+
+  h2.sec{font-family:"Fraunces",serif;font-size:21px;font-weight:600;margin:38px 0 4px}
+  p.lede{color:var(--ink-faint);margin:0 0 18px;max-width:760px}
+  .mono-label{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);font-weight:500}
+
+  /* priority callouts */
+  .pillars{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:8px 0 30px}
+  .pillar{border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .pillar::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+  .pillar.intel{background:linear-gradient(180deg,var(--teal-bg),var(--surface));}
+  .pillar.intel::before{background:var(--teal)}
+  .pillar.eng{background:linear-gradient(180deg,var(--amber-bg),var(--surface));}
+  .pillar.eng::before{background:var(--amber)}
+  .pillar .star{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
+  .pillar.intel .star{color:var(--teal)} .pillar.eng .star{color:var(--amber)}
+  .pillar h3{font-family:"Fraunces",serif;font-size:18px;margin:6px 0 8px}
+  .pillar ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-dim)}
+  .pillar li{margin:3px 0}
+
+  /* generic card grid */
+  .grid{display:grid;gap:14px}
+  .cols-3{grid-template-columns:repeat(3,1fr)}
+  .cols-2{grid-template-columns:1fr 1fr}
+  .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .card h4{margin:0 0 6px;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .card .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .card p{margin:0;font-size:13px;color:var(--ink-dim)}
+  .card .stack{margin-top:9px;display:flex;flex-wrap:wrap;gap:5px}
+  .chip{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:500;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:7px;padding:2px 7px;color:var(--ink-dim)}
+
+  /* flow rows */
+  .flow{display:flex;flex-direction:column;gap:10px;margin:6px 0}
+  .row{display:flex;align-items:center;gap:12px}
+  .node{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 15px;box-shadow:var(--shadow);min-width:0}
+  .node b{font-size:13.5px} .node small{display:block;color:var(--ink-faint);font-size:11.5px;font-family:"JetBrains Mono",monospace}
+  .arrow{color:var(--ink-faint);font-size:18px;flex:none}
+  .node.io{background:linear-gradient(180deg,var(--violet-bg),var(--surface))}
+  .node.brain{flex:1;border-color:var(--amber);background:linear-gradient(180deg,var(--amber-bg),var(--surface))}
+  .substeps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}
+  .substep{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:10px;padding:8px 11px;font-size:12px}
+  .substep b{font-size:12.5px} .substep small{display:block;color:var(--ink-faint);font-size:10.5px;font-family:"JetBrains Mono",monospace}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:16px 0 0;font-size:12px;color:var(--ink-faint)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  table.endpoints{width:100%;border-collapse:collapse;margin-top:6px;font-size:13px}
+  table.endpoints th{text-align:left;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-faint);font-weight:500;padding:6px 10px;border-bottom:1px solid var(--line)}
+  table.endpoints td{padding:7px 10px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  table.endpoints code{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--amber)}
+
+  .hide{display:none}
+  .foot{margin-top:46px;padding-top:18px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--ink-faint);font-family:"JetBrains Mono",monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">
+      <div class="glyph"></div>
+      <div>
+        <h1>Sub<span>Strate</span>OS</h1>
+        <div class="tag">Architecture · Company Brain · Zone 4 Intelligence Layer</div>
+      </div>
+    </div>
+    <div class="theme">Productivity &amp; Teamwork Reimagined</div>
+  </div>
+
+  <div class="toggle">
+    <button id="btn-high" class="active" onclick="show('high')">High-level</button>
+    <button id="btn-detail" onclick="show('detail')">Detailed</button>
+  </div>
+
+  <!-- ============ PRIORITY PILLARS (shown in both views) ============ -->
+  <div class="pillars">
+    <div class="pillar intel">
+      <div class="star">★ Priority — Intelligence Design</div>
+      <h3>Smart by construction</h3>
+      <ul>
+        <li>Hybrid retrieval (BM25 + vector) fused across <b>Content, People &amp; Activity</b> pillars via RRF.</li>
+        <li>Personalized ranker — same query, different ranking per persona (groups + activity history).</li>
+        <li>Semantic Kernel orchestrator plans Live Fetch vs. cached, multi-signal ranking, grounded generation.</li>
+        <li>Every answer grounded with citations; out-of-corpus questions refused explicitly.</li>
+        <li>Conversational memory: trimmed history injected into grounded prompts — web chat, Slack threads, Teams conversations.</li>
+      </ul>
+    </div>
+    <div class="pillar eng">
+      <div class="star">★ Priority — System Architecture &amp; Engineering Quality</div>
+      <h3>Production-grade, not a demo</h3>
+      <ul>
+        <li>Strict module boundaries — each Zone 4 component is a swappable interface.</li>
+        <li><b>Double-enforcement ACLs</b>: index-time stamp + query-time recheck, fail-closed on outage.</li>
+        <li>Managed identity everywhere — no connection strings in code.</li>
+        <li>Eval harness from day one; pytest suite gates every change.</li>
+        <li>OpenTelemetry → App Insights, one trace per request with signal breakdown.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ==================== HIGH-LEVEL VIEW ==================== -->
+  <section id="view-high">
+    <h2 class="sec">High-level architecture</h2>
+    <p class="lede">One Next.js frontend (User Web Chat + Admin Panel) talks to one FastAPI
+      intelligence service, which fuses three data pillars and grounds answers with Azure OpenAI —
+      all on Azure Container Apps, behind Entra SSO.</p>
+
+    <div class="flow">
+      <div class="row">
+        <div class="node io"><b>Users</b><small>Entra SSO · MSAL</small></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>Next.js Web</b><small>Web Chat + Admin Panel</small></div>
+        <div class="arrow">→</div>
+        <div class="node brain"><b>brain-api · FastAPI</b><small>orchestrator · retrieval · ranking · generation · ACL</small></div>
+      </div>
+      <div class="row" style="padding-left:8px">
+        <div class="arrow">↳</div>
+        <div class="node"><b>Azure AI Search</b><small>Content · hybrid</small></div>
+        <div class="node"><b>Cosmos Gremlin</b><small>People graph</small></div>
+        <div class="node"><b>Azure Data Explorer</b><small>Activity signals</small></div>
+        <div class="node"><b>Redis</b><small>cache · ACL store</small></div>
+        <div class="node"><b>Azure OpenAI</b><small>grounded generation</small></div>
+        <div class="node"><b>MS Graph</b><small>Live Fetch (OBO)</small></div>
+      </div>
+    </div>
+
+    <div class="grid cols-3" style="margin-top:24px">
+      <div class="card"><h4><span class="dot" style="background:var(--violet)"></span>Frontend</h4>
+        <p>Next.js 14 App Router. User chat + admin in one app, Entra-gated.</p>
+        <div class="stack"><span class="chip">Next.js 14</span><span class="chip">React 18</span><span class="chip">Tailwind</span><span class="chip">MSAL</span></div></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>brain-api</h4>
+        <p>FastAPI monolith with clean module boundaries — a future microservice split is a lift, not a rewrite.</p>
+        <div class="stack"><span class="chip">FastAPI</span><span class="chip">Python 3.12</span><span class="chip">Semantic Kernel</span></div></div>
+      <div class="card"><h4><span class="dot" style="background:var(--teal)"></span>Data &amp; AI</h4>
+        <p>Three pillars + LLM, all via managed identity. Redis for cache &amp; ACLs.</p>
+        <div class="stack"><span class="chip">AI Search</span><span class="chip">Cosmos</span><span class="chip">ADX</span><span class="chip">Azure OpenAI</span></div></div>
+    </div>
+  </section>
+
+  <!-- ==================== DETAILED VIEW ==================== -->
+  <section id="view-detail" class="hide">
+    <h2 class="sec">Detailed architecture</h2>
+    <p class="lede">Every component disclosed: the request path, each backend module, the data
+      backends, security, and observability. Module boundaries map 1:1 to Zone 4 components.</p>
+
+    <div class="mono-label">Request path — POST /query</div>
+    <div class="flow" style="margin-top:8px">
+      <div class="row">
+        <div class="node io"><b>Web Chat</b><small>bearer JWT</small></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>auth.py</b><small>Entra JWT validate · claims</small></div>
+        <div class="arrow">→</div>
+        <div class="node brain"><b>Orchestrator</b><small>Semantic Kernel · QueryPlanner</small>
+          <div class="substeps">
+            <div class="substep"><b>Hybrid Retriever</b><small>AI Search (BM25+vec)</small></div>
+            <div class="substep"><b>People Proximity</b><small>Cosmos Gremlin</small></div>
+            <div class="substep"><b>Activity Signal</b><small>Azure Data Explorer</small></div>
+            <div class="substep"><b>Live Fetch</b><small>MS Graph /search (OBO)</small></div>
+            <div class="substep"><b>ACL Recheck</b><small>Redis · fail-closed</small></div>
+            <div class="substep"><b>Personalized Ranker</b><small>RRF + weighted signals</small></div>
+            <div class="substep"><b>Generation</b><small>Azure OpenAI · citations</small></div>
+            <div class="substep"><b>Conversation Memory</b><small>trimmed history</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--violet)"></i> client / IO</span>
+      <span><i style="background:var(--amber)"></i> brain-api module</span>
+      <span><i style="background:var(--teal)"></i> Azure backend</span>
+    </div>
+
+    <h2 class="sec" style="font-size:17px">Backend modules — <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber)">substrateos-api/app/</code></h2>
+    <div class="grid cols-3">
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>orchestrator/</h4><p>Semantic Kernel kernel + QueryPlanner — decides Live Fetch vs cache, sequences signals.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>retrieval/</h4><p>AISearchClient + HybridRetriever — BM25 + vector over the content index.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>people/</h4><p>PeopleGraphClient + PeopleProximity over Cosmos Gremlin.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>activity/</h4><p>ActivitySignal + ActivityStore — engagement scores from ADX.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>ranking/</h4><p>PersonalizedRanker — RRF fusion + weighted multi-signal, per-persona.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>generation/</h4><p>AzureOpenAIClient + GeminiClient — grounded answers with citations.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--rose)"></span>acl/</h4><p>ACLStore — double-enforcement; query-time recheck, fail-closed.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>live_fetch/</h4><p>MSGraphSearchFetcher — on-behalf-of Graph search for "right now" queries.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>conversations/</h4><p>ConversationStore + memory — load trimmed history, record turns (web · Slack · Teams); history-carrying answers bypass the answer cache.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>ingest/</h4><p>chunk → embed → ACL-stamp → index (docx/pdf extraction).</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>connectors/</h4><p>SharePoint / Outlook / Teams · Cosmos connection + subscription stores.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>skills/ · workflows/</h4><p>Org skills (SkillStore/Router) + RefundEngine/Flow run store.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>discover/ · search/ · history/</h4><p>Discover, search, and history services for the nav surfaces.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>mcp/ · bots/</h4><p>MCP server surface; Teams/Slack bot endpoints.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>cache/ · tokens/ · metrics/</h4><p>Redis answer cache · token accounting · metrics store.</p></div>
+    </div>
+
+    <h2 class="sec" style="font-size:17px">API surface — <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber)">app/api/</code></h2>
+    <table class="endpoints">
+      <tr><th>Router</th><th>Purpose</th></tr>
+      <tr><td><code>/query</code></td><td>Grounded Q&amp;A — orchestrator entrypoint, loads + records conversation history.</td></tr>
+      <tr><td><code>/retrieve</code> · <code>/search</code> · <code>/discover</code></td><td>Raw retrieval, search, and discover surfaces.</td></tr>
+      <tr><td><code>/conversations</code> · <code>/history</code></td><td>Conversation list + turn history.</td></tr>
+      <tr><td><code>/feedback</code></td><td>Click/dwell → ADX (real activity signal).</td></tr>
+      <tr><td><code>/admin</code> · <code>/sources</code> · <code>/surfaces</code></td><td>Ingest, connectors, source &amp; surface management (Admin Panel).</td></tr>
+      <tr><td><code>/skills</code> (+ admin) · <code>/runs</code></td><td>Org skills catalog/router; workflow runs.</td></tr>
+      <tr><td><code>/context</code> · <code>/mcp</code></td><td>Context API + MCP server (PAT auth).</td></tr>
+      <tr><td><code>/bots</code> · <code>/tokens</code></td><td>Teams/Slack bot ingress; PAT token management.</td></tr>
+    </table>
+
+    <h2 class="sec" style="font-size:17px">Frontend surfaces — <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber)">web/app/</code></h2>
+    <div class="grid cols-2">
+      <div class="card"><h4><span class="dot" style="background:var(--violet)"></span>User Web Chat — <code style="color:var(--violet)">app/</code></h4>
+        <p>Grounded chat with citations, runs, skills. Mockup: <code style="color:var(--amber)">mockups/user-web-chat.html</code>.</p>
+        <div class="stack"><span class="chip">page.tsx</span><span class="chip">runs/</span><span class="chip">skills/</span></div></div>
+      <div class="card"><h4><span class="dot" style="background:var(--violet)"></span>Admin Panel — <code style="color:var(--violet)">app/admin/</code></h4>
+        <p>Sources, skills, surfaces, permissions. Mockup: <code style="color:var(--amber)">mockups/admin-portal.html</code>.</p>
+        <div class="stack"><span class="chip">sources/</span><span class="chip">skills/</span><span class="chip">surfaces/</span><span class="chip">permissions/</span></div></div>
+    </div>
+
+    <h2 class="sec" style="font-size:17px">Cross-cutting</h2>
+    <div class="grid cols-3">
+      <div class="card"><h4><span class="dot" style="background:var(--rose)"></span>Security</h4><p>Entra SSO + JWT validation; double-enforcement ACLs (index stamp + query recheck, fail-closed); managed identity; Key Vault for the rest.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--green)"></span>Observability</h4><p>structlog + OpenTelemetry → App Insights. One trace per request, ranking-signal breakdown as span attributes.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--teal)"></span>Quality gates</h4><p>pytest suite + eval harness (golden Q&amp;A recall/MRR). Frontend typecheck + lint + build.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>Deploy</h4><p>Docker amd64 → ACR (<code>cbrainindiaacr</code>) → Container Apps (<code>rg-company-brain-india</code>, centralindia) via the substrateos-deploy skill.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--amber)"></span>Identity flow</h4><p>DefaultAzureCredential → user-assigned managed identity in cloud; OBO to Microsoft Graph for Live Fetch.</p></div>
+      <div class="card"><h4><span class="dot" style="background:var(--violet)"></span>Config</h4><p>pydantic-settings reads env + Key Vault; no secrets in code.</p></div>
+    </div>
+  </section>
+
+  <div class="foot">SubStrateOS architecture · keep in sync with every shipped feature (Phase 4 of the substrateos-feature skill) · bootstrapped 2026-06-05</div>
+</div>
+
+<script>
+  function show(v){
+    document.getElementById('view-high').classList.toggle('hide', v!=='high');
+    document.getElementById('view-detail').classList.toggle('hide', v!=='detail');
+    document.getElementById('btn-high').classList.toggle('active', v==='high');
+    document.getElementById('btn-detail').classList.toggle('active', v==='detail');
+  }
+</script>
+</body>
+</html>
