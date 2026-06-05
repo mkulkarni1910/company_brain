@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 
 from app.domain.chunk import Chunk
-from app.domain.query import Candidate
+from app.domain.conversation import ConversationTurn
+from app.domain.query import Answer, Candidate
 from app.generation.prompts import (
     build_grounded_messages,
     parse_citations_from_answer,
@@ -59,3 +60,41 @@ def test_orphan_markers_are_dropped() -> None:
     answer = "Has [1] and [9] markers."
     cites = parse_citations_from_answer(answer, cands)
     assert [c.chunk_id for c in cites] == ["a#0"]
+
+
+# --- conversational history ---
+
+
+def _history_turn(q: str, a: str) -> ConversationTurn:
+    return ConversationTurn(
+        query=q,
+        answer=Answer(text=a, citations=[], query_id="h1"),
+        ts=datetime.now(UTC),
+    )
+
+
+def test_history_renders_as_alternating_messages() -> None:
+    history = [_history_turn("my name is Tom", "Nice to meet you, Tom.")]
+    msgs = build_grounded_messages(query="what was my name?", candidates=[], history=history)
+    assert [m["role"] for m in msgs] == ["system", "user", "assistant", "user"]
+    assert msgs[1]["content"] == "my name is Tom"
+    assert msgs[2]["content"] == "Nice to meet you, Tom."
+    assert msgs[3]["content"].startswith("QUESTION: what was my name?")
+
+
+def test_no_history_keeps_two_message_shape() -> None:
+    msgs = build_grounded_messages(query="q", candidates=[])
+    assert [m["role"] for m in msgs] == ["system", "user"]
+
+
+def test_system_prompt_allows_conversation_facts() -> None:
+    msgs = build_grounded_messages(query="q", candidates=[], history=[])
+    assert "conversation" in msgs[0]["content"].lower()
+
+
+def test_skill_prompt_still_prepended_with_history() -> None:
+    history = [_history_turn("a", "b")]
+    msgs = build_grounded_messages(
+        query="q", candidates=[], skill_prompt="SKILL RULES", history=history
+    )
+    assert msgs[0]["content"].startswith("SKILL RULES")
