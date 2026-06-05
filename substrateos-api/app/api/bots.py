@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 from fastapi.responses import Response
@@ -216,6 +216,34 @@ async def slack_webhook(
         await post_slack_reply(slack_token, channel, thread_ts, answer)
 
     background_tasks.add_task(_reply)
+    return {}
+
+
+@router.post("/bot/slack/interactive")
+async def slack_interactive(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    refund_flow=Depends(get_refund_flow),
+    x_slack_signature: str | None = Header(default=None),
+    x_slack_request_timestamp: str | None = Header(default=None),
+) -> dict:
+    """Slack interactivity (button clicks). Must ack within 3s — work runs in background."""
+    raw_body = await request.body()
+    s = get_settings()
+    if not s.slack_bot_token or not s.slack_signing_secret:
+        raise HTTPException(status_code=503, detail="Slack bot not configured")
+    if not verify_slack_signature(
+        s.slack_signing_secret, x_slack_request_timestamp or "", raw_body, x_slack_signature or ""
+    ):
+        raise HTTPException(status_code=403, detail="invalid signature")
+    payload_raw = (parse_qs(raw_body.decode()).get("payload") or ["{}"])[0]
+    try:
+        payload = json.loads(payload_raw)
+    except ValueError:
+        return {}
+    if payload.get("type") != "block_actions" or refund_flow is None:
+        return {}
+    background_tasks.add_task(refund_flow.handle_action, payload)
     return {}
 
 
