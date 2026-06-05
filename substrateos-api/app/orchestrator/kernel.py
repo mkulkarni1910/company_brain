@@ -6,6 +6,7 @@ import logging
 import time
 import uuid
 
+from app.domain.conversation import ConversationTurn
 from app.domain.skill import ResolvedSkill
 from app.acl.store import ACLStore
 from app.activity.signal import ActivitySignal
@@ -156,6 +157,7 @@ class SemanticKernelOrchestrator:
     async def answer(
         self, request: QueryRequest, *, user: User, user_token: str | None = None,
         skill_context: ResolvedSkill | None = None,
+        history: list[ConversationTurn] | None = None,
     ) -> Answer:
         query_id = str(uuid.uuid4())
         timer = StageTimer(query_id=query_id)
@@ -163,7 +165,7 @@ class SemanticKernelOrchestrator:
         try:
             return await self._answer(
                 request, user=user, user_token=user_token, timer=timer,
-                query_id=query_id, skill_context=skill_context,
+                query_id=query_id, skill_context=skill_context, history=history,
             )
         finally:
             total_ms = round((time.perf_counter() - t0) * 1000, 1)
@@ -178,11 +180,15 @@ class SemanticKernelOrchestrator:
         timer: StageTimer,
         query_id: str,
         skill_context: ResolvedSkill | None = None,
+        history: list[ConversationTurn] | None = None,
     ) -> Answer:
         key = _cache_key(user, request.query)
-        # Skip the cache lookup for debug requests so we always compute fresh
-        # ranking signals (a cached answer carries debug=None).
-        if not request.include_debug:
+        # Skip the cache for debug requests (cached answers carry debug=None) and
+        # for history-carrying requests (answers depend on the conversation and
+        # the key is (user, query) only — serving or storing them would leak
+        # across conversations).
+        use_cache = not request.include_debug and not history
+        if use_cache:
             async with timer.stage("cache_get"):
                 cached = await self._cache.get_json(key)
             if cached:
@@ -202,6 +208,7 @@ class SemanticKernelOrchestrator:
         messages = build_grounded_messages(
             query=request.query, candidates=candidates[:5],
             skill_prompt=skill_context.system_prompt if skill_context else None,
+            history=history,
         )
         async with timer.stage("generate"):
             text = await self._llm.complete(messages=messages, temperature=0.0, max_tokens=800)
@@ -230,9 +237,10 @@ class SemanticKernelOrchestrator:
             debug=debug,
         )
 
-        cache_blob = answer.model_dump()
-        cache_blob.pop("query_id", None)
-        cache_blob.pop("debug", None)
-        await self._cache.set_json(key, cache_blob, ttl_seconds=600)
+        if use_cache:
+            cache_blob = answer.model_dump()
+            cache_blob.pop("query_id", None)
+            cache_blob.pop("debug", None)
+            await self._cache.set_json(key, cache_blob, ttl_seconds=600)
 
         return answer
