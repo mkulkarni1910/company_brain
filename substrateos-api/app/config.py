@@ -103,6 +103,7 @@ class Settings(BaseSettings):
     teams_bot_tenant_id: str | None = None     # TEAMS_BOT_TENANT_ID
     slack_bot_token: str | None = None         # SLACK_BOT_TOKEN
     slack_signing_secret: str | None = None    # SLACK_SIGNING_SECRET
+    slack_refund_approver_id: str | None = None  # SLACK_REFUND_APPROVER_ID — Diana's Slack member ID
 
     # ACL store
     acl_doc_ttl_seconds: int | None = None  # None = persistent (live ACL is authoritative)
