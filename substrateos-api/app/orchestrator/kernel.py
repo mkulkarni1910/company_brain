@@ -6,14 +6,14 @@ import logging
 import time
 import uuid
 
-from app.domain.conversation import ConversationTurn
-from app.domain.skill import ResolvedSkill
 from app.acl.store import ACLStore
 from app.activity.signal import ActivitySignal
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings
+from app.domain.conversation import ConversationTurn
 from app.domain.identity import User
 from app.domain.query import Answer, Candidate, QueryRequest, RankedResult
+from app.domain.skill import ResolvedSkill
 from app.generation.azure_openai import AzureOpenAIClient
 from app.generation.prompts import build_grounded_messages, parse_citations_from_answer
 from app.live_fetch.base import LiveFetcher

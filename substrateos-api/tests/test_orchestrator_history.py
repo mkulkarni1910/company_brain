@@ -73,7 +73,7 @@ class _RecordingLLM:
 
 
 class _FakeLiveFetcher:
-    async def fetch(self, *, query, user):
+    async def fetch(self, *, query, user, user_token=None):
         return []
 
 
