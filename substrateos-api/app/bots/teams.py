@@ -8,6 +8,7 @@ from urllib.parse import quote
 import httpx
 from jose import JWTError, jwt
 
+from app.bots.formatting import to_teams_text
 from app.domain.query import Answer
 
 logger = logging.getLogger(__name__)
@@ -134,11 +135,20 @@ def strip_at_mention(text: str) -> str:
 
 def build_teams_reply(answer: Answer) -> dict:
     """Build a Bot Framework Activity containing an Adaptive Card."""
+    body: list[dict] = [
+        {"type": "TextBlock", "text": to_teams_text(answer.text), "wrap": True}
+    ]
+    if answer.citations:
+        n = len(answer.citations)
+        body.append({
+            "type": "TextBlock", "wrap": True, "isSubtle": True, "spacing": "Small",
+            "size": "Small", "text": f"grounded · {n} source{'' if n == 1 else 's'}",
+        })
     card: dict = {
         "type": "AdaptiveCard",
         "version": "1.5",
         "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-        "body": [{"type": "TextBlock", "text": answer.text, "wrap": True}],
+        "body": body,
     }
     actions = [
         {"type": "Action.OpenUrl", "title": c.title[:50], "url": c.source_url}

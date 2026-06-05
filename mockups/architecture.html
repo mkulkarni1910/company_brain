@@ -233,7 +233,7 @@
 
     <div class="mono-label">Surfaces → backend handlers (<code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber)">substrateos-api/app/</code>)</div>
     <div class="grid cols-3">
-      <div class="card"><h4>Slack / Teams <code>bots/</code></h4><p>Bot ingress + Teams approval cards. Router <code>/bots</code>.</p></div>
+      <div class="card"><h4>Slack / Teams <code>bots/</code></h4><p>Bot ingress + approval cards. Surface-aware rendering (<code>formatting.py</code>): markdown → Slack Block Kit / Teams Adaptive Card. Router <code>/bots</code>.</p></div>
       <div class="card"><h4>Other AI tools <code>mcp/</code></h4><p>MCP server (<code>build_mcp_asgi</code>), session manager. Router <code>/mcp</code>.</p></div>
       <div class="card"><h4>API <code>api/context</code> · <code>tokens/</code></h4><p>Context API + PAT auth. Routers <code>/context</code>, <code>/tokens</code>.</p></div>
       <div class="card"><h4>Web app <code>web/</code></h4><p>Next.js Web Chat + Admin Panel, MSAL bearer to the API.</p></div>

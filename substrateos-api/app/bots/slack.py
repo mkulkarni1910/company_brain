@@ -8,6 +8,7 @@ import time
 
 import httpx
 
+from app.bots.formatting import answer_to_slack_blocks
 from app.domain.query import Answer
 
 logger = logging.getLogger(__name__)
@@ -39,17 +40,8 @@ async def post_slack_reply(
     HTTP 200 even for API errors (not_in_channel, missing_scope, …) — the real
     outcome is the `ok` field in the JSON body, so it must be checked and logged.
     """
-    blocks: list[dict] = [
-        {"type": "section", "text": {"type": "mrkdwn", "text": answer.text[:3000]}},
-    ]
-    if answer.citations:
-        links = " · ".join(
-            f"<{c.source_url}|{c.title[:40]}>" for c in answer.citations[:5]
-        )
-        blocks.append({
-            "type": "context",
-            "elements": [{"type": "mrkdwn", "text": f"Sources: {links}"}],
-        })
+    # Render the model markdown as a Slack Block Kit card (mrkdwn-correct).
+    blocks = answer_to_slack_blocks(answer)
     # `text` fallback keeps notifications working and satisfies clients that
     # reject blocks-only messages.
     payload: dict = {"channel": channel, "blocks": blocks, "text": answer.text[:3000]}
