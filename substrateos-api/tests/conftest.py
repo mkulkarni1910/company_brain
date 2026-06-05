@@ -25,6 +25,8 @@ def _default_env(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
         "AZURE_AI_SEARCH_INDEX": "substrateos-content-t-test",
         "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com",
         "AZURE_REDIS_HOST": "test.redis.cache.windows.net",
+        "AZURE_REDIS_PORT": "6380",
+        "SUBSTRATEOS_TENANT_ID": "t-test",
         "ENABLE_DEBUG_AUTH": "true",
     }
     for k, v in defaults.items():
