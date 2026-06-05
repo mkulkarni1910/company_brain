@@ -50,6 +50,9 @@ from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
 from app.search.service import SearchService
 from app.tokens.store import CosmosTokenStore, NullTokenStore
+from app.workflows.engine import RefundEngine
+from app.workflows.flow import RefundFlow
+from app.workflows.store import RunStore
 
 logger = logging.getLogger("app.startup")
 
@@ -153,6 +156,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         skill_store=app.state.skill_store,
         llm=app.state.llm,
     )
+    app.state.run_store = RunStore()
+    app.state.refund_flow = RefundFlow(
+        engine=RefundEngine(retriever=app.state.retriever, llm=app.state.llm),
+        store=app.state.run_store,
+    )
     # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
     # configured (e.g. India has no Redis), else Redis (no-op without a host).
     if _s.cosmos_gremlin_endpoint and _s.cosmos_gremlin_key:
@@ -173,6 +181,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             yield
     finally:
         await app.state.orchestrator.aclose()
+        await app.state.run_store.aclose()
         await app.state.acl_store.aclose()
         await app.state.people_graph.aclose()
         await app.state.activity_store.aclose()

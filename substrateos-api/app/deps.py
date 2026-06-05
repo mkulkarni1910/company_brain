@@ -91,3 +91,11 @@ def get_skill_store(request: Request):
 
 def get_skill_router_svc(request: Request):
     return getattr(request.app.state, "skill_router_svc", None)
+
+
+def get_run_store(request: Request):
+    return getattr(request.app.state, "run_store", None)
+
+
+def get_refund_flow(request: Request):
+    return getattr(request.app.state, "refund_flow", None)

@@ -24,7 +24,7 @@ _SLACK_SECRET = "slack-test-secret"
 
 
 class _FakeOrchestrator:
-    async def answer(self, request, *, user, user_token=None):
+    async def answer(self, request, *, user, user_token=None, skill_context=None):
         return Answer(text="Here is the answer.", citations=[], query_id="q1")
 
 
@@ -414,6 +414,96 @@ def test_slack_webhook_surface_enabled_answers(monkeypatch):
         mock_post.assert_awaited_once()
         sent_answer = mock_post.await_args.args[3]
         assert sent_answer.text == "Here is the answer."
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+# ── POST /bot/slack (refund workflow divert) ──────────────────────────────────
+
+from app.deps import get_refund_flow, get_skill_router_svc  # noqa: E402
+from app.domain.skill import ResolvedSkill  # noqa: E402
+
+
+class _FakeRouter:
+    def __init__(self, resolved):
+        self._resolved = resolved
+
+    async def resolve_skill(self, query):
+        return self._resolved
+
+
+class _FakeFlow:
+    def __init__(self):
+        self.requests = []
+
+    async def handle_request(self, *, text, channel, thread_ts, requester_slack_id, user):
+        self.requests.append({"text": text, "channel": channel,
+                              "requester_slack_id": requester_slack_id})
+
+
+def _slack_event_body(text: str, user: str = "U_TOM") -> bytes:
+    return json.dumps({
+        "type": "event_callback",
+        "event": {"type": "app_mention", "text": f"<@UBOT> {text}",
+                  "user": user, "channel": "C_REFUNDS", "ts": "100.1"},
+    }).encode()
+
+
+def _post_signed_slack(client, body: bytes, path: str = "/bot/slack"):
+    ts = str(int(time.time()))
+    sig = _slack_sig(_SLACK_SECRET, ts, body)
+    return client.post(path, content=body, headers={
+        "X-Slack-Signature": sig, "X-Slack-Request-Timestamp": ts,
+        "Content-Type": "application/json",
+    })
+
+
+def test_slack_webhook_diverts_to_refund_workflow(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    resolved = ResolvedSkill(id="1", slug="refund", name="Refund", system_prompt="p",
+                             clean_query="refund $1,200 order 48213", workflow="refund")
+    flow = _FakeFlow()
+    app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
+    app.dependency_overrides[get_skill_router_svc] = lambda: _FakeRouter(resolved)
+    app.dependency_overrides[get_refund_flow] = lambda: flow
+    try:
+        with TestClient(app) as client:
+            resp = _post_signed_slack(client, _slack_event_body("refund $1,200 order 48213"))
+        assert resp.status_code == 200
+        assert len(flow.requests) == 1
+        assert flow.requests[0]["channel"] == "C_REFUNDS"
+        assert flow.requests[0]["requester_slack_id"] == "U_TOM"
+        assert "48213" in flow.requests[0]["text"]
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+def test_slack_webhook_non_workflow_skill_uses_orchestrator(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    resolved = ResolvedSkill(id="1", slug="faq", name="FAQ", system_prompt="p",
+                             clean_query="what is the vacation policy")
+    flow = _FakeFlow()
+    orch = _FakeOrchestrator()
+    app.dependency_overrides[get_orchestrator] = lambda: orch
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
+    app.dependency_overrides[get_skill_router_svc] = lambda: _FakeRouter(resolved)
+    app.dependency_overrides[get_refund_flow] = lambda: flow
+    try:
+        with patch("app.api.bots.post_slack_reply", new=AsyncMock()) as mock_post:
+            with TestClient(app) as client:
+                resp = _post_signed_slack(client, _slack_event_body("what is the vacation policy"))
+        assert resp.status_code == 200
+        assert flow.requests == []
+        mock_post.assert_awaited_once()
     finally:
         app.dependency_overrides.clear()
         get_settings.cache_clear()

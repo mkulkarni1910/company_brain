@@ -6,7 +6,7 @@ from app.main import app
 
 
 class _FakeOrch:
-    async def answer(self, body, *, user, user_token=None):  # noqa: ANN001, ANN201
+    async def answer(self, body, *, user, user_token=None, skill_context=None):  # noqa: ANN001, ANN201
         return Answer(text="x", citations=[], query_id="t")
 
 

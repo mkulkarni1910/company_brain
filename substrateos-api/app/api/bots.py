@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from urllib.parse import urlparse
@@ -18,7 +19,12 @@ from app.bots.teams import (
     verify_teams_jwt,
 )
 from app.config import get_settings
-from app.deps import get_connection_store, get_orchestrator
+from app.deps import (
+    get_connection_store,
+    get_orchestrator,
+    get_refund_flow,
+    get_skill_router_svc,
+)
 from app.domain.identity import User
 from app.domain.query import Answer, QueryRequest
 
@@ -137,6 +143,8 @@ async def slack_webhook(
     background_tasks: BackgroundTasks,
     orchestrator=Depends(get_orchestrator),
     store=Depends(get_connection_store),
+    skill_router=Depends(get_skill_router_svc),
+    refund_flow=Depends(get_refund_flow),
     x_slack_signature: str | None = Header(default=None),
     x_slack_request_timestamp: str | None = Header(default=None),
 ) -> dict:
@@ -166,6 +174,7 @@ async def slack_webhook(
     text = strip_bot_mention(event.get("text") or "").strip()
     channel = event.get("channel", "")
     thread_ts = event.get("thread_ts") or event.get("ts")
+    slack_user = event.get("user")
     slack_token = s.slack_bot_token
     enabled = await _surface_enabled(store, "slack")
 
@@ -180,8 +189,27 @@ async def slack_webhook(
             answer = Answer(text=WELCOME_TEXT, citations=[], query_id="smalltalk")
             await post_slack_reply(slack_token, channel, thread_ts, answer)
             return
+        skill_ctx = None
+        if skill_router is not None:
+            with contextlib.suppress(Exception):
+                skill_ctx = await skill_router.resolve_skill(text)
+        if (skill_ctx is not None and getattr(skill_ctx, "workflow", None) == "refund"
+                and refund_flow is not None):
+            try:
+                await refund_flow.handle_request(
+                    text=skill_ctx.clean_query, channel=channel, thread_ts=thread_ts,
+                    requester_slack_id=slack_user, user=_bot_user(),
+                )
+            except Exception:
+                logger.exception("Refund workflow failed")
+                answer = Answer(text=_ERROR_TEXT, citations=[], query_id="err")
+                await post_slack_reply(slack_token, channel, thread_ts, answer)
+            return
         try:
-            answer = await orchestrator.answer(QueryRequest(query=text), user=_bot_user())
+            effective = skill_ctx.clean_query if skill_ctx else text
+            answer = await orchestrator.answer(
+                QueryRequest(query=effective), user=_bot_user(), skill_context=skill_ctx
+            )
         except Exception:
             logger.exception("Slack bot query failed")
             answer = Answer(text=_ERROR_TEXT, citations=[], query_id="err")
