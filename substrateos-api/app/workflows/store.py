@@ -32,6 +32,7 @@ class RunStore:
     Mirrors writes to an in-process dict so the flow keeps working within a
     single process when Redis is unavailable (same degradation philosophy as
     SkillStore, but runs are flow-critical so a memory fallback is kept).
+    Reads prefer Redis and fall back to the process-local mirror, so a partially failed Redis write can shadow mirror-only data — acceptable for this demo-grade audit trail.
     """
 
     def __init__(self, client: redis.Redis | None = None, *, force_memory: bool = False) -> None:
@@ -63,8 +64,7 @@ class RunStore:
     async def _next_id(self) -> str:
         if self._r is not None:
             try:
-                if not await self._r.get(_SEQ_KEY):
-                    await self._r.set(_SEQ_KEY, _SEQ_START)
+                await self._r.set(_SEQ_KEY, _SEQ_START, nx=True)
                 n = await self._r.incr(_SEQ_KEY)
                 return f"RB-{n}"
             except _ERRORS as e:

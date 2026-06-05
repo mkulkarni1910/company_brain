@@ -14,8 +14,9 @@ def _make_redis() -> MagicMock:
     lists: dict[str, list[str]] = {}
     seq = {"n": 4470}
 
-    async def set_(key, value):
-        kv[key] = value
+    async def set_(key, value, nx=False):
+        if not (nx and key in kv):
+            kv[key] = value
 
     async def get(key):
         return kv.get(key)
