@@ -21,6 +21,7 @@ from app.bots.teams import (
 from app.config import get_settings
 from app.deps import (
     get_connection_store,
+    get_conversation_memory,
     get_orchestrator,
     get_refund_flow,
     get_skill_router_svc,
@@ -145,6 +146,7 @@ async def slack_webhook(
     store=Depends(get_connection_store),
     skill_router=Depends(get_skill_router_svc),
     refund_flow=Depends(get_refund_flow),
+    memory=Depends(get_conversation_memory),
     x_slack_signature: str | None = Header(default=None),
     x_slack_request_timestamp: str | None = Header(default=None),
 ) -> dict:
@@ -207,8 +209,14 @@ async def slack_webhook(
             return
         try:
             effective = skill_ctx.clean_query if skill_ctx else text
+            cid = f"slack:{channel}:{thread_ts}"
+            history = await memory.load_history(user=_bot_user(), conversation_id=cid)
             answer = await orchestrator.answer(
-                QueryRequest(query=effective), user=_bot_user(), skill_context=skill_ctx
+                QueryRequest(query=effective), user=_bot_user(),
+                skill_context=skill_ctx, history=history,
+            )
+            await memory.record(
+                user=_bot_user(), conversation_id=cid, query=effective, answer=answer
             )
         except Exception:
             logger.exception("Slack bot query failed")

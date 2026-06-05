@@ -24,7 +24,7 @@ _SLACK_SECRET = "slack-test-secret"
 
 
 class _FakeOrchestrator:
-    async def answer(self, request, *, user, user_token=None, skill_context=None):
+    async def answer(self, request, *, user, user_token=None, skill_context=None, history=None):
         return Answer(text="Here is the answer.", citations=[], query_id="q1")
 
 
@@ -146,7 +146,7 @@ def test_slack_invalid_hmac(monkeypatch):
 class _ExplodingOrchestrator:
     """Greetings must never reach the RAG pipeline."""
 
-    async def answer(self, request, *, user, user_token=None):
+    async def answer(self, request, *, user, user_token=None, history=None):
         raise AssertionError("orchestrator must not be called for small talk")
 
 
@@ -504,6 +504,59 @@ def test_slack_webhook_non_workflow_skill_uses_orchestrator(monkeypatch):
         assert resp.status_code == 200
         assert flow.requests == []
         mock_post.assert_awaited_once()
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+# ── conversational memory ─────────────────────────────────────────────────────
+
+from app.deps import get_conversation_memory  # noqa: E402
+
+
+class _Memory:
+    def __init__(self):
+        self.loaded, self.recorded = [], []
+
+    async def load_history(self, *, user, conversation_id):
+        self.loaded.append(conversation_id)
+        return []
+
+    async def record(self, *, user, conversation_id, query, answer):
+        self.recorded.append((conversation_id, query))
+
+
+def test_slack_memory_load_and_record(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    memory = _Memory()
+    app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
+    app.dependency_overrides[get_conversation_memory] = lambda: memory
+    try:
+        body = json.dumps({
+            "type": "event_callback",
+            "event": {"type": "app_mention", "text": "<@U1> what is PTO?", "user": "u1",
+                      "channel": "C1", "ts": "111.222"},
+        }).encode()
+        ts = str(int(time.time()))
+        with (
+            patch("app.api.bots.post_slack_reply", new=AsyncMock(return_value=None)),
+            TestClient(app) as client,
+        ):
+            resp = client.post(
+                "/bot/slack", content=body,
+                headers={
+                    "content-type": "application/json",
+                    "x-slack-signature": _slack_sig(_SLACK_SECRET, ts, body),
+                    "x-slack-request-timestamp": ts,
+                },
+            )
+        assert resp.status_code == 200
+        assert memory.loaded == ["slack:C1:111.222"]
+        assert memory.recorded == [("slack:C1:111.222", "what is PTO?")]
     finally:
         app.dependency_overrides.clear()
         get_settings.cache_clear()
