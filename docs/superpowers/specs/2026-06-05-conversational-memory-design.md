@@ -80,6 +80,12 @@ passed through to `build_grounded_messages`. No store dependency added; test
 fakes stay trivial. All existing fake orchestrators in tests must add the new
 kwarg (same churn as `skill_context`, cf. commit cc848aa).
 
+**Cache interaction (added during planning):** the answer cache in `_answer`
+is keyed by `(user, query)` only. A cached "what was my name?" from one
+conversation must not be served in another. Rule: when `history` is non-empty,
+**skip the cache entirely** — no get, no set. History-dependent answers are
+conversation-specific and must not be cached or served from cache.
+
 ### 4. Per-surface wiring
 
 | Surface | conversation_id | Load | Record |
