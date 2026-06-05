@@ -88,6 +88,23 @@ export async function postQuery(query: string, conversationId?: string): Promise
   return { answer, latencyMs: Math.round(performance.now() - t0) };
 }
 
+// Fast, context-aware "On it…" line from the small model — fills the pending bubble
+// immediately while postQuery (strong model) runs. Best-effort: never throws.
+export async function postQueryAck(query: string): Promise<string | null> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/query/ack`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+    if (!resp.ok) return null;
+    const data = (await resp.json()) as { ack?: string };
+    return data.ack ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function postFeedback(
   doc_id: string, signal: "thumbs_up" | "thumbs_down", query_id?: string
 ): Promise<void> {

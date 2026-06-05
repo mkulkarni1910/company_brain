@@ -134,6 +134,17 @@
   .trace .step .num{width:16px;height:16px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:9px;color:var(--ink-faint)}
   .trace .step.done .num{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
   .trace .arrow{width:22px;height:1px;background:linear-gradient(90deg,var(--line),transparent);margin:0 9px}
+  .trace .step.active .num{border-color:var(--amber);color:var(--amber);background:var(--amber-bg);animation:ackpulse 1.2s infinite}
+  .trace .step.active{color:var(--ink)}
+  /* immediate-acknowledgement (working) state — fast model, before the grounded answer */
+  .badge-working{margin-left:auto;display:flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:99px;padding:4px 10px}
+  .badge-working .dots{display:inline-flex;gap:3px}
+  .badge-working .dots i{width:4px;height:4px;border-radius:50%;background:var(--amber);animation:ackpulse 1.2s infinite}
+  .badge-working .dots i:nth-child(2){animation-delay:.18s}
+  .badge-working .dots i:nth-child(3){animation-delay:.36s}
+  @keyframes ackpulse{0%,65%,100%{opacity:.28}30%{opacity:1}}
+  .a-ack{margin-left:36px;font-size:15px;color:var(--ink-dim);font-style:italic;line-height:1.65}
+  .a-ack strong{font-style:normal;color:var(--ink);font-weight:600}
 
   .a-body{font-size:15.5px;line-height:1.72;color:var(--ink);margin-left:36px}
   .a-body p{margin:0 0 13px}
@@ -500,6 +511,23 @@
             <div class="sep"></div>
             <span class="cached">510 ms · skill: write-prd · cache miss</span>
           </div>
+        </section>
+
+        <div class="user-row"><div class="user-msg">Customer Priya is asking for a refund of $1,200 on order #48213. It's been about 45 days. Can we do it?</div></div>
+
+        <section class="answer">
+          <div class="a-head">
+            <div class="a-glyph"></div>
+            <div class="a-name">Substrate<b>OS</b></div>
+            <div class="badge-working"><span class="dots"><i></i><i></i><i></i></span>working</div>
+          </div>
+          <div class="trace">
+            <span class="step done"><span class="num">✓</span>plan</span><span class="arrow"></span>
+            <span class="step active"><span class="num">•</span>retrieve</span><span class="arrow"></span>
+            <span class="step"><span class="num">•</span>check policy</span><span class="arrow"></span>
+            <span class="step"><span class="num">•</span>ground</span>
+          </div>
+          <div class="a-ack">On it, <strong>Tom</strong> — pulling up order <strong>#48213</strong> and checking the refund policy…</div>
         </section>
       </div>
     </div>

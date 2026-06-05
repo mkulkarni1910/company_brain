@@ -160,6 +160,7 @@
         <li>Climbs the ladder past Find/Plan to <b>Do</b> and <b>Stay in control</b> — where the value is.</li>
         <li>Hybrid retrieval fused across <b>Content · People · Activity</b>; personalized per persona.</li>
         <li>Grounded generation with citations; <b>stops if unsure</b> rather than guessing.</li>
+        <li><b>Two-tier model routing</b>: a fast model acknowledges instantly ("On it…"), the strong model answers — lower perceived latency.</li>
         <li>Gemini today, Azure OpenAI–ready; plugs into Copilot Studio &amp; Foundry.</li>
       </ul>
     </div>
@@ -249,6 +250,7 @@
         <div class="arrow">→</div>
         <div class="node brain"><b>Orchestrator</b><small>Semantic Kernel · QueryPlanner</small>
           <div class="substeps">
+            <div class="substep"><b>Immediate Ack</b><small>fast model (flash) · "On it…"</small></div>
             <div class="substep"><b>Hybrid Retriever</b><small>AI Search BM25+vec</small></div>
             <div class="substep"><b>People Proximity</b><small>Cosmos Gremlin</small></div>
             <div class="substep"><b>Activity Signal</b><small>Azure Data Explorer</small></div>

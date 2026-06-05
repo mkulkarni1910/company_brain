@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.connectors.models import SurfaceConfig
-from app.deps import get_connection_store, get_orchestrator
+from app.deps import get_acknowledger, get_connection_store, get_orchestrator
 from app.domain.query import Answer
 from app.main import app
 
@@ -26,6 +26,16 @@ _SLACK_SECRET = "slack-test-secret"
 class _FakeOrchestrator:
     async def answer(self, request, *, user, user_token=None, skill_context=None, history=None):
         return Answer(text="Here is the answer.", citations=[], query_id="q1")
+
+
+_ACK_LINE = "On it — looking into that now…"
+
+
+class _FakeAck:
+    """Deterministic acknowledger so bot tests don't hit the network."""
+
+    async def make_ack(self, question, name=None):
+        return _ACK_LINE
 
 
 class _FakeStore:
@@ -268,6 +278,7 @@ def test_teams_webhook_valid(monkeypatch):
     from app.config import get_settings
     get_settings.cache_clear()
     app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_acknowledger] = lambda: _FakeAck()
     try:
         with patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)):
             # Teams ignores activities returned in the webhook response body —
@@ -289,8 +300,12 @@ def test_teams_webhook_valid(monkeypatch):
                     )
         assert resp.status_code == 200
         assert resp.json() == {}
-        mock_send.assert_awaited_once()
-        kwargs = mock_send.await_args.kwargs
+        # Two activities: the immediate ack first, then the grounded answer card.
+        assert mock_send.await_count == 2
+        ack_activity = mock_send.await_args_list[0].kwargs["activity"]
+        assert ack_activity["type"] == "message"
+        assert ack_activity["text"] == _ACK_LINE
+        kwargs = mock_send.await_args.kwargs  # last call = the answer
         assert kwargs["incoming"]["conversation"]["id"] == "conv1"
         activity = kwargs["activity"]
         assert activity["type"] == "message"
@@ -392,6 +407,7 @@ def test_slack_webhook_surface_enabled_answers(monkeypatch):
     get_settings.cache_clear()
     app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
     app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
+    app.dependency_overrides[get_acknowledger] = lambda: _FakeAck()
     try:
         body = json.dumps({
             "type": "event_callback",
@@ -411,8 +427,10 @@ def test_slack_webhook_surface_enabled_answers(monkeypatch):
                     },
                 )
         assert resp.status_code == 200
-        mock_post.assert_awaited_once()
-        sent_answer = mock_post.await_args.args[3]
+        # Two posts: the immediate ack first, then the grounded answer.
+        assert mock_post.await_count == 2
+        assert mock_post.await_args_list[0].args[3].text == _ACK_LINE
+        sent_answer = mock_post.await_args.args[3]  # last call = the answer
         assert sent_answer.text == "Here is the answer."
     finally:
         app.dependency_overrides.clear()
@@ -497,13 +515,17 @@ def test_slack_webhook_non_workflow_skill_uses_orchestrator(monkeypatch):
     app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
     app.dependency_overrides[get_skill_router_svc] = lambda: _FakeRouter(resolved)
     app.dependency_overrides[get_refund_flow] = lambda: flow
+    app.dependency_overrides[get_acknowledger] = lambda: _FakeAck()
     try:
         with patch("app.api.bots.post_slack_reply", new=AsyncMock()) as mock_post:
             with TestClient(app) as client:
                 resp = _post_signed_slack(client, _slack_event_body("what is the vacation policy"))
         assert resp.status_code == 200
         assert flow.requests == []
-        mock_post.assert_awaited_once()
+        # ack first, then the orchestrator answer
+        assert mock_post.await_count == 2
+        assert mock_post.await_args_list[0].args[3].text == _ACK_LINE
+        assert mock_post.await_args.args[3].text == "Here is the answer."
     finally:
         app.dependency_overrides.clear()
         get_settings.cache_clear()

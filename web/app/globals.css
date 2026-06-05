@@ -114,6 +114,16 @@
   .trace .step{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.4px;color:var(--ink-dim);display:flex;align-items:center;gap:7px;padding:4px 0}
   .trace .step .num{width:16px;height:16px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:9px;color:var(--ink-faint)}
   .trace .step.done .num{border-color:var(--teal);color:var(--teal);background:var(--teal-bg)}
+  .trace .step.active{color:var(--ink)}
+  .trace .step.active .num{border-color:var(--amber);color:var(--amber);background:var(--amber-bg);animation:ackpulse 1.2s infinite}
+  /* immediate-acknowledgement (working) state — fast model, before the grounded answer */
+  .badge-working{margin-left:auto;display:flex;align-items:center;gap:7px;font-family:var(--font-mono),monospace;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:99px;padding:4px 10px}
+  .badge-working .dots{display:inline-flex;gap:3px}
+  .badge-working .dots i{width:4px;height:4px;border-radius:50%;background:var(--amber);animation:ackpulse 1.2s infinite}
+  .badge-working .dots i:nth-child(2){animation-delay:.18s}
+  .badge-working .dots i:nth-child(3){animation-delay:.36s}
+  @keyframes ackpulse{0%,65%,100%{opacity:.28}30%{opacity:1}}
+  .a-ack{margin-left:36px;font-size:15px;color:var(--ink-dim);font-style:italic;line-height:1.65}
   .trace .arrow{width:22px;height:1px;background:linear-gradient(90deg,var(--line),transparent);margin:0 9px}
 
   .a-body{font-size:15.5px;line-height:1.72;color:var(--ink);margin-left:36px}

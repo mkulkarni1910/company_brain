@@ -20,6 +20,7 @@ from app.bots.teams import (
 )
 from app.config import get_settings
 from app.deps import (
+    get_acknowledger,
     get_connection_store,
     get_conversation_memory,
     get_orchestrator,
@@ -70,6 +71,7 @@ async def teams_webhook(
     orchestrator=Depends(get_orchestrator),
     store=Depends(get_connection_store),
     memory=Depends(get_conversation_memory),
+    acknowledger=Depends(get_acknowledger),
     authorization: str | None = Header(default=None),
 ) -> dict:
     s = get_settings()
@@ -126,6 +128,15 @@ async def teams_webhook(
 
     conv_id = (body.get("conversation") or {}).get("id") or ""
     cid = f"teams:{conv_id}" if conv_id else None
+
+    # Acknowledge immediately with the fast model, then research with the strong one.
+    with contextlib.suppress(Exception):
+        ack = await acknowledger.make_ack(text, name=(body.get("from") or {}).get("name"))
+        await send_teams_activity(
+            incoming=body, activity={"type": "message", "text": ack},
+            app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+            tenant_id=s.teams_bot_tenant_id,
+        )
     try:
         history = await memory.load_history(user=_bot_user(), conversation_id=cid)
         answer = await orchestrator.answer(
@@ -157,6 +168,7 @@ async def slack_webhook(
     skill_router=Depends(get_skill_router_svc),
     refund_flow=Depends(get_refund_flow),
     memory=Depends(get_conversation_memory),
+    acknowledger=Depends(get_acknowledger),
     x_slack_signature: str | None = Header(default=None),
     x_slack_request_timestamp: str | None = Header(default=None),
 ) -> dict:
@@ -201,6 +213,14 @@ async def slack_webhook(
             answer = Answer(text=WELCOME_TEXT, citations=[], query_id="smalltalk")
             await post_slack_reply(slack_token, channel, thread_ts, answer)
             return
+        # Acknowledge immediately with the fast model, before the heavy research path
+        # (orchestrator or refund workflow). Slack has no cheap display name → no greeting.
+        with contextlib.suppress(Exception):
+            ack = await acknowledger.make_ack(text)
+            await post_slack_reply(
+                slack_token, channel, thread_ts,
+                Answer(text=ack, citations=[], query_id="ack"),
+            )
         skill_ctx = None
         if skill_router is not None:
             with contextlib.suppress(Exception):

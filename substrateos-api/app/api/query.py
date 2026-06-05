@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Header, Request
 from app.api._auth_resolve import resolve_user
 from app.config import get_settings
 from app.deps import (
+    get_acknowledger,
     get_conversation_memory,
     get_orchestrator,
     get_skill_router_svc,
@@ -18,6 +19,28 @@ from app.domain.query import Answer, QueryRequest
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 
 router = APIRouter(tags=["query"])
+
+
+@router.post("/query/ack")
+async def query_ack(
+    body: QueryRequest,
+    acknowledger=Depends(get_acknowledger),
+    token_store=Depends(get_token_store),
+    authorization: str | None = Header(default=None),
+    x_debug_bypass_auth: str | None = Header(default=None),
+    x_ms_client_principal: str | None = Header(default=None),
+) -> dict:
+    """Fast, context-aware 'On it…' line from the small model — the web chat calls
+    this immediately to fill the pending bubble while POST /query (strong model) runs.
+    Never blocks the answer: make_ack degrades to a template on any failure."""
+    user = await resolve_user(
+        easy_auth=x_ms_client_principal,
+        authorization=authorization,
+        debug_header=x_debug_bypass_auth,
+        token_store=token_store,
+    )
+    ack = await acknowledger.make_ack(body.query, name=getattr(user, "display_name", None))
+    return {"ack": ack}
 
 
 @router.post("/query", response_model=Answer)

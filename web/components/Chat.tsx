@@ -3,14 +3,14 @@ import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { postQuery, postFeedback, getConversations, getConversation, logClick, postSearch,
+import { postQuery, postQueryAck, postFeedback, getConversations, getConversation, logClick, postSearch,
   listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources,
   Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource } from "@/lib/api";
 import { getSkills, SkillSummary } from "@/lib/skillsApi";
 import SkillsPage from "@/app/skills/page";
 import RunsPage from "@/app/runs/page";
 
-type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean };
+type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean; ack?: string };
 
 const USER_NAME = process.env.NEXT_PUBLIC_USER_NAME ?? "Lokesh Bhoyar";
 const USER_ROLE = process.env.NEXT_PUBLIC_USER_ROLE ?? "Central · Sales";
@@ -467,6 +467,11 @@ export default function Chat() {
     const id = crypto.randomUUID();
     setTurns((t) => [...t, { id, query, loading: true }]);
     setInput("");
+    // Immediate acknowledgement from the fast model — fills the pending bubble while
+    // the strong model researches. Best-effort; never overrides the real answer.
+    postQueryAck(query).then((ack) => {
+      if (ack) setTurns((t) => t.map((x) => (x.id === id && x.loading ? { ...x, ack } : x)));
+    });
     try {
       const { answer, latencyMs } = await postQuery(query, conversationId);
       setTurns((t) => t.map((x) => (x.id === id ? { ...x, answer, latencyMs, loading: false } : x)));
@@ -584,13 +589,18 @@ export default function Chat() {
                 <div className="user-row"><div className="user-msg">{t.query}</div></div>
                 {t.loading && (
                   <div className="answer">
-                    <div className="a-head"><div className="a-glyph" /><div className="a-name">Substrate<b>OS</b></div></div>
+                    <div className="a-head">
+                      <div className="a-glyph" /><div className="a-name">Substrate<b>OS</b></div>
+                      <div className="badge-working"><span className="dots"><i /><i /><i /></span>working</div>
+                    </div>
                     <div className="trace">
-                      {["plan", "retrieve", "rank", "ground"].map((s, i) => (
-                        <span className="step done" key={s} style={{ opacity: 0.5 }}><span className="num">…</span>{s}{i < 3 && <span className="arrow" style={{ marginLeft: 9 }} />}</span>
+                      {["plan", "retrieve", "rank", "ground"].map((s, i, arr) => (
+                        <span className={"step" + (i === 0 ? " done" : i === 1 ? " active" : "")} key={s}><span className="num">{i === 0 ? "✓" : "•"}</span>{s}{i < arr.length - 1 && <span className="arrow" style={{ marginLeft: 9 }} />}</span>
                       ))}
                     </div>
-                    <div className="a-body" style={{ color: "var(--ink-faint)" }}><p>Thinking…</p></div>
+                    {t.ack
+                      ? <div className="a-ack">{t.ack}</div>
+                      : <div className="a-body" style={{ color: "var(--ink-faint)" }}><p>Thinking…</p></div>}
                   </div>
                 )}
                 {t.error && <div className="answer"><div className="a-body" style={{ color: "var(--rose)" }}><p>{t.error}</p></div></div>}

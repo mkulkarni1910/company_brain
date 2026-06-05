@@ -34,6 +34,10 @@ def get_orchestrator(request: Request) -> SemanticKernelOrchestrator:
     return request.app.state.orchestrator
 
 
+def get_acknowledger(request: Request):
+    return request.app.state.acknowledger
+
+
 def get_activity_store(request: Request) -> ActivityStore:
     return request.app.state.activity_store
 

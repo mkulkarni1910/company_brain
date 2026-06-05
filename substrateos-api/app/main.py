@@ -34,6 +34,7 @@ from app.connectors.store import ConnectionStore
 from app.connectors.subscriptions import CosmosSubscriptionStore, SubscriptionStore
 from app.conversations.store import ConversationStore
 from app.discover.service import DiscoverService
+from app.generation.acknowledger import Acknowledger
 from app.generation.azure_openai import AzureOpenAIClient
 from app.generation.gemini import GeminiClient
 from app.history.store import HistoryStore
@@ -115,6 +116,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.activity = ActivitySignal(store=app.state.activity_store)
     app.state.live_fetcher = MSGraphSearchFetcher()
     app.state.planner = QueryPlanner(llm=app.state.llm)
+    app.state.acknowledger = Acknowledger(llm=app.state.llm)
     app.state.orchestrator = SemanticKernelOrchestrator(
         retriever=app.state.retriever,
         llm=app.state.llm,
