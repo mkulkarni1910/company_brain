@@ -69,6 +69,7 @@ async def teams_webhook(
     request: Request,
     orchestrator=Depends(get_orchestrator),
     store=Depends(get_connection_store),
+    memory=Depends(get_conversation_memory),
     authorization: str | None = Header(default=None),
 ) -> dict:
     s = get_settings()
@@ -123,8 +124,17 @@ async def teams_webhook(
         )
         return {}
 
+    conv_id = (body.get("conversation") or {}).get("id") or ""
+    cid = f"teams:{conv_id}" if conv_id else None
     try:
-        answer = await orchestrator.answer(QueryRequest(query=text), user=_bot_user())
+        history = await memory.load_history(user=_bot_user(), conversation_id=cid)
+        answer = await orchestrator.answer(
+            QueryRequest(query=text), user=_bot_user(), history=history
+        )
+        if cid:
+            await memory.record(
+                user=_bot_user(), conversation_id=cid, query=text, answer=answer
+            )
     except Exception:
         logger.exception("Teams bot query failed")
         answer = Answer(text=_ERROR_TEXT, citations=[], query_id="err")

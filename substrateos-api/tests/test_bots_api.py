@@ -560,3 +560,37 @@ def test_slack_memory_load_and_record(monkeypatch):
     finally:
         app.dependency_overrides.clear()
         get_settings.cache_clear()
+
+
+def test_teams_memory_load_and_record(monkeypatch):
+    monkeypatch.setenv("TEAMS_BOT_APP_ID", _TEAMS_APP_ID)
+    monkeypatch.setenv("TEAMS_BOT_APP_PASSWORD", _TEAMS_PASSWORD)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    memory = _Memory()
+    app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_conversation_memory] = lambda: memory
+    try:
+        with (
+            patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)),
+            patch("app.api.bots.send_teams_activity", new=AsyncMock(return_value=True)),
+            TestClient(app) as client,
+        ):
+            resp = client.post(
+                "/bot/teams",
+                json={
+                    "type": "message",
+                    "text": "<at>SubStrateOS</at> what is PTO?",
+                    "from": {"id": "u1", "aadObjectId": "aad-u1"},
+                    "conversation": {"id": "19:abc"},
+                    "id": "act1",
+                    "serviceUrl": "https://smba.trafficmanager.net",
+                },
+                headers={"Authorization": "Bearer fake-jwt"},
+            )
+        assert resp.status_code == 200
+        assert memory.loaded == ["teams:19:abc"]
+        assert memory.recorded == [("teams:19:abc", "what is PTO?")]
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
