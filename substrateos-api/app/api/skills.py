@@ -6,6 +6,7 @@ from app.api._auth_resolve import resolve_user
 from app.api.admin import require_admin_key
 from app.deps import get_skill_store, get_token_store
 from app.domain.skill import Skill, SkillCreate, SkillSummary, SkillUpdate
+from app.skills.store import SkillStorePersistenceError
 
 router = APIRouter(tags=["skills"])
 admin_router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_key)])
@@ -106,6 +107,8 @@ async def admin_create_skill(data: SkillCreate, store=Depends(get_skill_store)) 
         return await store.create(data)
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
+    except SkillStorePersistenceError as e:
+        raise HTTPException(status_code=503, detail=f"skill not persisted: {e}") from e
 
 
 @admin_router.patch("/skills/{skill_id}")
@@ -115,7 +118,10 @@ async def admin_update_skill(
     """Partially update a skill. Returns 404 if skill not found."""
     if store is None:
         raise HTTPException(status_code=404, detail="skill not found")
-    updated = await store.update(skill_id, data)
+    try:
+        updated = await store.update(skill_id, data)
+    except SkillStorePersistenceError as e:
+        raise HTTPException(status_code=503, detail=f"skill not persisted: {e}") from e
     if updated is None:
         raise HTTPException(status_code=404, detail="skill not found")
     return updated

@@ -6,9 +6,10 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from redis.exceptions import RedisError
 
 from app.domain.skill import Skill, SkillCreate, SkillUpdate
-from app.skills.store import SkillStore
+from app.skills.store import SkillStore, SkillStorePersistenceError
 
 
 def _make_redis(data: dict | None = None) -> MagicMock:
@@ -131,6 +132,53 @@ async def test_update_merges_fields():
     assert updated is not None
     assert updated.name == "New Name"
     assert updated.slug == "test-skill"
+
+
+@pytest.mark.asyncio
+async def test_create_raises_when_no_redis_backend():
+    # Deploy with no AZURE_REDIS_HOST -> _r is None -> writes must fail loudly,
+    # not return a phantom skill that was never persisted.
+    store = SkillStore(client=_make_redis())
+    store._r = None
+    data = SkillCreate(slug="x", name="X", description="D", team="T", system_prompt="S.")
+    with pytest.raises(SkillStorePersistenceError):
+        await store.create(data)
+
+
+@pytest.mark.asyncio
+async def test_create_raises_when_hset_fails():
+    r = _make_redis()
+
+    async def boom(*a, **k):
+        raise RedisError("connection refused")
+
+    r.hset = boom
+    store = SkillStore(client=r)
+    data = SkillCreate(slug="x", name="X", description="D", team="T", system_prompt="S.")
+    with pytest.raises(SkillStorePersistenceError):
+        await store.create(data)
+
+
+@pytest.mark.asyncio
+async def test_update_raises_when_no_redis_backend():
+    store = SkillStore(client=_make_redis())
+    store._r = None
+    with pytest.raises(SkillStorePersistenceError):
+        await store.update("some-id", SkillUpdate(name="New"))
+
+
+@pytest.mark.asyncio
+async def test_update_raises_when_hset_fails():
+    skill_id = str(uuid.uuid4())
+    r = _make_redis({skill_id: _skill_json(id=skill_id)})
+
+    async def boom(*a, **k):
+        raise RedisError("connection refused")
+
+    r.hset = boom
+    store = SkillStore(client=r)
+    with pytest.raises(SkillStorePersistenceError):
+        await store.update(skill_id, SkillUpdate(name="New Name"))
 
 
 @pytest.mark.asyncio

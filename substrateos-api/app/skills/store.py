@@ -15,6 +15,12 @@ from app.domain.skill import Skill, SkillCreate, SkillUpdate
 logger = logging.getLogger(__name__)
 _ERRORS = (RedisError, ConnectionError, TimeoutError, OSError)
 
+
+class SkillStorePersistenceError(RuntimeError):
+    """Raised when a write cannot be persisted (no Redis backend, or Redis is
+    unreachable). Reads degrade gracefully to empty; writes must fail loudly so
+    callers never get a phantom 201 for a skill that was never stored."""
+
 _DATA_KEY = "skills:all"          # HSET field=skill_id value=Skill JSON
 _CATALOG_KEY = "skills:catalog"   # JSON list cache, TTL 5 min
 _CATALOG_TTL = 300
@@ -105,6 +111,8 @@ class SkillStore:
         return catalog
 
     async def create(self, data: SkillCreate) -> Skill:
+        if self._r is None:
+            raise SkillStorePersistenceError("no Redis backend configured (AZURE_REDIS_HOST unset)")
         existing = await self.get_by_slug(data.slug)
         if existing is not None:
             raise ValueError(f"slug '{data.slug}' already exists (id={existing.id})")
@@ -117,25 +125,25 @@ class SkillStore:
             system_prompt=data.system_prompt, retrieval_config=data.retrieval_config,
             created_at=now, updated_at=now,
         )
-        if self._r is not None:
-            try:
-                await self._r.hset(_DATA_KEY, skill.id, skill.model_dump_json())
-            except _ERRORS as e:
-                logger.warning("SkillStore.create hset failed: %s", e)
+        try:
+            await self._r.hset(_DATA_KEY, skill.id, skill.model_dump_json())
+        except _ERRORS as e:
+            raise SkillStorePersistenceError(f"failed to persist skill: {e}") from e
         await self._invalidate_catalog()
         return skill
 
     async def update(self, skill_id: str, data: SkillUpdate) -> Skill | None:
+        if self._r is None:
+            raise SkillStorePersistenceError("no Redis backend configured (AZURE_REDIS_HOST unset)")
         skill = await self.get_by_id(skill_id)
         if skill is None:
             return None
         patch = data.model_dump(exclude_none=True)
         updated = skill.model_copy(update={**patch, "updated_at": datetime.now(UTC)})
-        if self._r is not None:
-            try:
-                await self._r.hset(_DATA_KEY, skill_id, updated.model_dump_json())
-            except _ERRORS as e:
-                logger.warning("SkillStore.update hset failed: %s", e)
+        try:
+            await self._r.hset(_DATA_KEY, skill_id, updated.model_dump_json())
+        except _ERRORS as e:
+            raise SkillStorePersistenceError(f"failed to persist skill: {e}") from e
         await self._invalidate_catalog()
         return updated
 

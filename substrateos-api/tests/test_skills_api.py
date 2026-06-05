@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.deps import get_skill_store
 from app.domain.skill import Skill, SkillCreate, SkillUpdate
 from app.main import app
+from app.skills.store import SkillStorePersistenceError
 
 _ADMIN = {"x-admin-key": "dev-admin-key-local"}
 
@@ -157,6 +158,41 @@ def test_admin_delete_skill():
         with TestClient(app) as c:
             resp = c.delete(f"/admin/skills/{s.id}", headers=_ADMIN)
         assert resp.status_code == 204
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_admin_create_returns_503_when_store_cannot_persist():
+    class _BrokenStore(_FakeStore):
+        async def create(self, data):
+            raise SkillStorePersistenceError("redis unavailable")
+
+    store = _BrokenStore()
+    app.dependency_overrides[get_skill_store] = lambda: store
+    try:
+        with TestClient(app) as c:
+            resp = c.post("/admin/skills", headers=_ADMIN, json={
+                "slug": "ghost", "name": "Ghost", "description": "D",
+                "team": "Eng", "system_prompt": "S."
+            })
+        assert resp.status_code == 503
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_admin_update_returns_503_when_store_cannot_persist():
+    s = _skill()
+
+    class _BrokenStore(_FakeStore):
+        async def update(self, sid, data):
+            raise SkillStorePersistenceError("redis unavailable")
+
+    store = _BrokenStore([s])
+    app.dependency_overrides[get_skill_store] = lambda: store
+    try:
+        with TestClient(app) as c:
+            resp = c.patch(f"/admin/skills/{s.id}", headers=_ADMIN, json={"enabled": False})
+        assert resp.status_code == 503
     finally:
         app.dependency_overrides.clear()
 
