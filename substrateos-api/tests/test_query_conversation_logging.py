@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
-from app.deps import get_conversation_store, get_orchestrator
+from app.deps import get_orchestrator
 from app.domain.conversation import Conversation, ConversationTurn
 from app.domain.query import Answer
 from app.main import app
@@ -33,7 +33,6 @@ def _run(payload, conv=None):
     store = _Store(conv=conv)
     orch = _Orch()
     app.dependency_overrides[get_orchestrator] = lambda: orch
-    app.dependency_overrides[get_conversation_store] = lambda: store
     try:
         with TestClient(app) as client:
             # get_conversation_memory builds from app.state; point state at the fake
