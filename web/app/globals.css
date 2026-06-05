@@ -436,7 +436,8 @@
   .setup-step::before{content:"";position:absolute;left:13px;top:24px;bottom:2px;width:2px;background:var(--line-soft)}
   .setup-step:last-child::before{display:none}
   .setup-step .num{position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:grid;place-items:center;font-family:var(--font-mono),monospace;font-size:12px;font-weight:600}
-  .setup-step .t{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.5}
+  .setup-step .t{font-size:13.5px;font-weight:400;color:var(--ink-dim);line-height:1.55}
+  .setup-step .t b{font-weight:600;color:var(--ink)}
   .setup-code{display:block;font-family:var(--font-mono),monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:8px;padding:8px 11px;margin-top:8px;color:var(--ink-dim);word-break:break-all;line-height:1.5}
   .setup-step .t code{font-family:var(--font-mono),monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;color:var(--amber)}
   @media(max-width:960px){.surf-grid{grid-template-columns:repeat(2,1fr)}}
