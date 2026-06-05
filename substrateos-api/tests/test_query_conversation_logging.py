@@ -8,7 +8,7 @@ _HDR = {"x-debug-bypass-auth": "t-test,u-x,t-test:everyone"}
 
 
 class _Orch:
-    async def answer(self, body, *, user, user_token=None):
+    async def answer(self, body, *, user, user_token=None, skill_context=None):
         return Answer(text="x", citations=[], query_id="q1")
 
 
