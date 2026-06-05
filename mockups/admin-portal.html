@@ -141,9 +141,31 @@
   .surf-action-btn{font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:9px;border:none;cursor:pointer;transition:.15s;white-space:nowrap}
   .btn-slack{background:#4A154B;color:#fff}.btn-slack:hover{background:#3d1140}
   .btn-teams{background:#5059C9;color:#fff}.btn-teams:hover{background:#404db0}
-  .surf-installed{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;color:var(--green)}
-  .surf-installed .d{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .surf-installed{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;color:var(--green);white-space:nowrap}
+  .surf-installed .d{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none}
+  .surf-setup{flex:none}
   .surf-url{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint);background:var(--paper-2);border:1px solid var(--line-soft);border-radius:7px;padding:5px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+  .surf-setup{font-size:12px;font-weight:600;color:var(--ink-dim);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .surf-setup:hover{border-color:#cabd9f;color:var(--ink);background:var(--surface)}
+
+  /* ── surface setup modal (Slack / Teams) ── */
+  .setup-hd{display:flex;align-items:center;gap:13px;margin:0 0 4px}
+  .setup-hd .lg{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;flex:none}
+  .setup-hd .lg svg{width:23px;height:23px}
+  .sk-modal .setup-hd h3{margin:0;font-family:"Fraunces",serif;font-size:19px;font-weight:600}
+  .setup-hd .sub{font-size:12.5px;color:var(--ink-faint);margin-top:1px}
+  .setup-note{display:flex;gap:9px;align-items:flex-start;background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:10px;padding:10px 13px;margin:16px 0 4px;font-size:12.5px;color:#7a5410;line-height:1.5}
+  .setup-note svg{width:15px;height:15px;flex:none;margin-top:2px}
+  .setup-steps{list-style:none;margin:18px 0 0;padding:0}
+  .setup-step{position:relative;padding:0 0 20px 40px}
+  .setup-step:last-child{padding-bottom:0}
+  .setup-step::before{content:"";position:absolute;left:13px;top:24px;bottom:2px;width:2px;background:var(--line-soft)}
+  .setup-step:last-child::before{display:none}
+  .setup-step .num{position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--amber);color:#fff;display:grid;place-items:center;font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:600}
+  .setup-step .t{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.5}
+  .setup-step .t b{font-weight:700}
+  .setup-code{display:block;font-family:"JetBrains Mono",monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:8px;padding:8px 11px;margin-top:8px;color:var(--ink-dim);word-break:break-all;line-height:1.5}
+  .setup-step .t code{font-family:"JetBrains Mono",monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;color:var(--amber)}
 
   /* ── overview ── */
   .ov-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
@@ -239,7 +261,8 @@
   .t-hr{background:#ece2f0;color:#6b3f7a}
   .t-mkt{background:#f6ecd2;color:#946112}
   .t-biz{background:#dce8ee;color:#2a5a72}
-  .sk-rating{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--amber)}
+  .sk-rating{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--amber);white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+  .sk-rating .sk-star{font-size:17px;line-height:1}
   .sk-runs{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-dim)}
   .sk-scope{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-faint)}
   .sk-actions{display:flex;gap:8px}
@@ -264,7 +287,9 @@
   .sk-list-item{display:flex;gap:8px;margin-bottom:7px;align-items:center}
   .sk-list-item input{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--surface);color:var(--ink)}
   .sk-list-remove{font-size:13px;color:var(--ink-faint);cursor:pointer;background:none;border:none;padding:4px}
-  .sk-list-add{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--teal);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline}
+  .sk-list-add{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--teal);background:var(--teal-bg);border:1px dashed var(--teal);border-radius:9px;cursor:pointer;padding:8px 13px;margin-top:9px;transition:.15s}
+  .sk-list-add:hover{background:#cbe9e3}
+  .sk-list-add .plus{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--teal);color:#fff;font-size:13px;line-height:1;font-family:inherit}
   .sk-modal-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft)}
   .sk-cancel{font-family:"JetBrains Mono",monospace;font-size:12px;padding:9px 16px;border-radius:9px;background:transparent;color:var(--ink-dim);border:1px solid var(--line);cursor:pointer}
   .sk-save{font-family:"JetBrains Mono",monospace;font-size:12px;padding:9px 16px;border-radius:9px;background:var(--ink);color:var(--paper);border:none;cursor:pointer}
@@ -574,7 +599,7 @@
           </div>
           <div class="surf-foot">
             <div class="surf-installed" id="slack-installed"><span class="d"></span>Installed in Contoso Inc.</div>
-            <span class="surf-scope">All employees</span>
+            <button class="surf-setup" onclick="document.getElementById('setup-slack-bg').classList.add('show')">Setup guide</button>
           </div>
         </div>
 
@@ -598,8 +623,7 @@
             Teams surface disabled — all Teams access blocked.
           </div>
           <div class="surf-foot">
-            <button class="surf-action-btn btn-teams" id="teams-install-btn" onclick="installTeams()">Install to Teams</button>
-            <span class="surf-scope">All employees</span>
+            <button class="surf-action-btn btn-teams" id="teams-install-btn" onclick="document.getElementById('setup-teams-bg').classList.add('show')">Install to Teams</button>
           </div>
         </div>
 
@@ -624,7 +648,6 @@
           </div>
           <div class="surf-foot">
             <span class="surf-url">app.substrateos.ai/contoso</span>
-            <span class="surf-scope">All employees</span>
           </div>
         </div>
 
@@ -649,7 +672,6 @@
           </div>
           <div class="surf-foot">
             <span class="surf-url">api.substrateos.ai/contoso</span>
-            <span class="surf-scope">Developers</span>
           </div>
         </div>
 
@@ -674,7 +696,6 @@
           </div>
           <div class="surf-foot">
             <span class="surf-url" style="opacity:.4">mcp.substrateos.ai/contoso</span>
-            <span class="surf-scope">Developers</span>
           </div>
         </div>
 
@@ -910,7 +931,7 @@
               <td><span class="sk-name">Deploy to Production</span><span class="sk-slug">/deploy-to-production</span></td>
               <td><span class="sk-team t-eng">Engineering</span></td>
               <td><span class="sk-scope">org</span></td>
-              <td><span class="sk-rating">★ 4.8</span></td>
+              <td><span class="sk-rating"><span class="sk-star">★</span>4.8</span></td>
               <td><span class="sk-runs">312</span></td>
               <td style="text-align:right"><button class="sw on" onclick="toggleSkill(this)"></button></td>
               <td><div class="sk-actions"><button class="sk-btn" onclick="editSkill(1)">Edit</button><button class="sk-btn del" onclick="confirmDelete(1)">Delete</button></div></td>
@@ -919,7 +940,7 @@
               <td><span class="sk-name">Write a PRD</span><span class="sk-slug">/write-prd</span></td>
               <td><span class="sk-team t-prod">Product</span></td>
               <td><span class="sk-scope">org</span></td>
-              <td><span class="sk-rating">★ 4.6</span></td>
+              <td><span class="sk-rating"><span class="sk-star">★</span>4.6</span></td>
               <td><span class="sk-runs">198</span></td>
               <td style="text-align:right"><button class="sw on" onclick="toggleSkill(this)"></button></td>
               <td><div class="sk-actions"><button class="sk-btn" onclick="editSkill(2)">Edit</button><button class="sk-btn del" onclick="confirmDelete(2)">Delete</button></div></td>
@@ -928,7 +949,7 @@
               <td><span class="sk-name">Onboard a New Hire</span><span class="sk-slug">/onboard-new-hire</span></td>
               <td><span class="sk-team t-hr">HR / People</span></td>
               <td><span class="sk-scope">org</span></td>
-              <td><span class="sk-rating">★ 4.9</span></td>
+              <td><span class="sk-rating"><span class="sk-star">★</span>4.9</span></td>
               <td><span class="sk-runs">87</span></td>
               <td style="text-align:right"><button class="sw on" onclick="toggleSkill(this)"></button></td>
               <td><div class="sk-actions"><button class="sk-btn" onclick="editSkill(3)">Edit</button><button class="sk-btn del" onclick="confirmDelete(3)">Delete</button></div></td>
@@ -937,7 +958,7 @@
               <td><span class="sk-name">Launch Campaign Brief</span><span class="sk-slug">/launch-campaign-brief</span></td>
               <td><span class="sk-team t-mkt">Marketing</span></td>
               <td><span class="sk-scope">org</span></td>
-              <td><span class="sk-rating">★ 4.5</span></td>
+              <td><span class="sk-rating"><span class="sk-star">★</span>4.5</span></td>
               <td><span class="sk-runs">64</span></td>
               <td style="text-align:right"><button class="sw" onclick="toggleSkill(this)"></button></td>
               <td><div class="sk-actions"><button class="sk-btn" onclick="editSkill(4)">Edit</button><button class="sk-btn del" onclick="confirmDelete(4)">Delete</button></div></td>
@@ -946,7 +967,7 @@
               <td><span class="sk-name">Build a QBR Deck</span><span class="sk-slug">/build-qbr-deck</span></td>
               <td><span class="sk-team t-biz">Business / Ops</span></td>
               <td><span class="sk-scope">org</span></td>
-              <td><span class="sk-rating">★ 4.7</span></td>
+              <td><span class="sk-rating"><span class="sk-star">★</span>4.7</span></td>
               <td><span class="sk-runs">141</span></td>
               <td style="text-align:right"><button class="sw on" onclick="toggleSkill(this)"></button></td>
               <td><div class="sk-actions"><button class="sk-btn" onclick="editSkill(5)">Edit</button><button class="sk-btn del" onclick="confirmDelete(5)">Delete</button></div></td>
@@ -955,7 +976,7 @@
               <td><span class="sk-name">Incident Postmortem</span><span class="sk-slug">/incident-postmortem</span></td>
               <td><span class="sk-team t-eng">Engineering</span></td>
               <td><span class="sk-scope">team</span></td>
-              <td><span class="sk-rating">★ 4.4</span></td>
+              <td><span class="sk-rating"><span class="sk-star">★</span>4.4</span></td>
               <td><span class="sk-runs">53</span></td>
               <td style="text-align:right"><button class="sw on" onclick="toggleSkill(this)"></button></td>
               <td><div class="sk-actions"><button class="sk-btn" onclick="editSkill(6)">Edit</button><button class="sk-btn del" onclick="confirmDelete(6)">Delete</button></div></td>
@@ -1008,12 +1029,12 @@
     <div class="sk-field">
       <label>Steps</label>
       <div id="sk-steps-list"></div>
-      <button class="sk-list-add" onclick="addListItem('sk-steps-list')">+ Add step</button>
+      <button class="sk-list-add" onclick="addListItem('sk-steps-list')"><span class="plus">+</span>Add step</button>
     </div>
     <div class="sk-field">
       <label>Data Feeds</label>
       <div id="sk-feeds-list"></div>
-      <button class="sk-list-add" onclick="addListItem('sk-feeds-list')">+ Add feed</button>
+      <button class="sk-list-add" onclick="addListItem('sk-feeds-list')"><span class="plus">+</span>Add feed</button>
     </div>
     <div class="sk-field">
       <label>System Prompt</label>
@@ -1034,6 +1055,55 @@
     <div class="sk-modal-foot">
       <button class="sk-cancel" onclick="document.getElementById('sk-del-bg').classList.remove('show')">Cancel</button>
       <button class="sk-del-btn" onclick="deleteSkill()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Slack setup modal ── -->
+<div class="sk-modal-bg" id="setup-slack-bg">
+  <div class="sk-modal">
+    <div class="setup-hd">
+      <div class="lg sl-slack"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg></div>
+      <div><h3>Connect SubstrateOS to Slack</h3><div class="sub">One-time setup · ~5 minutes · admin access to your Slack workspace</div></div>
+    </div>
+    <div class="setup-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      Each reply is scoped to what the asking user can see — SubstrateOS uses their identity, not a shared bot account.
+    </div>
+    <ol class="setup-steps">
+      <li class="setup-step"><span class="num">1</span><div class="t">Go to <b>api.slack.com/apps</b> → <b>Create New App</b> → <b>From scratch</b>, and name it <b>SubstrateOS</b>.</div></li>
+      <li class="setup-step"><span class="num">2</span><div class="t">Under <b>OAuth &amp; Permissions</b>, add the bot token scopes:<code class="setup-code">app_mentions:read   chat:write   im:read   im:write</code></div></li>
+      <li class="setup-step"><span class="num">3</span><div class="t">Under <b>Event Subscriptions</b>, enable events and set the Request URL, then subscribe to <code>app_mention</code> and <code>message.im</code>.<code class="setup-code">https://api.substrateos.ai/bot/slack</code></div></li>
+      <li class="setup-step"><span class="num">4</span><div class="t"><b>Install to Workspace</b>, then copy the <b>Bot User OAuth Token</b> and the <b>Signing Secret</b>.</div></li>
+      <li class="setup-step"><span class="num">5</span><div class="t">Add them to your server environment and restart the API — this card will flip to <b>Active</b>.<code class="setup-code">SLACK_BOT_TOKEN=xoxb-…   SLACK_SIGNING_SECRET=…</code></div></li>
+    </ol>
+    <div class="sk-modal-foot">
+      <button class="sk-cancel" onclick="document.getElementById('setup-slack-bg').classList.remove('show')">Close</button>
+      <a class="surf-action-btn btn-slack" href="https://api.slack.com/apps" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">Open Slack API ↗</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Teams setup modal ── -->
+<div class="sk-modal-bg" id="setup-teams-bg">
+  <div class="sk-modal">
+    <div class="setup-hd">
+      <div class="lg sl-teams"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.5 8.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm1.5 1h-3a1.5 1.5 0 0 0-1.5 1.5V16h1.5v-5h3v5H23v-5a1.5 1.5 0 0 0-1.5-1.5zM13 9H9a2 2 0 0 0-2 2v7h2v-3h4v3h2v-7a2 2 0 0 0-2-2zm0 4H9v-2h4v2z"/><circle cx="11" cy="4.5" r="2.5"/></svg></div>
+      <div><h3>Connect SubstrateOS to Microsoft Teams</h3><div class="sub">One-time setup · ~8 minutes · Azure Bot + Teams Admin Center access</div></div>
+    </div>
+    <div class="setup-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      Answers render as Adaptive Cards, and meeting context appears in the side panel during calls.
+    </div>
+    <ol class="setup-steps">
+      <li class="setup-step"><span class="num">1</span><div class="t">In the <b>Azure Portal</b>, create an <b>Azure Bot</b> resource and set its messaging endpoint to:<code class="setup-code">https://api.substrateos.ai/bot/teams</code></div></li>
+      <li class="setup-step"><span class="num">2</span><div class="t">Copy the <b>App ID</b> and <b>App Password</b>, add them to your server environment, and restart the API.<code class="setup-code">TEAMS_BOT_APP_ID=…   TEAMS_BOT_APP_PASSWORD=…</code></div></li>
+      <li class="setup-step"><span class="num">3</span><div class="t">Download the manifest package below, then upload it in <b>Teams Admin Center → Apps → Manage apps → Upload an app</b>.</div></li>
+      <li class="setup-step"><span class="num">4</span><div class="t">Done — this card will show <b>Active</b> on the next load.</div></li>
+    </ol>
+    <div class="sk-modal-foot">
+      <button class="sk-cancel" onclick="document.getElementById('setup-teams-bg').classList.remove('show')">Close</button>
+      <button class="surf-action-btn btn-teams">Download manifest.zip</button>
     </div>
   </div>
 </div>
@@ -1179,7 +1249,16 @@
       slugEl.value = nameEl.value.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
     }
   }
-  document.getElementById('sk-slug').addEventListener('input', function(){ this.dataset.edited = '1'; });
+  document.getElementById('sk-slug').addEventListener('input', function(){
+    this.dataset.edited = '1';
+    // slugs are lowercase, no spaces — sanitize as the user types
+    var clean = this.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+    if (clean !== this.value) {
+      var pos = this.selectionStart;
+      this.value = clean;
+      this.selectionStart = this.selectionEnd = pos;
+    }
+  });
 
   function renderList(containerId, items) {
     var c = document.getElementById(containerId);
@@ -1206,6 +1285,9 @@
   // close modals on backdrop click
   document.getElementById('sk-modal-bg').addEventListener('click', function(e){ if(e.target===this) closeSkillModal(); });
   document.getElementById('sk-del-bg').addEventListener('click', function(e){ if(e.target===this) document.getElementById('sk-del-bg').classList.remove('show'); });
+  ['setup-slack-bg','setup-teams-bg'].forEach(function(id){
+    document.getElementById(id).addEventListener('click', function(e){ if(e.target===this) this.classList.remove('show'); });
+  });
 </script>
 </body>
 </html>

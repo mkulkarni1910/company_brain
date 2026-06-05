@@ -90,6 +90,14 @@ function BlockedIcon() {
   );
 }
 
+function InfoIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+    </svg>
+  );
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 function TeamsInstallModal({ onClose }: { onClose: () => void }) {
@@ -106,23 +114,24 @@ function TeamsInstallModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="admin-modal" onClick={onClose}>
       <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-        <h3>Install SubstrateOS in Microsoft Teams</h3>
-        <ol style={{ paddingLeft: 18, margin: "0 0 16px", lineHeight: 1.7, fontSize: 13 }}>
-          <li>In <b>Azure Portal</b>, create an <b>Azure Bot</b> resource. Set the messaging endpoint to:<br />
-            <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
-              {API_URL}/bot/teams
-            </code>
-          </li>
-          <li>Copy the <b>App ID</b> and <b>App Password</b>, then set in your server environment:<br />
-            <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
-              TEAMS_BOT_APP_ID=… TEAMS_BOT_APP_PASSWORD=…
-            </code>
-            &nbsp;and restart the API.
-          </li>
-          <li>Download the manifest package and upload it in <b>Teams Admin Center → Apps → Manage apps → Upload an app</b>.</li>
-          <li>Done — this card will show Active on next load.</li>
+        <div className="setup-hd">
+          <div className="lg sl-teams">{ICONS.teams}</div>
+          <div>
+            <h3>Connect SubstrateOS to Microsoft Teams</h3>
+            <div className="sub">One-time setup · ~8 minutes · Azure Bot + Teams Admin Center access</div>
+          </div>
+        </div>
+        <div className="setup-note">
+          <InfoIcon />
+          Answers render as Adaptive Cards, and meeting context appears in the side panel during calls.
+        </div>
+        <ol className="setup-steps">
+          <li className="setup-step"><span className="num">1</span><div className="t">In the <b>Azure Portal</b>, create an <b>Azure Bot</b> resource and set its messaging endpoint to:<code className="setup-code">{API_URL}/bot/teams</code></div></li>
+          <li className="setup-step"><span className="num">2</span><div className="t">Copy the <b>App ID</b> and <b>App Password</b>, add them to your server environment, and restart the API.<code className="setup-code">TEAMS_BOT_APP_ID=…   TEAMS_BOT_APP_PASSWORD=…</code></div></li>
+          <li className="setup-step"><span className="num">3</span><div className="t">Download the manifest package below, then upload it in <b>Teams Admin Center → Apps → Manage apps → Upload an app</b>.</div></li>
+          <li className="setup-step"><span className="num">4</span><div className="t">Done — this card will show <b>Active</b> on the next load.</div></li>
         </ol>
-        {dlErr && <p style={{ color: "var(--rose)", fontSize: 12, margin: "0 0 8px" }}>Download failed — check that TEAMS_BOT_APP_ID is set and the API is running.</p>}
+        {dlErr && <p className="setup-err">Download failed — check that TEAMS_BOT_APP_ID is set and the API is running.</p>}
         <div className="modal-foot">
           <button className="modal-close" onClick={onClose}>Close</button>
           <button className="surf-install-btn btn-teams" onClick={handleDownload} disabled={downloading}>
@@ -138,26 +147,27 @@ function SlackInstallModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="admin-modal" onClick={onClose}>
       <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
-        <h3>Install SubstrateOS in Slack</h3>
-        <ol style={{ paddingLeft: 18, margin: "0 0 16px", lineHeight: 1.7, fontSize: 13 }}>
-          <li>Go to <b>api.slack.com/apps</b> → <b>Create new app</b> → From scratch → name it <b>SubstrateOS</b>.</li>
-          <li>Under <b>OAuth &amp; Permissions</b>, add bot scopes: <code>app_mentions:read</code>, <code>chat:write</code>, <code>im:read</code>, <code>im:write</code>.</li>
-          <li>Under <b>Event Subscriptions</b> → enable → set Request URL to:<br />
-            <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
-              {API_URL}/bot/slack
-            </code>
-            <br />Subscribe to <code>app_mention</code> and <code>message.im</code>.
-          </li>
-          <li><b>Install to workspace</b>, copy the <b>Bot User OAuth Token</b> and <b>Signing Secret</b>.</li>
-          <li>Set in your server environment:<br />
-            <code style={{ fontSize: 11, background: "var(--paper-2)", padding: "2px 6px", borderRadius: 4 }}>
-              SLACK_BOT_TOKEN=xoxb-… SLACK_SIGNING_SECRET=…
-            </code>
-            &nbsp;and restart the API — the card will show Active.
-          </li>
+        <div className="setup-hd">
+          <div className="lg sl-slack">{ICONS.slack}</div>
+          <div>
+            <h3>Connect SubstrateOS to Slack</h3>
+            <div className="sub">One-time setup · ~5 minutes · admin access to your Slack workspace</div>
+          </div>
+        </div>
+        <div className="setup-note">
+          <InfoIcon />
+          Each reply is scoped to what the asking user can see — SubstrateOS uses their identity, not a shared bot account.
+        </div>
+        <ol className="setup-steps">
+          <li className="setup-step"><span className="num">1</span><div className="t">Go to <b>api.slack.com/apps</b> → <b>Create New App</b> → <b>From scratch</b>, and name it <b>SubstrateOS</b>.</div></li>
+          <li className="setup-step"><span className="num">2</span><div className="t">Under <b>OAuth &amp; Permissions</b>, add the bot token scopes:<code className="setup-code">app_mentions:read   chat:write   im:read   im:write</code></div></li>
+          <li className="setup-step"><span className="num">3</span><div className="t">Under <b>Event Subscriptions</b>, enable events and set the Request URL, then subscribe to <code>app_mention</code> and <code>message.im</code>.<code className="setup-code">{API_URL}/bot/slack</code></div></li>
+          <li className="setup-step"><span className="num">4</span><div className="t"><b>Install to Workspace</b>, then copy the <b>Bot User OAuth Token</b> and the <b>Signing Secret</b>.</div></li>
+          <li className="setup-step"><span className="num">5</span><div className="t">Add them to your server environment and restart the API — this card will flip to <b>Active</b>.<code className="setup-code">SLACK_BOT_TOKEN=xoxb-…   SLACK_SIGNING_SECRET=…</code></div></li>
         </ol>
         <div className="modal-foot">
           <button className="modal-close" onClick={onClose}>Close</button>
+          <a className="surf-install-btn btn-slack" href="https://api.slack.com/apps" target="_blank" rel="noreferrer" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open Slack API ↗</a>
         </div>
       </div>
     </div>
@@ -177,17 +187,13 @@ function SurfaceCard({ meta, config, onToggle, onInstall, botConfigured }: CardP
 
   const footer = meta.installable ? (
     installed ? (
-      <div className="surf-installed">
-        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", display: "inline-block", flexShrink: 0 }} />
-        Installed in {workspace_name ?? "your workspace"}
-        {/* keep setup reachable: manifest re-download / install steps */}
-        <button
-          onClick={onInstall}
-          style={{ background: "none", border: "none", padding: 0, marginLeft: 8, color: "var(--ink-faint)", fontSize: 12, textDecoration: "underline", cursor: "pointer" }}
-        >
-          {meta.name === "teams" ? "manifest / setup" : "setup"}
-        </button>
-      </div>
+      <>
+        <div className="surf-installed">
+          <span className="d" />
+          Installed in {workspace_name ?? "your workspace"}
+        </div>
+        <button className="surf-setup" onClick={onInstall}>Setup guide</button>
+      </>
     ) : botConfigured && meta.name === "teams" ? (
       <button
         className="surf-install-btn btn-teams"
@@ -232,7 +238,6 @@ function SurfaceCard({ meta, config, onToggle, onInstall, botConfigured }: CardP
       </div>
       <div className="surf-foot">
         {footer}
-        <span className="surf-scope">{meta.scope}</span>
       </div>
     </div>
   );

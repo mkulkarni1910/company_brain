@@ -20,7 +20,13 @@ function toSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function StringList({ label, items, onChange }: { label: string; items: string[]; onChange: (v: string[]) => void }) {
+// Slugs are lowercase with no spaces — sanitize as the user types (keep trailing
+// hyphens so they can keep typing), without the leading/trailing strip toSlug does.
+function sanitizeSlug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+}
+
+function StringList({ label, addLabel, items, onChange }: { label: string; addLabel: string; items: string[]; onChange: (v: string[]) => void }) {
   const set = (i: number, v: string) => { const a = [...items]; a[i] = v; onChange(a); };
   const add = () => onChange([...items, ""]);
   const remove = (i: number) => onChange(items.filter((_, j) => j !== i));
@@ -33,7 +39,7 @@ function StringList({ label, items, onChange }: { label: string; items: string[]
           <button className="skill-list-remove" onClick={() => remove(i)} type="button">✕</button>
         </div>
       ))}
-      <button className="skill-list-add" onClick={add} type="button">+ Add</button>
+      <button className="skill-list-add" onClick={add} type="button"><span className="plus">+</span>{addLabel}</button>
     </div>
   );
 }
@@ -57,7 +63,7 @@ function SkillForm({ initial, onSave, onClose, saving }: {
           </div>
           <div className="skill-form-row">
             <label className="skill-form-label">Slug</label>
-            <input className="skill-form-input" value={f.slug} onChange={(e) => set("slug", e.target.value)} placeholder="seo-research" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }} />
+            <input className="skill-form-input" value={f.slug} onChange={(e) => set("slug", sanitizeSlug(e.target.value))} placeholder="seo-research" style={{ fontFamily: "var(--font-mono)", fontSize: 12 }} />
           </div>
         </div>
         <div className="skill-form-row">
@@ -83,8 +89,8 @@ function SkillForm({ initial, onSave, onClose, saving }: {
             </label>
           </div>
         </div>
-        <StringList label="Steps" items={f.steps} onChange={(v) => set("steps", v)} />
-        <StringList label="Data Feeds" items={f.data_feeds} onChange={(v) => set("data_feeds", v)} />
+        <StringList label="Steps" addLabel="Add step" items={f.steps} onChange={(v) => set("steps", v)} />
+        <StringList label="Data Feeds" addLabel="Add feed" items={f.data_feeds} onChange={(v) => set("data_feeds", v)} />
         <div className="skill-form-row">
           <label className="skill-form-label">System Prompt</label>
           <textarea className="skill-form-textarea" rows={6} value={f.system_prompt} onChange={(e) => set("system_prompt", e.target.value)} placeholder="Instructions injected into the query when this skill is active…" />
@@ -174,7 +180,7 @@ export default function AdminSkillsPage() {
                   <td><span className="skill-row-name">{s.name}</span><span className="skill-row-slug">/{s.slug}</span></td>
                   <td><span className={`skill-team ${teamClass(s.team)}`}>{s.team}</span></td>
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)" }}>{s.run_scope}</td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{s.rating > 0 ? `★ ${s.rating.toFixed(1)}` : "—"}</td>
+                  <td>{s.rating > 0 ? <span className="skill-rating"><span className="skill-star">★</span>{s.rating.toFixed(1)}</span> : <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-faint)" }}>—</span>}</td>
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{s.run_count}</td>
                   <td>
                     <button className={`sw${s.enabled ? " on" : ""}`} aria-label={s.enabled ? "Disable" : "Enable"} onClick={() => handleToggle(s)} />
