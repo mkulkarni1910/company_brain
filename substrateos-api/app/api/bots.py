@@ -236,7 +236,7 @@ async def slack_interactive(
         s.slack_signing_secret, x_slack_request_timestamp or "", raw_body, x_slack_signature or ""
     ):
         raise HTTPException(status_code=403, detail="invalid signature")
-    payload_raw = (parse_qs(raw_body.decode()).get("payload") or ["{}"])[0]
+    payload_raw = (parse_qs(raw_body.decode(errors="replace")).get("payload") or ["{}"])[0]
     try:
         payload = json.loads(payload_raw)
     except ValueError:
