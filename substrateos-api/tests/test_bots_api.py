@@ -562,6 +562,42 @@ def test_slack_memory_load_and_record(monkeypatch):
         get_settings.cache_clear()
 
 
+def test_slack_memory_thread_reply_same_cid(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    memory = _Memory()
+    app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
+    app.dependency_overrides[get_conversation_memory] = lambda: memory
+    try:
+        body = json.dumps({
+            "type": "event_callback",
+            "event": {"type": "app_mention", "text": "<@U1> and the limits?", "user": "u1",
+                      "channel": "C1", "ts": "222.333", "thread_ts": "111.222"},
+        }).encode()
+        ts = str(int(time.time()))
+        with (
+            patch("app.api.bots.post_slack_reply", new=AsyncMock(return_value=None)),
+            TestClient(app) as client,
+        ):
+            resp = client.post(
+                "/bot/slack", content=body,
+                headers={
+                    "content-type": "application/json",
+                    "x-slack-signature": _slack_sig(_SLACK_SECRET, ts, body),
+                    "x-slack-request-timestamp": ts,
+                },
+            )
+        assert resp.status_code == 200
+        assert memory.loaded == ["slack:C1:111.222"]
+        assert memory.recorded == [("slack:C1:111.222", "and the limits?")]
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
 def test_teams_memory_load_and_record(monkeypatch):
     monkeypatch.setenv("TEAMS_BOT_APP_ID", _TEAMS_APP_ID)
     monkeypatch.setenv("TEAMS_BOT_APP_PASSWORD", _TEAMS_PASSWORD)
@@ -569,6 +605,7 @@ def test_teams_memory_load_and_record(monkeypatch):
     get_settings.cache_clear()
     memory = _Memory()
     app.dependency_overrides[get_orchestrator] = lambda: _FakeOrchestrator()
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
     app.dependency_overrides[get_conversation_memory] = lambda: memory
     try:
         with (

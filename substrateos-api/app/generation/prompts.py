@@ -14,6 +14,8 @@ SYSTEM_PROMPT = (
     "'I don't have information about that.' Do not invent facts or sources."
 )
 
+_MARKER = re.compile(r"\[(\d+)\]")
+
 
 def build_grounded_messages(
     *,
@@ -34,12 +36,9 @@ def build_grounded_messages(
     messages: list[dict[str, str]] = [{"role": "system", "content": system}]
     for t in history or []:
         messages.append({"role": "user", "content": t.query})
-        messages.append({"role": "assistant", "content": t.answer.text})
+        messages.append({"role": "assistant", "content": _MARKER.sub("", t.answer.text).strip()})
     messages.append({"role": "user", "content": user})
     return messages
-
-
-_MARKER = re.compile(r"\[(\d+)\]")
 
 
 def parse_citations_from_answer(answer: str, candidates: list[Candidate]) -> list[Citation]:

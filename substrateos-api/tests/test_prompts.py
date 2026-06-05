@@ -98,3 +98,17 @@ def test_skill_prompt_still_prepended_with_history() -> None:
         query="q", candidates=[], skill_prompt="SKILL RULES", history=history
     )
     assert msgs[0]["content"].startswith("SKILL RULES")
+
+
+def test_history_answers_have_citation_markers_stripped() -> None:
+    history = [_history_turn("q", "PTO is 20 days. [1] See policy. [2]")]
+    msgs = build_grounded_messages(query="and?", candidates=[], history=history)
+    assert msgs[2]["content"] == "PTO is 20 days.  See policy."
+
+
+def test_multi_turn_history_ordering() -> None:
+    history = [_history_turn("a", "A"), _history_turn("b", "B")]
+    msgs = build_grounded_messages(query="c", candidates=[], history=history)
+    assert [m["role"] for m in msgs] == ["system", "user", "assistant", "user", "assistant", "user"]
+    assert msgs[1]["content"] == "a"
+    assert msgs[3]["content"] == "b"
