@@ -72,3 +72,26 @@ async def post_slack_reply(
     except Exception:  # noqa: BLE001
         logger.exception("Slack post_message failed")
         return "request_failed"
+
+
+async def slack_call(token: str, method: str, payload: dict) -> dict | None:
+    """POST a Slack Web API method; return the body when ok=true, else None.
+
+    Slack returns HTTP 200 even for API errors — `ok` in the body is the truth.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"https://slack.com/api/{method}",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                json=payload,
+                timeout=10.0,
+            )
+        body = resp.json()
+        if not body.get("ok"):
+            logger.warning("Slack %s failed: %s", method, body.get("error", "unknown_error"))
+            return None
+        return body
+    except Exception:  # noqa: BLE001
+        logger.exception("Slack %s request failed", method)
+        return None
