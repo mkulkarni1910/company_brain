@@ -15,6 +15,7 @@ class Skill(BaseModel):
     description: str
     team: str
     run_scope: Literal["org", "team"] = "org"
+    workflow: str | None = None  # e.g. "refund" — diverts to a workflow engine instead of plain RAG
     enabled: bool = True
     steps: list[str] = Field(default_factory=list)
     data_feeds: list[str] = Field(default_factory=list)
@@ -58,6 +59,7 @@ class SkillCreate(BaseModel):
     description: str
     team: str
     run_scope: Literal["org", "team"] = "org"
+    workflow: str | None = None
     enabled: bool = True
     steps: list[str] = Field(default_factory=list)
     data_feeds: list[str] = Field(default_factory=list)
@@ -70,6 +72,7 @@ class SkillUpdate(BaseModel):
     description: str | None = None
     team: str | None = None
     run_scope: Literal["org", "team"] | None = None
+    workflow: str | None = None
     enabled: bool | None = None
     steps: list[str] | None = None
     data_feeds: list[str] | None = None
@@ -92,3 +95,4 @@ class ResolvedSkill:
     name: str
     system_prompt: str
     clean_query: str  # query with /slug prefix stripped (or original query for auto)
+    workflow: str | None = None  # e.g. "refund" — diverts to a workflow engine instead of plain RAG

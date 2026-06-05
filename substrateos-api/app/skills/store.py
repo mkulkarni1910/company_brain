@@ -112,7 +112,7 @@ class SkillStore:
         skill = Skill(
             id=str(uuid.uuid4()),
             slug=data.slug, name=data.name, description=data.description,
-            team=data.team, run_scope=data.run_scope, enabled=data.enabled,
+            team=data.team, run_scope=data.run_scope, workflow=data.workflow, enabled=data.enabled,
             steps=data.steps, data_feeds=data.data_feeds,
             system_prompt=data.system_prompt, retrieval_config=data.retrieval_config,
             created_at=now, updated_at=now,

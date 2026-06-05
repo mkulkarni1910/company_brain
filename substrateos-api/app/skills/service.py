@@ -46,6 +46,7 @@ class SkillRouter:
         return ResolvedSkill(
             id=skill.id, slug=skill.slug, name=skill.name,
             system_prompt=skill.system_prompt, clean_query=clean or query,
+            workflow=skill.workflow,
         )
 
     async def _resolve_auto(self, query: str):
@@ -62,6 +63,7 @@ class SkillRouter:
         return ResolvedSkill(
             id=skill.id, slug=skill.slug, name=skill.name,
             system_prompt=skill.system_prompt, clean_query=query,
+            workflow=skill.workflow,
         )
 
     async def _llm_route(self, query: str, catalog: list[dict]) -> str | None:
