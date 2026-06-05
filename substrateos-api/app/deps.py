@@ -2,6 +2,7 @@ from fastapi import Request
 
 from app.activity.store import ActivityStore
 from app.cache.redis_cache import RedisCache
+from app.conversations.memory import ConversationMemory
 from app.conversations.store import ConversationStore
 from app.discover.service import DiscoverService
 from app.generation.azure_openai import AzureOpenAIClient
@@ -59,6 +60,10 @@ def get_search_service(request: Request) -> "SearchService | None":
 
 def get_conversation_store(request: Request) -> "ConversationStore | None":
     return getattr(request.app.state, "conversation_store", None)
+
+
+def get_conversation_memory(request: Request) -> "ConversationMemory":
+    return ConversationMemory(getattr(request.app.state, "conversation_store", None))
 
 
 def get_token_store(request: Request):

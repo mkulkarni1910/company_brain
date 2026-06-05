@@ -7,7 +7,13 @@ from fastapi import APIRouter, Depends, Header, Request
 
 from app.api._auth_resolve import resolve_user
 from app.config import get_settings
-from app.deps import get_conversation_store, get_orchestrator, get_skill_router_svc, get_skill_store, get_token_store
+from app.deps import (
+    get_conversation_memory,
+    get_orchestrator,
+    get_skill_router_svc,
+    get_skill_store,
+    get_token_store,
+)
 from app.domain.query import Answer, QueryRequest
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 
@@ -19,7 +25,7 @@ async def query(
     request: Request,
     body: QueryRequest,
     orchestrator: SemanticKernelOrchestrator = Depends(get_orchestrator),
-    conversation_store=Depends(get_conversation_store),
+    memory=Depends(get_conversation_memory),
     token_store=Depends(get_token_store),
     skill_store=Depends(get_skill_store),
     skill_router_svc=Depends(get_skill_router_svc),
@@ -53,8 +59,9 @@ async def query(
         else body
     )
 
+    history = await memory.load_history(user=user, conversation_id=body.conversation_id)
     answer = await orchestrator.answer(
-        effective_body, user=user, user_token=tok, skill_context=skill_ctx
+        effective_body, user=user, user_token=tok, skill_context=skill_ctx, history=history
     )
 
     # Fire-and-forget run_count increment — never blocks the response.
@@ -77,8 +84,8 @@ async def query(
     if metrics is not None:
         with contextlib.suppress(Exception):
             await metrics.record_query(user.tenant_id, user.user_id)
-    if body.conversation_id and conversation_store is not None:
-        await conversation_store.append(
+    if body.conversation_id:
+        await memory.record(
             user=user, conversation_id=body.conversation_id, query=body.query, answer=answer
         )
     return answer
