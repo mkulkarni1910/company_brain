@@ -104,6 +104,11 @@ class Settings(BaseSettings):
     slack_bot_token: str | None = None         # SLACK_BOT_TOKEN
     slack_signing_secret: str | None = None    # SLACK_SIGNING_SECRET
     slack_refund_approver_id: str | None = None  # SLACK_REFUND_APPROVER_ID — Diana's Slack member ID
+    # User directory + Entra-driven approval routing
+    entra_managers_group: str = "Managers"        # Entra group → role "manager"
+    entra_agents_group: str = "Support Agent"     # Entra group → role "agent"
+    slack_refund_channel_id: str | None = None    # SLACK_REFUND_CHANNEL_ID — customer requests land here
+    directory_sync_interval_hours: float = 24.0   # daily Slack+Entra directory sync
 
     # GitHub tool (raise-PR action connector). App-level OAuth App credentials —
     # per-user tokens are obtained through the user's own GitHub login and stored
