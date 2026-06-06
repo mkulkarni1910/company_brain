@@ -2,7 +2,7 @@
 
 When → Check → Stop → Do → Record: a user asks to route something for sign-off,
 SubstrateOS resolves the approver (the requester's manager from the Entra `manages`
-edge, with a configured fallback), DMs them an Approve/Reject card, and records
+edge, or stops), DMs them an Approve/Reject card, and records
 every step. Nothing acts until a human decides. Lifts the RefundFlow pattern but
 drops the refund-specific policy engine — the whole point is human sign-off.
 """
@@ -66,13 +66,13 @@ class ApprovalFlow:
             payload["thread_ts"] = thread_ts
         return await slack_call(token, "chat.postMessage", payload)
 
-    # ── approver resolution (manager → fallback) ───────────────────────────────
+    # ── approver resolution (manager or stop) ─────────────────────────────────
 
     async def _resolve_approver(self, token: str, requester_slack_id: str | None,
                                 tenant_id: str) -> tuple[str | None, str | None, str]:
-        """Returns (approver_slack_id, approver_name, source). Source is one of
-        'manager' / 'fallback' / 'none'."""
-        # 1) the requester's manager, via Slack email → graph manages-edge → Slack.
+        """Returns (approver_slack_id, approver_name, source). Source is
+        'manager' or 'none' — there is no fallback approver: the playbook
+        stops rather than guessing who may sign off."""
         if self._people is not None:
             email = await self._email(token, requester_slack_id)
             if email:
@@ -81,10 +81,6 @@ class ApprovalFlow:
                     sid = await self._slack_id_for_email(token, mgr.get("email"))
                     if sid:
                         return sid, mgr.get("display_name") or "your manager", "manager"
-        # 2) configured fallback approver.
-        fb = get_settings().slack_refund_approver_id
-        if fb:
-            return fb, (await self._display_name(token, fb) or "an approver"), "fallback"
         return None, None, "none"
 
     # ── inbound request ────────────────────────────────────────────────────────
@@ -119,7 +115,7 @@ class ApprovalFlow:
         run.approver_name = approver_name
         run.approver_source = source
         await self._store.save(run)
-        role = "requester's manager" if source == "manager" else "configured approver"
+        role = "requester's manager"
         await self._store.add_event(
             run.id, step="Approver resolved",
             detail=f"{approver_name} — {role}",

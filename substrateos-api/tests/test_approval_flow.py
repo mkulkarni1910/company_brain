@@ -82,9 +82,9 @@ async def test_routes_to_resolved_manager(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_falls_back_to_configured_approver(monkeypatch):
+async def test_no_manager_means_no_fallback(monkeypatch):
+    """No env-var fallback approver exists anymore — manager or stop."""
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
-    monkeypatch.setenv("SLACK_REFUND_APPROVER_ID", "U_FB")
     from app.config import get_settings
     get_settings.cache_clear()
     store = RunStore(client=None, force_memory=True)
@@ -94,15 +94,14 @@ async def test_falls_back_to_configured_approver(monkeypatch):
         await flow.handle_request(text="get this signed off", channel="C", thread_ts=None,
                                   requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
-    assert run.status == "pending_approval"
-    assert run.approver_source == "fallback"
-    assert run.approver_name == "Sam Approver"
+    assert run.status == "error"
+    assert run.approver_source is None
+    assert "conversations.open" not in [m for m, _ in calls]
 
 
 @pytest.mark.asyncio
 async def test_no_approver_asks_requester(monkeypatch):
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
-    monkeypatch.delenv("SLACK_REFUND_APPROVER_ID", raising=False)
     from app.config import get_settings
     get_settings.cache_clear()
     store = RunStore(client=None, force_memory=True)
