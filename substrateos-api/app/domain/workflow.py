@@ -5,7 +5,10 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-RunStatus = Literal["running", "pending_approval", "approved", "rejected", "completed", "error"]
+RunStatus = Literal[
+    "running", "pending_approval", "pending_confirm",
+    "approved", "rejected", "completed", "cancelled", "error",
+]
 
 
 class RefundDecision(BaseModel):
@@ -29,7 +32,17 @@ class RunEvent(BaseModel):
     actor: str
 
 
-RunKind = Literal["refund", "approval"]
+RunKind = Literal["refund", "approval", "github_pr"]
+
+
+class PrDraft(BaseModel):
+    """The AI-drafted change awaiting the requester's confirm (github_pr runs)."""
+    path: str
+    base_sha: str       # sha of the current file (Contents API requires it on update)
+    new_content: str
+    summary: str        # one-line, shown on the preview card
+    title: str          # PR title
+    body: str           # PR description (markdown)
 
 
 class RefundRun(BaseModel):
@@ -49,5 +62,10 @@ class RefundRun(BaseModel):
     # generic approval playbook
     request_text: str | None = None
     approver_source: str | None = None  # "manager" | "fallback" | "mention"
+    # github_pr playbook
+    surface: str | None = None          # "web" | "slack" | "teams"
+    requester_email: str | None = None  # identity key for the per-user GitHub token
+    pr_draft: PrDraft | None = None
+    pr_url: str | None = None
     created_at: datetime
     updated_at: datetime

@@ -75,3 +75,10 @@ class SurfaceConfig(BaseModel):
     enabled: bool = True
     installed: bool = False
     workspace_name: str | None = None
+
+
+class GithubConfig(BaseModel):
+    """Admin-configured PR target for the GitHub tool."""
+    owner: str
+    repo: str
+    base_branch: str = "main"
