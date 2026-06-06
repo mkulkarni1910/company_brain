@@ -392,7 +392,6 @@ function SurfaceCard({ meta, config, onToggle, onInstall, botConfigured }: CardP
 export default function Surfaces() {
   const [configs, setConfigs] = useState<SurfaceConfig[]>([]);
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
-  const [ghCfg, setGhCfg] = useState<GithubConfig | null>(null);
   const [installModal, setInstallModal] = useState<"teams" | "slack" | "github" | null>(null);
   const [err, setErr] = useState(false);
   const [filter, setFilter] = useState<SurfFilter>("all");
@@ -403,7 +402,6 @@ export default function Surfaces() {
       .then(([surfaces, status, cfg]) => {
         setConfigs(surfaces);
         setBotStatus(status);
-        setGhCfg(cfg);
         // Auto-heal: if bot is configured but not yet marked installed, sync DB.
         const heal = (name: string, wsName: string, configured: boolean) => {
           const sc = surfaces.find((s) => s.name === name);
@@ -439,6 +437,17 @@ export default function Surfaces() {
 
   const handleInstall = (name: string) => {
     if (name === "teams" || name === "slack" || name === "github") setInstallModal(name);
+  };
+
+  // After the repo is saved in the modal, flip the card to "Connected to owner/repo"
+  // immediately — same sync the load-time auto-heal performs.
+  const healGithub = (cfg: GithubConfig) => {
+    if (!cfg.app_configured || !cfg.repo_configured) return;
+    const sc = configOf("github");
+    if (sc.installed) return;
+    patchSurface("github", sc.enabled, { installed: true, workspace_name: `${cfg.owner}/${cfg.repo}` })
+      .then((updated) => setConfigs((prev) => prev.map((c) => (c.name === "github" ? updated : c))))
+      .catch(() => {});
   };
 
   const enriched = SURFACES.map((meta) => {
@@ -521,7 +530,7 @@ export default function Surfaces() {
       </div>
       {installModal === "teams" && <TeamsInstallModal onClose={() => setInstallModal(null)} />}
       {installModal === "slack" && <SlackInstallModal onClose={() => setInstallModal(null)} />}
-      {installModal === "github" && <GithubInstallModal onClose={() => setInstallModal(null)} onSaved={(c) => setGhCfg(c)} />}
+      {installModal === "github" && <GithubInstallModal onClose={() => setInstallModal(null)} onSaved={healGithub} />}
     </div>
     </div>
   );
