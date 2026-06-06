@@ -20,10 +20,11 @@ from app.domain.audit import Actor, AuditEvent
 logger = logging.getLogger(__name__)
 _ERRORS = (RedisError, ConnectionError, TimeoutError, OSError)
 
-# Bound both stores so a long-running process can't leak heap and a run's Redis
-# list can't grow without limit. A single governed run emits a handful of events;
-# this cap is generous and only protects against pathological loops.
-_MAX_EVENTS_PER_RUN = 1000
+# Heap guard for the in-process mirror only. The durable Redis trail is NEVER
+# trimmed — an audit log must not drop its own events. A single governed run emits
+# a handful of events; this cap only protects the mirror against pathological loops,
+# and it preserves the EARLIEST events (provenance start) rather than the latest.
+_MAX_MEM_EVENTS_PER_RUN = 5000
 
 
 def _audit_key(run_id: str) -> str:
@@ -55,22 +56,28 @@ class AuditLog:
                 await self._r.aclose()
 
     async def append(self, event: AuditEvent) -> None:
-        """Append one event. Best-effort on the Redis hop: on a Redis error the
-        event is retained in the in-process mirror and the failure is logged
-        (NOT silently dropped) so it surfaces in telemetry. The in-memory mirror
-        is capped per run to bound heap; durable/tamper-evident storage is a
-        documented follow-up."""
+        """Append one event.
+
+        Durable trail (Redis) is never trimmed. The in-process mirror is a
+        degraded-mode cache, bounded per run; on overflow it keeps the EARLIEST
+        events (so the provenance start — Request received / Rule evaluated — is
+        never the thing that's lost) and logs loudly. Redis errors are logged,
+        not silently swallowed; durable/tamper-evident storage is a follow-up.
+        """
         blob = event.model_dump_json()
         bucket = self._mem.setdefault(event.run_id, [])
-        bucket.append(blob)
-        if len(bucket) > _MAX_EVENTS_PER_RUN:
-            del bucket[: len(bucket) - _MAX_EVENTS_PER_RUN]
+        if len(bucket) < _MAX_MEM_EVENTS_PER_RUN:
+            bucket.append(blob)
+        else:
+            logger.error(
+                "AuditLog: run %s exceeded %d mirror events; newest dropped from the "
+                "in-memory mirror (earliest preserved; Redis trail remains complete)",
+                event.run_id, _MAX_MEM_EVENTS_PER_RUN,
+            )
         if self._r is None:
             return
         try:
-            key = _audit_key(event.run_id)
-            await self._r.rpush(key, blob)
-            await self._r.ltrim(key, -_MAX_EVENTS_PER_RUN, -1)
+            await self._r.rpush(_audit_key(event.run_id), blob)  # durable: no ltrim
         except _ERRORS as e:
             logger.warning("AuditLog.append redis failed (kept in memory mirror): %s", e)
 

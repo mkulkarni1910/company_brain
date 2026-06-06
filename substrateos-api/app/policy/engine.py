@@ -17,19 +17,14 @@ from app.domain.policy import Condition, Decision, Policy
 
 logger = logging.getLogger(__name__)
 
-_MISSING = object()
-
 
 class PolicyEngine:
     """Decide allow | require_approval | deny | stop deterministically, in code."""
 
     def evaluate(self, policy: Policy, facts: dict) -> Decision:
-        # 1. fail closed on missing/None facts
-        missing = [
-            c.fact
-            for c in policy.all
-            if facts.get(c.fact, _MISSING) is _MISSING or facts.get(c.fact) is None
-        ]
+        # 1. fail closed on missing/None facts (a default-less get returns None for
+        #    an absent key, so `is None` covers both "absent" and "explicit None")
+        missing = [c.fact for c in policy.all if facts.get(c.fact) is None]
         if missing:
             return self._decision(
                 policy,

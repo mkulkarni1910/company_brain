@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 RunStatus = Literal[
-    "running", "pending_approval", "approved", "rejected", "denied", "completed", "error"
+    "running", "pending_approval", "approved", "rejected", "denied", "halted", "completed", "error"
 ]
 
 

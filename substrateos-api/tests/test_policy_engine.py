@@ -119,3 +119,23 @@ def test_in_op_requires_a_container_value():
         Condition(fact="channel", op="in", value="sms")  # must be a list
     # a proper list is accepted
     assert Condition(fact="channel", op="in", value=["sms", "email"]).op == "in"
+
+
+def test_store_hot_reloads_on_file_change_no_restart(tmp_path):
+    # "flip 500 -> 300 in the file, no code change" must take effect without a restart.
+    import os
+
+    body = (
+        "id: refund.v1\nversion: 1\nowner: x\n"
+        "all:\n  - {{fact: amount_usd, op: '<=', value: {v} }}\n"
+        "on_pass: allow\non_fail: require_approval\non_missing_data: stop\n"
+    )
+    p = tmp_path / "refund.v1.yaml"
+    p.write_text(body.format(v=500))
+    os.utime(p, (1000, 1000))
+    store = PolicyStore(tmp_path)
+    assert store.load("refund.v1").all[0].value == 500
+
+    p.write_text(body.format(v=300))
+    os.utime(p, (2000, 2000))  # new mtime → cache invalidated, next load reflects the edit
+    assert store.load("refund.v1").all[0].value == 300

@@ -96,9 +96,90 @@ async def test_require_approval_opens_durable_pending(monkeypatch):
     assert run.status == "pending_approval"
     # a DURABLE, role-scoped pending approval now backs the run
     assert run.approval_id and run.approval_id.startswith("AP-")
-    pending = await approvals._store.get(run.approval_id)
+    pending = await approvals.get_pending(run.approval_id)
     assert pending is not None and pending.required_role == "support_manager"
     assert pending.rule_id == "refund.v1"
+
+
+def _require_approval_policy() -> Policy:
+    return Policy(
+        id="refund.v1", version=1, owner="support_manager",
+        all=[Condition(fact="amount_usd", op="<=", value=500),
+             Condition(fact="order_age_days", op="<=", value=30)],
+        on_pass="allow", on_fail="require_approval",
+        required_role="support_manager", on_missing_data="stop",
+    )
+
+
+@pytest.mark.asyncio
+async def test_stop_halts_without_routing_or_pending(monkeypatch):
+    flow, store, audit, approvals = _flow_with(_require_approval_policy(), monkeypatch)
+    # facts missing order_age_days → PolicyEngine returns 'stop' (fail closed)
+    flow._engine.evaluate.return_value = RefundFacts(
+        found=True, order_id="48213", customer="X", amount_usd=1200,
+        order_age_days=None, reasoning="order age unknown",
+    )
+    with patch("app.workflows.flow.slack_call", new=_noop_slack):
+        await flow.handle_request(text="refund", channel="C", thread_ts=None,
+                                  requester_slack_id=None, user=_user())
+    run = (await store.list_runs())[0]
+    assert run.status == "halted"          # NOT pending_approval
+    assert run.approval_id is None         # no durable pending opened for a stop
+    steps = [e.step for e in await store.list_events(run.id)]
+    assert "Halted" in steps and "Routed for approval" not in steps
+
+
+@pytest.mark.asyncio
+async def test_governed_resolution_closes_pending_and_stamps_rule(monkeypatch):
+    monkeypatch.setenv("SLACK_REFUND_APPROVER_ID", "U_DIANA")
+    flow, store, audit, approvals = _flow_with(_require_approval_policy(), monkeypatch)
+    with patch("app.workflows.flow.slack_call", new=_noop_slack):
+        await flow.handle_request(text="refund 1200", channel="C", thread_ts="t1",
+                                  requester_slack_id="U_TOM", user=_user())
+    run = (await store.list_runs())[0]
+    assert run.status == "pending_approval" and run.approval_id
+
+    payload = {
+        "type": "block_actions", "user": {"id": "U_DIANA", "name": "diana"},
+        "container": {"channel_id": "D", "message_ts": "1"},
+        "actions": [{"action_id": "refund_approve", "value": run.id}],
+    }
+    with patch("app.workflows.flow.slack_call", new=_noop_slack):
+        await flow.handle_action(payload)
+
+    loaded = await store.get(run.id)
+    assert loaded.status == "completed"
+    # the pending is CLOSED — no orphaned 'pending' record left behind
+    pending = await approvals.get_pending(run.approval_id)
+    assert pending is not None and pending.status == "approved"
+    # the resolution event is identity- AND rule-stamped
+    approved = next(e for e in await audit.query(run.id) if e.step == "Approved")
+    assert approved.actor.type == "human" and approved.actor.idp == "entra"
+    assert approved.rule == {"id": "refund.v1", "version": 1}
+
+
+@pytest.mark.asyncio
+async def test_unauthorized_clicker_cannot_decide(monkeypatch):
+    monkeypatch.setenv("SLACK_REFUND_APPROVER_ID", "U_DIANA")
+    flow, store, audit, approvals = _flow_with(_require_approval_policy(), monkeypatch)
+    with patch("app.workflows.flow.slack_call", new=_noop_slack):
+        await flow.handle_request(text="refund 1200", channel="C", thread_ts="t1",
+                                  requester_slack_id="U_TOM", user=_user())
+    run = (await store.list_runs())[0]
+
+    # a random user (not the configured approver) clicks Approve
+    payload = {
+        "type": "block_actions", "user": {"id": "U_RANDO", "name": "rando"},
+        "container": {"channel_id": "D", "message_ts": "1"},
+        "actions": [{"action_id": "refund_approve", "value": run.id}],
+    }
+    with patch("app.workflows.flow.slack_call", new=_noop_slack):
+        await flow.handle_action(payload)
+
+    loaded = await store.get(run.id)
+    assert loaded.status == "pending_approval"          # click refused, run unchanged
+    pending = await approvals.get_pending(run.approval_id)
+    assert pending is not None and pending.status == "pending"  # not decided by an outsider
 
 
 @pytest.mark.asyncio

@@ -81,6 +81,9 @@ class ApprovalService:
             )
         return pending.id
 
+    async def get_pending(self, approval_id: str) -> PendingApproval | None:
+        return await self._store.get(approval_id)
+
     async def resolve(
         self, approval_id: str, choice: ApprovalChoice, identity: User, *, note: str | None = None
     ) -> ApprovalDecision:
