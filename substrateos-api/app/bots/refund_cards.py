@@ -104,3 +104,21 @@ def outcome_blocks(d: RefundDecision, *, approved: bool, approver_name: str) -> 
         {"type": "section", "text": {"type": "mrkdwn", "text": f"{head}\n{body}"}},
         {"type": "context", "elements": [{"type": "mrkdwn", "text": ":lock: recorded with the decision"}]},
     ])]}
+
+
+def customer_request_blocks(*, request_text: str, customer_name: str, run_id: str) -> dict:
+    """Channel card for a customer's refund ask — needs a support agent to pick
+    it up and run the playbook themselves (customers can't trigger refunds)."""
+    return {
+        "blocks": [{"type": "section", "text": {"type": "mrkdwn",
+            "text": f":wave: *Customer refund request* — needs a support agent · run {run_id}"}}],
+        "attachments": [_bar(_AMBER, [
+            {"type": "section", "fields": [
+                {"type": "mrkdwn", "text": f"*From*\n{customer_name}"},
+                {"type": "mrkdwn", "text": f"*Request*\n{request_text[:500]}"},
+            ]},
+            {"type": "context", "elements": [{"type": "mrkdwn",
+                "text": "Customers can't trigger refunds directly — an agent should "
+                        "pick this up and run it."}]},
+        ])],
+    }

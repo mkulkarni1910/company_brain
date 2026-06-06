@@ -68,3 +68,16 @@ def test_auto_approved_blocks():
     d = _D.model_copy(update={"auto_approve": True, "amount_usd": 89.0, "order_id": "48190"})
     s = _text(auto_approved_blocks(d, run_id="RB-4472"))
     assert "Auto-approved" in s and "$89" in s
+
+
+def test_customer_request_blocks():
+    from app.bots.refund_cards import customer_request_blocks
+
+    card = customer_request_blocks(
+        request_text="I want a refund for order 48213",
+        customer_name="Priya Sharma", run_id="RB-4480",
+    )
+    assert "RB-4480" in card["blocks"][0]["text"]["text"]
+    body = str(card["attachments"])
+    assert "Priya Sharma" in body and "order 48213" in body
+    assert card["attachments"][0]["color"] == "#c8860d"  # amber: waiting on a human
