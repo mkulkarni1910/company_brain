@@ -313,6 +313,7 @@ async def bot_status() -> dict:
             "app_id": s.teams_bot_app_id,
         },
         "slack": {"configured": bool(s.slack_bot_token and s.slack_signing_secret)},
+        "github": {"configured": bool(s.github_client_id and s.github_client_secret)},
     }
 
 
