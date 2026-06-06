@@ -8,12 +8,14 @@ export type RefundDecision = {
   auto_approve: boolean; reasoning: string;
 };
 
+// Mirrors substrateos-api app/domain/workflow.py PrDraft (UI reads path/summary/title).
 export type PrDraft = {
   path?: string | null;
+  base_sha?: string | null;
+  new_content?: string | null;
   summary?: string | null;
   title?: string | null;
-  branch?: string | null;
-  commit_message?: string | null;
+  body?: string | null;
 };
 
 export type RunSummary = {
