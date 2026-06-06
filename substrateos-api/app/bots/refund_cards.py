@@ -1,6 +1,19 @@
+"""Slack cards for the refund playbook.
+
+Each builder returns a message-payload fragment ({"blocks": [...], "attachments":
+[...]}) that the flow spreads into chat.postMessage / chat.update. The colored
+left-bar (amber for "needs approval", green for approved, red for rejected) comes
+from a message *attachment* with a `color` — the one piece of Slack styling that
+lets these read as cards rather than a flat mrkdwn dump.
+"""
+
 from __future__ import annotations
 
 from app.domain.workflow import RefundDecision
+
+_AMBER = "#c8860d"
+_GREEN = "#2f8f5b"
+_RED = "#c8546a"
 
 
 def _usd(v: float | None) -> str:
@@ -19,58 +32,75 @@ def _facts_fields(d: RefundDecision) -> dict:
     }
 
 
-def needs_approval_blocks(d: RefundDecision, *, approver_label: str, run_id: str) -> list[dict]:
-    return [
-        {"type": "section", "text": {"type": "mrkdwn",
-         "text": f":warning: *I can't auto-approve this one.*  `Needs approval` · run {run_id}"}},
-        _facts_fields(d),
-        {"type": "section", "text": {"type": "mrkdwn",
-         "text": f"*Why:* {d.reasoning}\n*What I'm doing:* Routed to *{approver_label}* for approval. I'll update here."}},
-    ]
+def _bar(color: str, blocks: list[dict]) -> dict:
+    return {"color": color, "blocks": blocks}
 
 
-def auto_approved_blocks(d: RefundDecision, *, run_id: str) -> list[dict]:
-    return [
-        {"type": "section", "text": {"type": "mrkdwn",
-         "text": f":white_check_mark: *Auto-approved within policy.* · run {run_id}"}},
-        _facts_fields(d),
-        {"type": "section", "text": {"type": "mrkdwn",
-         "text": f"*Why:* {d.reasoning}\n*Done:* Refund of {_usd(d.amount_usd)} issued to "
-                 f"{d.customer} on order #{d.order_id}. Recorded in the audit log."}},
-    ]
+def needs_approval_blocks(d: RefundDecision, *, approver_label: str, run_id: str) -> dict:
+    return {
+        "blocks": [{"type": "section", "text": {"type": "mrkdwn",
+            "text": f":warning: *I can't auto-approve this one.*  `Needs approval` · run {run_id}"}}],
+        "attachments": [_bar(_AMBER, [
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"*Why*\n{d.reasoning}"}},
+            {"type": "section", "text": {"type": "mrkdwn",
+                "text": f"*What I'm doing*\nRouted to *{approver_label}* for approval. I'll update here."}},
+        ])],
+    }
 
 
-def approval_dm_blocks(d: RefundDecision, *, requester_name: str, run_id: str) -> list[dict]:
-    return [
-        {"type": "header", "text": {"type": "plain_text", "text": "Refund needs your approval"}},
-        _facts_fields(d),
-        {"type": "section", "text": {"type": "mrkdwn",
-         "text": f"*Requested by:* {requester_name}\n*Reason:* {d.reasoning}\n_run {run_id}_"}},
-        {"type": "actions", "elements": [
-            {"type": "button", "style": "primary", "action_id": "refund_approve",
-             "value": run_id, "text": {"type": "plain_text", "text": "Approve"}},
-            {"type": "button", "style": "danger", "action_id": "refund_reject",
-             "value": run_id, "text": {"type": "plain_text", "text": "Reject"}},
-        ]},
-    ]
+def auto_approved_blocks(d: RefundDecision, *, run_id: str) -> dict:
+    return {
+        "blocks": [{"type": "section", "text": {"type": "mrkdwn",
+            "text": f":white_check_mark: *Auto-approved within policy.* · run {run_id}"}}],
+        "attachments": [_bar(_GREEN, [
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"*Why*\n{d.reasoning}"}},
+            {"type": "section", "text": {"type": "mrkdwn",
+                "text": f"*Done*\nRefund of {_usd(d.amount_usd)} issued to {d.customer} on order "
+                        f"#{d.order_id}. Recorded in the audit log."}},
+        ])],
+    }
 
 
-def decided_dm_blocks(d: RefundDecision, *, approved: bool, approver_name: str) -> list[dict]:
+def approval_dm_blocks(d: RefundDecision, *, requester_name: str, run_id: str) -> dict:
+    return {
+        "blocks": [
+            {"type": "header", "text": {"type": "plain_text", "text": "Refund needs your approval"}},
+            _facts_fields(d),
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"*Requested by*\n{requester_name}"}},
+        ],
+        # callout + buttons in an amber attachment so the action zone reads as a card.
+        "attachments": [_bar(_AMBER, [
+            {"type": "section", "text": {"type": "mrkdwn",
+                "text": f"Over the auto-approve limit (*{_usd(d.policy_limit_usd)} / "
+                        f"{d.policy_limit_days} days*). Your approval is required before the refund is issued."}},
+            {"type": "actions", "elements": [
+                {"type": "button", "style": "primary", "action_id": "refund_approve",
+                 "value": run_id, "text": {"type": "plain_text", "text": "Approve"}},
+                {"type": "button", "style": "danger", "action_id": "refund_reject",
+                 "value": run_id, "text": {"type": "plain_text", "text": "Reject"}},
+            ]},
+        ])],
+    }
+
+
+def decided_dm_blocks(d: RefundDecision, *, approved: bool, approver_name: str) -> dict:
     verdict = "Approved" if approved else "Rejected"
     icon = ":white_check_mark:" if approved else ":x:"
-    return [
+    return {"attachments": [_bar(_GREEN if approved else _RED, [
         {"type": "section", "text": {"type": "mrkdwn",
-         "text": f"{icon} *{verdict} by {approver_name}*\nRefund of {_usd(d.amount_usd)} on "
-                 f"order #{d.order_id} · decision recorded in the audit log."}},
-    ]
+            "text": f"{icon} *{verdict} by {approver_name}*\nRefund of {_usd(d.amount_usd)} on order #{d.order_id}"}},
+        {"type": "context", "elements": [{"type": "mrkdwn", "text": ":lock: decision recorded in the audit log"}]},
+    ])]}
 
 
-def outcome_blocks(d: RefundDecision, *, approved: bool, approver_name: str) -> list[dict]:
+def outcome_blocks(d: RefundDecision, *, approved: bool, approver_name: str) -> dict:
     if approved:
-        text = (f":white_check_mark: *Approved* by *{approver_name}*.\nRefund of "
-                f"{_usd(d.amount_usd)} issued to {d.customer} on order #{d.order_id}. "
-                "Confirmation sent to the customer; the full record is in the audit log.")
+        head = f":white_check_mark: *Approved by {approver_name}*"
+        body = f"Refund of {_usd(d.amount_usd)} issued to {d.customer} on order #{d.order_id}. Confirmation sent."
     else:
-        text = (f":x: *Rejected* by *{approver_name}*.\nThe refund of {_usd(d.amount_usd)} on "
-                f"order #{d.order_id} was declined. The decision is recorded in the audit log.")
-    return [{"type": "section", "text": {"type": "mrkdwn", "text": text}}]
+        head = f":x: *Rejected by {approver_name}*"
+        body = f"The refund of {_usd(d.amount_usd)} on order #{d.order_id} was declined."
+    return {"attachments": [_bar(_GREEN if approved else _RED, [
+        {"type": "section", "text": {"type": "mrkdwn", "text": f"{head}\n{body}"}},
+        {"type": "context", "elements": [{"type": "mrkdwn", "text": ":lock: recorded with the decision"}]},
+    ])]}

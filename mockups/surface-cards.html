@@ -137,6 +137,77 @@ Full-time employees accrue <b>20 days</b> off, prorated by start date.
     </div>
   </div>
   <p class="note">Manager resolved from the Entra <code>manages</code> edge (Tom → Diana). Decision flows back to the channel and is recorded in Runs → Audit. Source: app/workflows/approval.py · app/bots/approval_cards.py</p>
+
+  <div class="eyebrow">Refund cards — refined (Slack attachments give the colored left-bar)</div>
+  <style>
+    .acard{border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08);max-width:560px;margin-bottom:18px}
+    .acard-bar{border-left:4px solid var(--amber);border-radius:0 8px 8px 0;background:#fbf6ec;padding:13px 16px;margin:0}
+    .acard-bar.green{border-left-color:var(--green);background:#eef7f1}
+    .acard-pad{padding:14px 16px}
+    .alabel{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);font-weight:600;margin-bottom:2px}
+    .facts{display:grid;grid-template-columns:auto auto;gap:3px 26px;margin:4px 0}
+    .facts .k{color:var(--dim);font-size:13.5px}.facts .v{font-weight:700;font-size:13.5px}
+    .needs-pill{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;background:var(--amber-bg,#f6e7c8);color:#7a5410;border-radius:20px;padding:3px 10px;margin-left:8px}
+    .check{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:18px;flex:none}
+  </style>
+  <div class="cols">
+    <div class="panel" style="background:transparent;border:none;box-shadow:none">
+      <div class="cap good">① Channel — needs approval</div>
+      <div class="msg" style="padding-left:0">
+        <div class="av"></div>
+        <div style="flex:1">
+          <div class="who">SubstrateOS<span class="bot">APP</span></div>
+          <div class="body" style="margin:2px 0 8px">⚠️ <b>I can't auto-approve this one.</b> <span class="needs-pill">Needs approval</span> · run RB-4478</div>
+          <div class="acard"><div class="acard-bar">
+            <div class="alabel">Why</div>
+            <div style="margin-bottom:9px">$1,200 over 45 days is past the policy limit of <b>$500</b> and <b>30 days</b>.</div>
+            <div class="alabel">What I'm doing</div>
+            <div>Routed to <b>Diana Foster</b> (Support Manager) for approval. I'll update here.</div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="background:transparent;border:none;box-shadow:none">
+      <div class="cap good">② Manager DM — Approve / Reject</div>
+      <div class="acard">
+        <div class="acard-pad" style="border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+          <div class="av" style="width:30px;height:30px;border-radius:7px"></div>
+          <div><div style="font-weight:700;font-size:13px">SubstrateOS</div><div style="color:var(--dim);font-size:11.5px">Approval required · just now</div></div>
+        </div>
+        <div class="acard-pad">
+          <div style="font-weight:700;font-size:16px;margin-bottom:9px">Refund needs your approval</div>
+          <div class="facts">
+            <span class="k">Customer</span><span class="v">Priya Sharma</span>
+            <span class="k">Order</span><span class="v">#48213</span>
+            <span class="k">Amount</span><span class="v">$1,200</span>
+            <span class="k">Age</span><span class="v">45 days</span>
+            <span class="k">Requested by</span><span class="v">Tom Reyes (Support)</span>
+          </div>
+          <div class="acard-bar" style="margin-top:11px;border-radius:8px">Over the auto-approve limit (<b>$500 / 30 days</b>). Your approval is required before the refund is issued.</div>
+          <div style="margin-top:12px"><a class="sbtn" href="#" style="background:#5b5fc7;color:#fff;border-color:#5b5fc7">Approve</a><a class="sbtn" href="#">Reject</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="background:transparent;border:none;box-shadow:none;max-width:560px">
+    <div class="cap good">③ After the decision — recorded</div>
+    <div class="acard">
+      <div class="acard-pad" style="border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">
+        <div class="av" style="width:30px;height:30px;border-radius:7px"></div>
+        <div><div style="font-weight:700;font-size:13px">SubstrateOS</div><div style="color:var(--dim);font-size:11.5px">Approval required · just now</div></div>
+      </div>
+      <div class="acard-pad">
+        <div class="acard-bar green" style="border-radius:8px;display:flex;align-items:center;gap:13px">
+          <div class="check">✓</div>
+          <div><div style="font-weight:700;font-size:15px;color:#1f6b41">Approved by Diane Foster</div><div style="color:var(--dim);font-size:13px">Refund of $1,200 on order #48213 · 10:34 AM</div></div>
+        </div>
+        <div style="color:var(--dim);font-size:12px;margin-top:10px">🔒 Signed in with Microsoft Entra ID · diane.foster@acme.com · recorded with the decision</div>
+      </div>
+    </div>
+  </div>
+  <p class="note">Slack can't do colored text / right-aligned values / dotted separators — but message <b>attachments</b> give the amber &amp; green left-bars, plus a header, facts, and the 🔒 Entra footer. Source: app/bots/refund_cards.py (+ approval_cards.py).</p>
 </div>
 </body>
 </html>

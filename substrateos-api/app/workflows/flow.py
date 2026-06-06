@@ -40,10 +40,10 @@ class RefundFlow:
         return profile.get("display_name") or u.get("real_name") or u.get("name")
 
     async def _post(self, token: str, channel: str, thread_ts: str | None,
-                    *, text: str, blocks: list[dict] | None = None) -> dict | None:
+                    *, text: str, card: dict | None = None) -> dict | None:
         payload: dict = {"channel": channel, "text": text}
-        if blocks:
-            payload["blocks"] = blocks
+        if card:
+            payload.update(card)  # {"blocks": [...], "attachments": [...]}
         if thread_ts:
             payload["thread_ts"] = thread_ts
         return await slack_call(token, "chat.postMessage", payload)
@@ -114,7 +114,7 @@ class RefundFlow:
             )
             await self._post(token, channel, thread_ts,
                              text="Auto-approved within policy — refund issued.",
-                             blocks=auto_approved_blocks(decision, run_id=run.id))
+                             card=auto_approved_blocks(decision, run_id=run.id))
             return
 
         # Needs approval — route to the configured manager.
@@ -128,8 +128,8 @@ class RefundFlow:
                                     detail=f"Sent to {approver_label} in Slack", actor="SubstrateOS")
         await self._post(token, channel, thread_ts,
                          text="I can't auto-approve this one — routing for approval.",
-                         blocks=needs_approval_blocks(decision, approver_label=approver_label,
-                                                      run_id=run.id))
+                         card=needs_approval_blocks(decision, approver_label=approver_label,
+                                                    run_id=run.id))
         if not approver_id:
             logger.warning("SLACK_REFUND_APPROVER_ID not configured; run %s waits", run.id)
             return
@@ -141,7 +141,7 @@ class RefundFlow:
             return
         posted = await slack_call(token, "chat.postMessage", {
             "channel": dm, "text": "Refund needs your approval",
-            "blocks": approval_dm_blocks(decision, requester_name=requester, run_id=run.id),
+            **approval_dm_blocks(decision, requester_name=requester, run_id=run.id),
         })
         if posted:
             run.dm_channel = dm
@@ -176,9 +176,9 @@ class RefundFlow:
                 await slack_call(token, "chat.update", {
                     "channel": dm_channel, "ts": dm_ts,
                     "text": f"Refund {run.status}",
-                    "blocks": decided_dm_blocks(run.decision,
-                                                approved=(run.status in ("approved", "completed")),
-                                                approver_name=run.approver_name or "a manager"),
+                    **decided_dm_blocks(run.decision,
+                                        approved=(run.status in ("approved", "completed")),
+                                        approver_name=run.approver_name or "a manager"),
                 })
             return
 
@@ -199,7 +199,7 @@ class RefundFlow:
             await slack_call(token, "chat.update", {
                 "channel": dm_channel, "ts": dm_ts,
                 "text": f"Refund {'approved' if approved else 'rejected'}",
-                "blocks": decided_dm_blocks(d, approved=approved, approver_name=approver_name),
+                **decided_dm_blocks(d, approved=approved, approver_name=approver_name),
             })
         if approved:
             await self._store.add_event(
@@ -212,4 +212,4 @@ class RefundFlow:
         if run.channel:
             await self._post(token, run.channel, run.thread_ts,
                              text=f"Refund {'approved' if approved else 'rejected'} by {approver_name}",
-                             blocks=outcome_blocks(d, approved=approved, approver_name=approver_name))
+                             card=outcome_blocks(d, approved=approved, approver_name=approver_name))

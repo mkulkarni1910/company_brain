@@ -58,10 +58,10 @@ class ApprovalFlow:
         return ((body or {}).get("user") or {}).get("id")
 
     async def _post(self, token: str, channel: str, thread_ts: str | None,
-                    *, text: str, blocks: list[dict] | None = None) -> dict | None:
+                    *, text: str, card: dict | None = None) -> dict | None:
         payload: dict = {"channel": channel, "text": text}
-        if blocks:
-            payload["blocks"] = blocks
+        if card:
+            payload.update(card)
         if thread_ts:
             payload["thread_ts"] = thread_ts
         return await slack_call(token, "chat.postMessage", payload)
@@ -128,7 +128,7 @@ class ApprovalFlow:
 
         await self._post(token, channel, thread_ts,
                          text=f"On it, {first} — sending that to {approver_name} for sign-off. I'll update here.",
-                         blocks=needs_approval_blocks(request_text=text, approver_label=approver_name, run_id=run.id))
+                         card=needs_approval_blocks(request_text=text, approver_label=approver_name, run_id=run.id))
 
         opened = await slack_call(token, "conversations.open", {"users": approver_id})
         dm = ((opened or {}).get("channel") or {}).get("id")
@@ -138,7 +138,7 @@ class ApprovalFlow:
             return
         posted = await slack_call(token, "chat.postMessage", {
             "channel": dm, "text": "Approval needed",
-            "blocks": approval_dm_blocks(request_text=text, requester_name=requester, run_id=run.id),
+            **approval_dm_blocks(request_text=text, requester_name=requester, run_id=run.id),
         })
         if posted:
             run.dm_channel = dm
@@ -174,9 +174,9 @@ class ApprovalFlow:
             if dm_channel and dm_ts:
                 await slack_call(token, "chat.update", {
                     "channel": dm_channel, "ts": dm_ts, "text": f"Approval {run.status}",
-                    "blocks": decided_dm_blocks(request_text=req,
-                                                approved=(run.status in ("approved", "completed")),
-                                                approver_name=run.approver_name or "a manager"),
+                    **decided_dm_blocks(request_text=req,
+                                        approved=(run.status in ("approved", "completed")),
+                                        approver_name=run.approver_name or "a manager"),
                 })
             return
 
@@ -195,9 +195,9 @@ class ApprovalFlow:
             await slack_call(token, "chat.update", {
                 "channel": dm_channel, "ts": dm_ts,
                 "text": f"Approval {'approved' if approved else 'rejected'}",
-                "blocks": decided_dm_blocks(request_text=req, approved=approved, approver_name=approver_name),
+                **decided_dm_blocks(request_text=req, approved=approved, approver_name=approver_name),
             })
         if run.channel:
             await self._post(token, run.channel, run.thread_ts,
                              text=f"Approval {'approved' if approved else 'rejected'} by {approver_name}",
-                             blocks=outcome_blocks(request_text=req, approved=approved, approver_name=approver_name))
+                             card=outcome_blocks(request_text=req, approved=approved, approver_name=approver_name))

@@ -18,33 +18,43 @@ _D = RefundDecision(
 )
 
 
-def _text(blocks: list[dict]) -> str:
-    return json.dumps(blocks)
+def _text(card: dict) -> str:
+    return json.dumps(card)
 
 
-def test_needs_approval_blocks_mentions_facts_and_approver():
-    blocks = needs_approval_blocks(_D, approver_label="Diana Foster", run_id="RB-4471")
-    s = _text(blocks)
+def _all_blocks(card: dict) -> list[dict]:
+    """Flatten top-level blocks + every attachment's blocks."""
+    out = list(card.get("blocks", []))
+    for att in card.get("attachments", []):
+        out.extend(att.get("blocks", []))
+    return out
+
+
+def test_needs_approval_blocks_mentions_reason_and_approver():
+    card = needs_approval_blocks(_D, approver_label="Diana Foster", run_id="RB-4471")
+    s = _text(card)
     assert "Needs approval" in s
-    assert "$1,200" in s
     assert "Diana Foster" in s
     assert "RB-4471" in s
+    assert "auto-approve limit" in s  # the WHY box carries the reasoning
+    # the colored left-bar comes from an amber attachment
+    assert any(a.get("color") for a in card["attachments"])
 
 
 def test_approval_dm_blocks_have_buttons_with_run_id():
-    blocks = approval_dm_blocks(_D, requester_name="Tom Reyes", run_id="RB-4471")
-    actions = [b for b in blocks if b.get("type") == "actions"]
+    card = approval_dm_blocks(_D, requester_name="Tom Reyes", run_id="RB-4471")
+    actions = [b for b in _all_blocks(card) if b.get("type") == "actions"]
     assert len(actions) == 1
     ids = {e["action_id"]: e["value"] for e in actions[0]["elements"]}
     assert ids == {"refund_approve": "RB-4471", "refund_reject": "RB-4471"}
-    assert "Tom Reyes" in _text(blocks)
+    s = _text(card)
+    assert "Tom Reyes" in s and "Priya Sharma" in s and "$1,200" in s  # facts live on the DM card
 
 
 def test_decided_dm_blocks_no_buttons():
-    blocks = decided_dm_blocks(_D, approved=True, approver_name="Diana Foster")
-    s = _text(blocks)
-    assert "Approved by Diana Foster" in s
-    assert not [b for b in blocks if b.get("type") == "actions"]
+    card = decided_dm_blocks(_D, approved=True, approver_name="Diana Foster")
+    assert "Approved by Diana Foster" in _text(card)
+    assert not [b for b in _all_blocks(card) if b.get("type") == "actions"]
 
 
 def test_outcome_blocks_approved_and_rejected():
