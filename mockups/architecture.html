@@ -183,7 +183,7 @@
     <p class="lede">Every surface carries identity into one engine that runs the playbook step by step —
       and acts only after it checks the rules, asks a human if risky, and logs everything.</p>
 
-    <div class="mono-label">Surfaces — where it starts · it always knows who's asking</div>
+    <div class="mono-label">Surfaces — where requests start · it always knows who's asking</div>
     <div class="surfaces">
       <div class="surface"><b>Slack</b><small>bot</small></div>
       <div class="surface"><b>Teams</b><small>bot · approvals</small></div>
@@ -192,6 +192,11 @@
       <div class="surface"><b>API</b><small>PAT / context</small></div>
     </div>
     <div class="connectall">↓ all sign in through Microsoft Entra ↓</div>
+
+    <div class="mono-label">Tools — where it acts · the engine does the work in your systems</div>
+    <div class="surfaces" style="grid-template-columns:repeat(5,1fr)">
+      <div class="surface" style="border-top-color:var(--green)"><b>GitHub</b><small>raise PRs</small></div>
+    </div>
 
     <div class="engine">
       <div class="lbl">The engine — runs the playbook, step by step</div>
@@ -204,7 +209,7 @@
         <div class="seq">→</div>
         <div class="step risk"><b>Ask a human</b><small>Teams approval</small></div>
         <div class="seq">→</div>
-        <div class="step"><b>Do it</b><small>act in your tools</small></div>
+        <div class="step"><b>Do it</b><small>act in your tools · GitHub PR</small></div>
         <div class="seq">→</div>
         <div class="step"><b>Log it</b><small>full audit record</small></div>
       </div>
@@ -271,7 +276,7 @@
 
     <div class="mono-label">The playbook engine — same shape for any task (act → stay in control)</div>
     <div class="engine">
-      <div class="lbl"><code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/workflows/</code> (RefundFlow · ApprovalFlow · RunStore — manager resolved via Entra <code style="color:var(--amber)">manages</code> edge) + <code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/skills/</code> (SkillStore · SkillRouter)</div>
+      <div class="lbl"><code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/workflows/</code> (RefundFlow · ApprovalFlow · GithubFlow · RunStore — manager resolved via Entra <code style="color:var(--amber)">manages</code> edge) + <code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/skills/</code> (SkillStore · SkillRouter)</div>
       <div class="steps">
         <div class="step"><b>When</b><small>trigger / event</small></div>
         <div class="seq">→</div>
@@ -285,10 +290,43 @@
       </div>
     </div>
 
+    <div class="mono-label">Tool — GitHub · the first place the engine <i>acts</i> (raise-pr playbook)</div>
+    <div class="flow">
+      <div class="row">
+        <div class="node io"><b>Connect once</b><small>per-user OAuth</small></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>api/github.py</b><small>/auth/github/start · /callback · one-shot CSRF state (Redis)</small></div>
+        <div class="arrow">→</div>
+        <div class="node io"><b>github_store.py</b><small>config · per-user token github:token:{email}</small></div>
+      </div>
+      <div class="row">
+        <div class="node brain" style="flex:1"><b>GithubFlow</b><small>app/workflows/github_pr.py · When→Check→Stop→Do→Record · run kind github_pr</small>
+          <div class="substeps">
+            <div class="substep"><b>When</b><small>SkillRouter → seeded raise-pr skill</small></div>
+            <div class="substep"><b>Check</b><small>tool on? repo set? user token? (else Connect link)</small></div>
+            <div class="substep"><b>Draft</b><small>github_engine.py PrDraftEngine · 2 grounded LLM steps · path validated against repo tree</small></div>
+            <div class="substep acl"><b>Stop</b><small>pending_confirm · requester previews · kill-switch blocks here</small></div>
+            <div class="substep"><b>Do</b><small>branch + commit + PR <i>as the user</i> (github.py client, their token)</small></div>
+            <div class="substep"><b>Record</b><small>RunStore audit → admin Runs</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="node io"><b>Three faces, one engine</b><small>Slack blocks + buttons · Teams Adaptive Card + Action.Submit · Web pending_action + POST /workflows/runs/{id}/action</small></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>bots/github_cards.py</b><small>Slack blocks + Teams card renderers</small></div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:#fff;border:1px solid var(--line)"></i> surface / IO / store</span>
+      <span><i style="background:var(--navy)"></i> tool module</span>
+      <span><i style="background:var(--amber)"></i> Stop gate — admin kill-switch reaches the confirm step</span>
+    </div>
+
     <h2 class="sec" style="font-size:17px">Backend modules — <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber)">substrateos-api/app/</code></h2>
     <div class="grid cols-3">
       <div class="card"><h4><code>orchestrator/</code></h4><p>Semantic Kernel + QueryPlanner — sequences the gather-facts steps; Live Fetch vs cache.</p></div>
-      <div class="card"><h4><code>skills/ · workflows/</code></h4><p>Playbook catalog/router + the When→Check→Stop→Do→Record engine and run store.</p></div>
+      <div class="card"><h4><code>skills/ · workflows/</code></h4><p>Playbook catalog/router + the When→Check→Stop→Do→Record engine and run store. Flows: RefundFlow · ApprovalFlow · GithubFlow (<code>github_pr.py</code> + <code>github_engine.py</code> PrDraftEngine).</p></div>
       <div class="card"><h4><code>retrieval/</code></h4><p>AISearchClient + HybridRetriever — BM25 + vector over the content index.</p></div>
       <div class="card"><h4><code>people/</code></h4><p>PeopleGraphClient + PeopleProximity over Cosmos Gremlin.</p></div>
       <div class="card"><h4><code>activity/</code></h4><p>ActivitySignal + ActivityStore — engagement scores from ADX.</p></div>
@@ -297,10 +335,10 @@
       <div class="card"><h4><code>acl/</code></h4><p>ACLStore — double-enforcement; query-time recheck, fail-closed on outage.</p></div>
       <div class="card"><h4><code>live_fetch/</code></h4><p>MSGraphSearchFetcher — on-behalf-of Graph for "right now" facts.</p></div>
       <div class="card"><h4><code>conversations/</code></h4><p>ConversationStore + memory — trimmed history into grounded prompts (web · Slack · Teams); history-carrying answers bypass the answer cache.</p></div>
-      <div class="card"><h4><code>ingest/ · connectors/</code></h4><p>chunk→embed→ACL-stamp→index; SharePoint/Outlook/Teams connectors.</p></div>
+      <div class="card"><h4><code>ingest/ · connectors/</code></h4><p>chunk→embed→ACL-stamp→index; SharePoint/Outlook/Teams connectors. GitHub action connector: <code>github.py</code> (REST client) + <code>github_store.py</code> (config · per-user tokens · OAuth states).</p></div>
       <div class="card"><h4><code>discover/ · search/ · history/</code></h4><p>Discover, search, and history services behind the nav surfaces.</p></div>
       <div class="card"><h4><code>cache/ · tokens/ · metrics/</code></h4><p>Redis answer cache · PAT token accounting · metrics store.</p></div>
-      <div class="card"><h4><code>bots/ · mcp/</code></h4><p>Slack/Teams bot ingress; MCP server for other AI tools.</p></div>
+      <div class="card"><h4><code>bots/ · mcp/</code></h4><p>Slack/Teams bot ingress + interactive dispatch; <code>github_cards.py</code> (Slack blocks + Teams Adaptive Card); MCP server for other AI tools.</p></div>
       <div class="card"><h4><code>domain/ · deps.py</code></h4><p>Pydantic data classes + DI wiring shared across modules.</p></div>
     </div>
 
@@ -309,6 +347,7 @@
       <tr><th>Router</th><th>Purpose</th></tr>
       <tr><td><code>/query</code></td><td>Grounded Q&amp;A — orchestrator entrypoint; loads + records conversation history.</td></tr>
       <tr><td><code>/skills</code> (+ admin) · <code>/runs</code></td><td>Playbook catalog/router; workflow runs &amp; their audit records.</td></tr>
+      <tr><td><code>/auth/github/*</code> · <code>/workflows/runs/{id}/action</code> · <code>/admin/github/config</code></td><td>Per-user GitHub OAuth (start/callback); requester-only Create PR / Cancel; admin repo target.</td></tr>
       <tr><td><code>/retrieve</code> · <code>/search</code> · <code>/discover</code></td><td>Raw retrieval, search, and discover surfaces.</td></tr>
       <tr><td><code>/conversations</code> · <code>/history</code></td><td>Conversation list + turn history.</td></tr>
       <tr><td><code>/feedback</code></td><td>Click/dwell → ADX (real activity signal).</td></tr>
@@ -336,9 +375,10 @@
           <tr><th>Playbook</th><th>Owner</th><th>Status</th></tr>
           <tr><td><b>Refunds</b></td><td>D. Rao</td><td><span class="pill live">live</span></td></tr>
           <tr><td><b>Discounts</b></td><td>S. Mehta</td><td><span class="pill live">live</span></td></tr>
+          <tr><td><b>Raise PR</b> <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted)">tool · GitHub</span></td><td>Platform</td><td><span class="pill live">live</span></td></tr>
           <tr><td><b>Outages</b></td><td>A. Khan</td><td><span class="pill draft">draft</span></td></tr>
         </table>
-        <p style="margin-top:10px;font-size:11.5px;color:var(--amber)">Approvals waiting · full history · kill switch</p>
+        <p style="margin-top:10px;font-size:11.5px;color:var(--amber)">Approvals waiting · full history · kill switch (tool / surface toggle blocks pending confirms)</p>
       </div>
     </div>
 
@@ -361,7 +401,7 @@
     <div class="kicker">It starts with one playbook. <b>The real prize is everything built on top.</b></div>
   </section>
 
-  <div class="foot">SubstrateOS architecture · aligned to the Master Deck · keep in sync with every shipped feature (Phase 4 of the substrateos-feature skill) · updated 2026-06-05</div>
+  <div class="foot">SubstrateOS architecture · aligned to the Master Deck · keep in sync with every shipped feature (Phase 4 of the substrateos-feature skill) · updated 2026-06-07</div>
 </div>
 
 <script>

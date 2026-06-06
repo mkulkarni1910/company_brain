@@ -20,7 +20,7 @@ when you genuinely introduce one** (with a one-line why/where).
 | **azure-identity** (`DefaultAzureCredential`) + **msal** | managed identity in cloud, `az login` locally, OBO to Graph |
 | **azure-keyvault-secrets** | secrets that can't use managed identity |
 | **python-jose** | Entra JWT validation (`app/auth.py`) |
-| **httpx** + **tenacity** | outbound HTTP (e.g. Microsoft Graph live fetch) with retries |
+| **httpx** + **tenacity** | outbound HTTP with retries — Microsoft Graph live fetch; GitHub REST API + OAuth token exchange (`app/connectors/github.py`, `app/api/github.py`) |
 | **mcp** | MCP server surface (`app/mcp/`) |
 | **tiktoken** | token accounting (`app/tokens/`) |
 | **python-docx** / **pypdf** | document text extraction on ingest (`app/ingest/`) |
