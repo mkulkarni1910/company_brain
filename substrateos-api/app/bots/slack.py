@@ -108,3 +108,23 @@ async def slack_call(token: str, method: str, payload: dict) -> dict | None:
     except Exception:  # noqa: BLE001
         logger.exception("Slack %s request failed", method)
         return None
+
+
+async def slack_users_list(token: str) -> list[dict] | None:
+    """Fetch every workspace member via paginated users.list (through slack_get —
+    users.list rejects JSON POST bodies). Returns None on ANY failure so the
+    directory sync keeps its previous data instead of merging a partial page.
+    """
+    members: list[dict] = []
+    cursor = ""
+    while True:
+        params: dict = {"limit": 200}
+        if cursor:
+            params["cursor"] = cursor
+        body = await slack_get(token, "users.list", params)
+        if body is None:
+            return None
+        members.extend(body.get("members") or [])
+        cursor = ((body.get("response_metadata") or {}).get("next_cursor") or "")
+        if not cursor:
+            return members
