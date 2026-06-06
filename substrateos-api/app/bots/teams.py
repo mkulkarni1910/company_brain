@@ -128,6 +128,30 @@ async def send_teams_activity(
         return False
 
 
+async def get_teams_member_email(*, incoming: dict, app_id: str, app_password: str,
+                                 tenant_id: str | None = None) -> str | None:
+    """The sender's email/UPN via the Connector members API — identity for the
+    per-user GitHub token. None on any failure (the flow then explains itself)."""
+    service_url = (incoming.get("serviceUrl") or "").rstrip("/")
+    conv_id = (incoming.get("conversation") or {}).get("id") or ""
+    user_id = (incoming.get("from") or {}).get("id") or ""
+    if not (service_url and conv_id and user_id):
+        return None
+    try:
+        token = await _connector_token(app_id, app_password, tenant_id=tenant_id)
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{service_url}/v3/conversations/{quote(conv_id, safe='')}/members/{quote(user_id, safe='')}",
+                headers={"Authorization": f"Bearer {token}"}, timeout=10.0,
+            )
+        if resp.status_code >= 300:
+            return None
+        d = resp.json()
+        return d.get("email") or d.get("userPrincipalName")
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def strip_at_mention(text: str) -> str:
     """Remove <at>BotName</at> prefixes Teams injects into message text."""
     return re.sub(r"<at>[^<]*</at>", "", text).strip()

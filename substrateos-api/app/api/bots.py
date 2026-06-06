@@ -9,12 +9,18 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, 
 from fastapi.responses import Response
 
 from app.api.admin import require_admin_key
-from app.bots.github_cards import cancelled_blocks, pr_created_blocks, preview_blocks
+from app.bots.github_cards import (
+    cancelled_blocks,
+    pr_created_blocks,
+    preview_blocks,
+    teams_preview_activity,
+)
 from app.bots.manifest import build_manifest_zip
 from app.bots.slack import post_slack_reply, slack_call, strip_bot_mention, verify_slack_signature
 from app.bots.smalltalk import WELCOME_TEXT, is_smalltalk
 from app.bots.teams import (
     build_teams_reply,
+    get_teams_member_email,
     send_teams_activity,
     strip_at_mention,
     verify_teams_jwt,
@@ -117,6 +123,8 @@ async def teams_webhook(
     store=Depends(get_connection_store),
     memory=Depends(get_conversation_memory),
     acknowledger=Depends(get_acknowledger),
+    skill_router=Depends(get_skill_router_svc),
+    github_flow=Depends(get_github_flow),
     authorization: str | None = Header(default=None),
 ) -> dict:
     s = get_settings()
@@ -145,6 +153,29 @@ async def teams_webhook(
             )
         return {}
 
+    # Adaptive Card Action.Submit arrives as a message with `value` and no text.
+    value = body.get("value")
+    if (body.get("type") == "message" and isinstance(value, dict)
+            and str(value.get("action", "")).startswith("github_") and github_flow is not None):
+        email = await get_teams_member_email(
+            incoming=body, app_id=s.teams_bot_app_id,
+            app_password=s.teams_bot_app_password, tenant_id=s.teams_bot_tenant_id)
+        actor = (body.get("from") or {}).get("name") or email or "Someone"
+        run_id = str(value.get("run_id") or "")
+        if value["action"] == "github_create":
+            result = await github_flow.confirm(run_id, actor_email=email, actor_name=actor)
+            text = (f"✅ PR created — {result.pr_url}" if result.ok
+                    else f"⚠ {result.message}")
+        else:
+            result = await github_flow.cancel(run_id, actor_email=email, actor_name=actor)
+            text = ("✕ Cancelled — nothing reached GitHub." if result.ok
+                    else f"⚠ {result.message}")
+        await send_teams_activity(
+            incoming=body, activity={"type": "message", "text": text},
+            app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+            tenant_id=s.teams_bot_tenant_id)
+        return {}
+
     if body.get("type") != "message":
         return {}
 
@@ -169,6 +200,29 @@ async def teams_webhook(
             app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
             tenant_id=s.teams_bot_tenant_id,
         )
+        return {}
+
+    skill_ctx = None
+    if skill_router is not None:
+        with contextlib.suppress(Exception):
+            skill_ctx = await skill_router.resolve_skill(text)
+    if getattr(skill_ctx, "workflow", None) == "github" and github_flow is not None:
+        email = await get_teams_member_email(
+            incoming=body, app_id=s.teams_bot_app_id,
+            app_password=s.teams_bot_app_password, tenant_id=s.teams_bot_tenant_id)
+        name = (body.get("from") or {}).get("name") or "A teammate"
+        result = await github_flow.start(skill_ctx.clean_query, requester_name=name,
+                                         requester_email=email, surface="teams")
+        if result.status == "preview":
+            activity = teams_preview_activity(
+                draft=result.run.pr_draft, repo_label="the configured repo",
+                run_id=result.run.id)
+        else:
+            activity = {"type": "message", "text": result.message or _ERROR_TEXT}
+        await send_teams_activity(
+            incoming=body, activity=activity,
+            app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+            tenant_id=s.teams_bot_tenant_id)
         return {}
 
     conv_id = (body.get("conversation") or {}).get("id") or ""
