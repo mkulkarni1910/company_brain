@@ -10,10 +10,13 @@ export type RefundDecision = {
 
 export type RunSummary = {
   id: string;
+  kind?: "refund" | "approval";
   status: "running" | "pending_approval" | "approved" | "rejected" | "completed" | "error";
   requester_name: string;
   approver_name: string | null;
   decision: RefundDecision | null;
+  request_text?: string | null;
+  approver_source?: string | null;
   created_at: string;
   updated_at: string;
 };

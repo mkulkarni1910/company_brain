@@ -75,10 +75,12 @@ class RunStore:
     async def create(
         self, *, requester_name: str, requester_slack_id: str | None,
         channel: str | None, thread_ts: str | None,
+        kind: str = "refund", request_text: str | None = None,
     ) -> RefundRun:
         now = datetime.now(UTC)
         run = RefundRun(
-            id=await self._next_id(), requester_name=requester_name,
+            id=await self._next_id(), kind=kind, request_text=request_text,
+            requester_name=requester_name,
             requester_slack_id=requester_slack_id, channel=channel, thread_ts=thread_ts,
             created_at=now, updated_at=now,
         )

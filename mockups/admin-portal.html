@@ -1048,6 +1048,12 @@
 
       <div class="runs-list">
         <div class="run-row active" onclick="selectRun(this)">
+          <div class="pb">Discount exception — 18% off Acme<span>request-approval · slack</span></div>
+          <div class="trig">Tom Reyes · Slack #deals</div>
+          <span class="rst stopped">Stopped for approval</span>
+          <span class="time">12:00 PM</span>
+        </div>
+        <div class="run-row" onclick="selectRun(this)">
           <div class="pb">What is our PTO policy?<span>conversation · web</span></div>
           <div class="trig">Maya Iyer · Web chat</div>
           <span class="rst auto">Answered</span>
@@ -1067,42 +1073,43 @@
         </div>
       </div>
 
-      <!-- run detail: conversation execution flow -->
-      <div class="run-eyebrow">Conversation</div>
-      <h2 class="run-title">What is our PTO policy?</h2>
-      <p class="run-meta">Web chat · conversation #c8f2a1 · 10:41 AM</p>
+      <!-- run detail: request-approval playbook flow -->
+      <div class="run-eyebrow">Live run</div>
+      <h2 class="run-title">Discount exception — 18% off Acme</h2>
+      <p class="run-meta">Slack #deals · request-approval · run #AP-7782 · 12:00 PM</p>
 
       <div class="flow-card">
-        <div class="flow-head"><span><b>Grounded Q&amp;A</b> · web chat · 1 turn</span><span class="flow-badge ok">Answered</span></div>
+        <div class="flow-head"><span><b>request-approval</b> · routed to manager</span><span class="flow-badge">Stopped for approval</span></div>
         <div class="flow-step">
           <div class="flow-ic ok">✓</div>
-          <div><h4>Who's asking</h4><p>Maya Iyer · verified via <b>Microsoft Entra ID</b> · via Web chat</p></div>
+          <div><h4>Who's asking</h4><p>Tom Reyes · verified via <b>Microsoft Entra ID</b> · Support team</p></div>
         </div>
         <div class="flow-step">
           <div class="flow-ic ok">✓</div>
-          <div><h4>Gather the facts</h4><p>Retrieved <b>1 source</b> from SharePoint · ACL-rechecked · ranked for this user.</p></div>
+          <div><h4>The request</h4><p>&ldquo;Send this discount exception to my support manager for sign-off&rdquo; — <b>18% off</b> to close the Acme renewal (over the 12% desk limit).</p></div>
         </div>
         <div class="flow-step">
           <div class="flow-ic ok">✓</div>
-          <div><h4>Ground the answer</h4><p>Grounded answer with <b>1 citation</b> · nothing out of corpus refused.</p></div>
+          <div><h4>Find the approver</h4><p>Resolved <b>Diana Foster</b> — Tom&rsquo;s manager via the Entra <code style="font-family:'JetBrains Mono',monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;color:var(--amber)">manages</code> edge.</p></div>
         </div>
         <div class="flow-step">
-          <div class="flow-ic ok">✓</div>
-          <div><h4>Answered</h4><p>Delivered to <b>Web chat</b> · 340 ms · feedback fed back to the activity pillar.</p></div>
+          <div class="flow-ic act">→</div>
+          <div><h4>Decision</h4><p>Hold the action. Sent an <b>Approve / Reject</b> card to Diana Foster in Slack. Awaiting sign-off — nothing acts until she approves.</p></div>
         </div>
       </div>
 
-      <!-- run detail: audit log (conversation turns) -->
+      <!-- run detail: audit log -->
       <div class="audit-wrap">
         <div class="audit-eyebrow">Audit log</div>
-        <h3>Conversation #c8f2a1</h3>
-        <p class="sub">A complete, tamper-evident record of every turn — nothing is a black box.</p>
+        <h3>request-approval · run #AP-7782</h3>
+        <p class="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
         <table class="audit-table">
           <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>
           <tbody>
-            <tr><td class="a-time">10:41:02</td><td class="a-step">Asked</td><td class="a-detail">"What is our PTO policy, and who owns it?"</td><td class="a-who">Maya Iyer<span class="chip-entra">Entra</span></td></tr>
-            <tr><td class="a-time">10:41:02</td><td class="a-step">Facts gathered</td><td class="a-detail">1 source · SharePoint /sites/hr/pto.md<span class="chip-appr">grounded</span></td><td class="a-who">SubstrateOS</td></tr>
-            <tr><td class="a-time">10:41:03</td><td class="a-step">Answered</td><td class="a-detail">"Full-time employees accrue 20 days PTO… owned by People Ops" [1]</td><td class="a-who">SubstrateOS</td></tr>
+            <tr><td class="a-time">12:00:01</td><td class="a-step">Request received</td><td class="a-detail">"Send this discount exception to my support manager" · from Slack #deals</td><td class="a-who">Tom Reyes<span class="chip-entra">Entra</span></td></tr>
+            <tr><td class="a-time">12:00:02</td><td class="a-step">Approver resolved</td><td class="a-detail">Diana Foster — Tom's manager (Entra <code style="font-family:'JetBrains Mono',monospace;font-size:11px">manages</code> edge)<span class="chip-appr">manager</span></td><td class="a-who">SubstrateOS</td></tr>
+            <tr><td class="a-time">12:00:03</td><td class="a-step">Routed for approval</td><td class="a-detail">Approve/Reject card DM'd to Diana Foster in Slack</td><td class="a-who">SubstrateOS</td></tr>
+            <tr><td class="a-time">—</td><td class="a-step">Awaiting decision</td><td class="a-detail">Pending Diana Foster's sign-off · nothing acts until approved</td><td class="a-who">—</td></tr>
           </tbody>
         </table>
       </div>

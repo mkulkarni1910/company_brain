@@ -104,6 +104,39 @@ Full-time employees accrue <b>20 days</b> off, prorated by start date.
     </div>
   </div>
   <p class="note">Reference render only — actual Slack/Teams styling is theirs. Source of truth: app/bots/formatting.py</p>
+
+  <div class="eyebrow">Slack — request-approval playbook (act → stay in control)</div>
+  <div class="cols">
+    <div class="panel">
+      <div class="cap good">In the channel — the requester's ack</div>
+      <div class="msg">
+        <div class="av"></div>
+        <div style="flex:1">
+          <div class="who">SubstrateOS<span class="bot">APP</span> <span class="t">12:00</span></div>
+          <div class="body">On it, <b>Tom</b> — sending that to <b>Diana Foster</b> (your manager) for sign-off. I&rsquo;ll update here. <span style="color:var(--dim)">· run #AP-7782</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="cap good">DM to the manager — Approve / Reject</div>
+      <div class="msg">
+        <div class="av"></div>
+        <div style="flex:1">
+          <div class="who">SubstrateOS<span class="bot">APP</span> <span class="t">12:00</span></div>
+          <div class="body" style="font-weight:700;font-size:15px;color:var(--ink);margin-bottom:6px">Approval needed</div>
+          <div class="body" style="background:#f7f7f7;border:1px solid var(--line);border-left:3px solid #5b5fc7;border-radius:6px;padding:10px 12px">
+            <div style="font-size:13px;color:var(--dim)">Request</div>
+            <div style="margin:2px 0 9px">Discount exception — <b>18% off</b> to close the Acme renewal (over the 12% desk limit).</div>
+            <div style="font-size:13px;color:var(--dim)">Requested by</div>
+            <div>Tom Reyes <span class="sup" style="vertical-align:0">· Support</span> · <span style="color:var(--dim)">run #AP-7782</span></div>
+          </div>
+          <a class="sbtn" href="#" style="background:#2f8f5b;color:#fff;border-color:#2f8f5b">Approve</a><a class="sbtn" href="#" style="color:#b3261e;border-color:#f0c3c0">Reject</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note">Manager resolved from the Entra <code>manages</code> edge (Tom → Diana). Decision flows back to the channel and is recorded in Runs → Audit. Source: app/workflows/approval.py · app/bots/approval_cards.py</p>
 </div>
 </body>
 </html>

@@ -108,3 +108,7 @@ def get_run_store(request: Request):
 
 def get_refund_flow(request: Request):
     return getattr(request.app.state, "refund_flow", None)
+
+
+def get_approval_flow(request: Request):
+    return getattr(request.app.state, "approval_flow", None)

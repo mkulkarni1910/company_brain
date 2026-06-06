@@ -29,9 +29,14 @@ class RunEvent(BaseModel):
     actor: str
 
 
+RunKind = Literal["refund", "approval"]
+
+
 class RefundRun(BaseModel):
-    """State of one refund workflow run (RB-xxxx)."""
+    """State of one workflow run. Named for the original refund playbook, but now
+    also backs the generic request-approval playbook (kind='approval')."""
     id: str
+    kind: RunKind = "refund"
     status: RunStatus = "running"
     requester_name: str
     requester_slack_id: str | None = None
@@ -41,5 +46,8 @@ class RefundRun(BaseModel):
     dm_ts: str | None = None
     decision: RefundDecision | None = None
     approver_name: str | None = None
+    # generic approval playbook
+    request_text: str | None = None
+    approver_source: str | None = None  # "manager" | "fallback" | "mention"
     created_at: datetime
     updated_at: datetime

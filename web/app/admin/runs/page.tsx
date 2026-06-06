@@ -30,8 +30,28 @@ function wfStatus(r: RunSummary) {
   return WF_STATUS[r.status] ?? { cls: "running", label: r.status };
 }
 function wfTitle(r: RunSummary): string {
+  if (r.kind === "approval") return snippet(r.request_text || "Approval request", 60);
   const d = r.decision;
   return d?.order_id ? `Refund ${usd(d.amount_usd)} · order #${d.order_id}` : "Refund run";
+}
+const isApproval = (r: RunSummary) => r.kind === "approval";
+
+function approvalStages(run: RunSummary): Stage[] {
+  const s: Stage[] = [
+    { icon: "ok", sym: "✓", title: "Who's asking", body: <>{run.requester_name} · verified via <b>Microsoft Entra ID</b></> },
+    { icon: "ok", sym: "✓", title: "The request", body: <>&ldquo;{run.request_text || "—"}&rdquo;</> },
+  ];
+  if (run.approver_name) {
+    s.push({ icon: "ok", sym: "✓", title: "Find the approver", body: <>Resolved <b>{run.approver_name}</b>{run.approver_source === "manager" ? <> — the requester&rsquo;s manager (Entra <code>manages</code> edge)</> : run.approver_source === "fallback" ? <> — the configured approver</> : null}.</> });
+  } else {
+    s.push({ icon: "warn", sym: "!", title: "Find the approver", body: <>Couldn&rsquo;t resolve an approver — asked the requester who to route to.</> });
+  }
+  if (run.status === "pending_approval") s.push({ icon: "act", sym: "→", title: "Decision", body: <>Hold the action. Sent an <b>Approve / Reject</b> card to {run.approver_name}. Awaiting sign-off — nothing acts until they approve.</> });
+  else if (run.status === "approved" || run.status === "completed") s.push({ icon: "ok", sym: "✓", title: "Decision", body: <>Approved by <b>{run.approver_name}</b>. The requester was cleared to proceed.</> });
+  else if (run.status === "rejected") s.push({ icon: "bad", sym: "✕", title: "Decision", body: <>Rejected by <b>{run.approver_name}</b> — no action taken.</> });
+  else if (run.status === "error") s.push({ icon: "bad", sym: "✕", title: "Decision", body: <>Couldn&rsquo;t route this for approval.</> });
+  else s.push({ icon: "act", sym: "→", title: "Decision", body: <>In progress…</> });
+  return s;
 }
 
 type Stage = { icon: "ok" | "warn" | "act" | "bad"; sym: string; title: string; body: React.ReactNode };
@@ -105,7 +125,7 @@ export default function AdminRunsPage() {
         })),
         ...runs.map((r: RunSummary): RunItem => {
           const sm = wfStatus(r);
-          return { kind: "workflow", id: r.id, title: wfTitle(r), sub: "refund playbook · slack", trigger: `${r.requester_name} · Slack`, cls: sm.cls, label: sm.label, ts: r.created_at };
+          return { kind: "workflow", id: r.id, title: wfTitle(r), sub: `${isApproval(r) ? "request-approval" : "refund playbook"} · slack`, trigger: `${r.requester_name} · Slack`, cls: sm.cls, label: sm.label, ts: r.created_at };
         }),
       ].sort((a, b) => (a.ts < b.ts ? 1 : -1));
       setItems(merged);
@@ -176,17 +196,17 @@ export default function AdminRunsPage() {
             {kind === "workflow" && wf && (
               <div className="run-detail">
                 <div className="run-eyebrow">{wf.run.status === "pending_approval" || wf.run.status === "running" ? "Live run" : "Run"}</div>
-                <h2 className="run-title">Refund playbook</h2>
-                <p className="run-meta">Slack · run #{wf.run.id} · {fmtClock(wf.run.created_at)}</p>
+                <h2 className="run-title">{isApproval(wf.run) ? wfTitle(wf.run) : "Refund playbook"}</h2>
+                <p className="run-meta">Slack · {isApproval(wf.run) ? "request-approval" : "refund"} · run #{wf.run.id} · {fmtClock(wf.run.created_at)}</p>
                 <div className="flow-card">
-                  <div className="flow-head"><span><b>refund_v1</b>{wf.run.approver_name ? <> · owner: {wf.run.approver_name}</> : null}</span><span className="flow-badge">{wfStatus(wf.run).label}</span></div>
-                  {wfStages(wf.run).map((s, i) => (
+                  <div className="flow-head"><span>{isApproval(wf.run) ? <><b>request-approval</b> · routed to manager</> : <><b>refund_v1</b>{wf.run.approver_name ? <> · owner: {wf.run.approver_name}</> : null}</>}</span><span className={`flow-badge${["approved", "auto", "completed"].includes(wfStatus(wf.run).cls) ? " ok" : ""}`}>{wfStatus(wf.run).label}</span></div>
+                  {(isApproval(wf.run) ? approvalStages(wf.run) : wfStages(wf.run)).map((s, i) => (
                     <div className="flow-step" key={i}><div className={`flow-ic ${s.icon}`}>{s.sym}</div><div><h4>{s.title}</h4><p>{s.body}</p></div></div>
                   ))}
                 </div>
                 <div className="audit-wrap">
                   <div className="audit-eyebrow">Audit log</div>
-                  <h3>Refund playbook · run #{wf.run.id}</h3>
+                  <h3>{isApproval(wf.run) ? "request-approval" : "Refund playbook"} · run #{wf.run.id}</h3>
                   <p className="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
                   <table className="audit-table">
                     <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>

@@ -95,6 +95,32 @@ SKILL = {
 }
 
 
+APPROVAL_SKILL = {
+    "slug": "request-approval",
+    "name": "Request Approval",
+    "description": (
+        "Routes any action that needs human sign-off to the right approver. Use when a "
+        "user asks to send something for approval, get something approved, or escalate a "
+        "request to their manager (e.g. 'send this discount exception to my manager', "
+        "'get this signed off'). Resolves the requester's manager, sends an Approve/Reject "
+        "card, and records every step. NOT for answering questions — only for routing "
+        "approvals."
+    ),
+    "team": "Platform",
+    "run_scope": "org",
+    "enabled": True,
+    "workflow": "approval",
+    "steps": [
+        "Who's asking — verify the requester",
+        "Capture the request — what needs sign-off",
+        "Find the approver — the requester's manager",
+        "Stop — route an Approve/Reject card and wait for a human",
+    ],
+    "data_feeds": ["People graph (manager edges)"],
+    "system_prompt": "Route the request for human approval. Never act before sign-off.",
+}
+
+
 def _doc(doc_id: str, title: str, body: str, tenant: str) -> dict:
     now = datetime.now(UTC)
     return {
@@ -148,16 +174,17 @@ def main() -> int:
             print(f"ingested {doc['doc_id']}: {r.json()}")
 
         skills = client.get("/admin/skills").json()
-        existing = next((s for s in skills if s.get("slug") == "refund"), None)
-        if existing:
-            patch = {k: v for k, v in SKILL.items() if k != "slug"}
-            r = client.patch(f"/admin/skills/{existing['id']}", json=patch)
-            r.raise_for_status()
-            print(f"updated skill refund (id={existing['id']})")
-        else:
-            r = client.post("/admin/skills", json=SKILL)
-            r.raise_for_status()
-            print(f"created skill refund (id={r.json().get('id')})")
+        for skill in (SKILL, APPROVAL_SKILL):
+            existing = next((s for s in skills if s.get("slug") == skill["slug"]), None)
+            if existing:
+                patch = {k: v for k, v in skill.items() if k != "slug"}
+                r = client.patch(f"/admin/skills/{existing['id']}", json=patch)
+                r.raise_for_status()
+                print(f"updated skill {skill['slug']} (id={existing['id']})")
+            else:
+                r = client.post("/admin/skills", json=skill)
+                r.raise_for_status()
+                print(f"created skill {skill['slug']} (id={r.json().get('id')})")
     print("done.")
     return 0
 

@@ -102,6 +102,28 @@ class PeopleGraphClient:
         out.sort(key=lambda p: order.get(p.user_id, 999))
         return out
 
+    async def manager_of(self, *, email: str, tenant_id: str) -> dict | None:
+        """Resolve a person's manager by email via the Entra `manages` edge
+        (seeded manager→report). Returns {user_id, email, display_name} or None.
+        Best-effort: any graph error / unseeded data yields None."""
+        if not email:
+            return None
+        try:
+            rows = await self.submit(
+                "g.V().has('user','tenant_id', tid).has('email', em)"
+                ".in('manages').valueMap('user_id','email','display_name')",
+                {"tid": tenant_id, "em": email},
+            )
+        except Exception:  # noqa: BLE001 - best-effort
+            return None
+        for r in rows:
+            uid = (r.get("user_id") or [None])[0]
+            memail = (r.get("email") or [None])[0]
+            name = (r.get("display_name") or [None])[0]
+            if uid:
+                return {"user_id": uid, "email": memail or "", "display_name": name or ""}
+        return None
+
     async def aclose(self) -> None:
         def _close() -> None:
             self._client.close()

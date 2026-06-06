@@ -271,7 +271,7 @@
 
     <div class="mono-label">The playbook engine — same shape for any task (act → stay in control)</div>
     <div class="engine">
-      <div class="lbl"><code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/workflows/</code> (RefundEngine · RefundFlow · RunStore) + <code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/skills/</code> (SkillStore · SkillRouter)</div>
+      <div class="lbl"><code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/workflows/</code> (RefundFlow · ApprovalFlow · RunStore — manager resolved via Entra <code style="color:var(--amber)">manages</code> edge) + <code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/skills/</code> (SkillStore · SkillRouter)</div>
       <div class="steps">
         <div class="step"><b>When</b><small>trigger / event</small></div>
         <div class="seq">→</div>

@@ -53,6 +53,7 @@ from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
 from app.search.service import SearchService
 from app.tokens.store import CosmosTokenStore, NullTokenStore
+from app.workflows.approval import ApprovalFlow
 from app.workflows.engine import RefundEngine
 from app.workflows.flow import RefundFlow
 from app.workflows.store import RunStore
@@ -164,6 +165,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.refund_flow = RefundFlow(
         engine=RefundEngine(retriever=app.state.retriever, llm=app.state.llm),
         store=app.state.run_store,
+    )
+    app.state.approval_flow = ApprovalFlow(
+        store=app.state.run_store, people=app.state.people_graph,
     )
     # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
     # configured (e.g. India has no Redis), else Redis (no-op without a host).
