@@ -23,6 +23,7 @@ from app.api.search import router as search_router
 from app.api.sources import router as sources_router
 from app.api.surfaces import router as surfaces_router
 from app.api.tokens import router as tokens_router
+from app.api.admin_runs import router as admin_runs_router
 from app.api.runs import router as runs_router
 from app.api.skills import admin_router as skills_admin_router
 from app.api.skills import router as skills_router
@@ -230,6 +231,7 @@ app.include_router(context_router)
 app.include_router(skills_router)
 app.include_router(skills_admin_router)
 app.include_router(runs_router)
+app.include_router(admin_runs_router)
 
 if get_settings().mcp_enabled:
     app.mount("/mcp", build_mcp_asgi())

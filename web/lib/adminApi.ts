@@ -42,6 +42,19 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await resp.json()) as T;
 }
 
+export type ConvRunSummary = { id: string; title: string; surface: string; turn_count: number; updated_at: string };
+export type ConvTurn = { query: string; answer: { text: string; citations: { title: string; source_url: string; doc_id: string }[] }; ts: string };
+export type ConvRunDetail = { id: string; title: string; surface: string; updated_at: string; asker: string | null; turns: ConvTurn[] };
+
+export async function getConversationRuns(): Promise<ConvRunSummary[]> {
+  try { return await call<ConvRunSummary[]>("/admin/conversation-runs"); }
+  catch { return []; }
+}
+export async function getConversationRun(id: string): Promise<ConvRunDetail | null> {
+  try { return await call<ConvRunDetail>(`/admin/conversation-runs/${encodeURIComponent(id)}`); }
+  catch { return null; }
+}
+
 export type SourceHealth = { name: string; type: string; status: string; items: number };
 export type ActivityItem = { ts: string; actor: string; text: string; kind: string };
 export type NeedsItem = { text: string; where: string; severity: "error" | "warning" | "ok" };

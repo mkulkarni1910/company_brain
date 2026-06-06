@@ -107,19 +107,10 @@ class ConversationStore:
                 continue
         return out
 
-    async def get(self, *, user: User, conversation_id: str) -> Conversation | None:
-        try:
-            rows = await self._submit(
-                "g.V().has('conversation','conv_id', cid).has('tenant_id', tid).has('user_id', uid)"
-                ".valueMap('conv_id','title','created_at','updated_at','turns_json')",
-                {"cid": conversation_id, "tid": user.tenant_id, "uid": user.user_id},
-            )
-        except Exception as e:  # noqa: BLE001 - degrade to None
-            logger.warning("conversation get failed (cid=%s): %s", conversation_id, e)
-            return None
-        if not rows:
-            return None
-        vm = rows[0]
+    @staticmethod
+    def _conv_from_vm(vm: dict) -> Conversation:
+        """Build a Conversation from a Gremlin valueMap row (shared by get/get_any)."""
+        updated = _one(vm, "updated_at")
         raw = _one(vm, "turns_json")
         turns: list[ConversationTurn] = []
         for t in (json.loads(raw) if raw else []):
@@ -130,7 +121,58 @@ class ConversationStore:
                     text=a.get("text", ""),
                     citations=[Citation(**c) for c in a.get("citations", [])],
                     query_id=""),
-                ts=t.get("ts")))
+                ts=t.get("ts") or updated))  # older turns predate per-turn ts
         return Conversation(
             id=_one(vm, "conv_id"), title=_one(vm, "title"),
-            created_at=_one(vm, "created_at"), updated_at=_one(vm, "updated_at"), turns=turns)
+            created_at=_one(vm, "created_at"), updated_at=updated, turns=turns)
+
+    async def get(self, *, user: User, conversation_id: str) -> Conversation | None:
+        try:
+            rows = await self._submit(
+                "g.V().has('conversation','conv_id', cid).has('tenant_id', tid).has('user_id', uid)"
+                ".valueMap('conv_id','title','created_at','updated_at','turns_json')",
+                {"cid": conversation_id, "tid": user.tenant_id, "uid": user.user_id},
+            )
+        except Exception as e:  # noqa: BLE001 - degrade to None
+            logger.warning("conversation get failed (cid=%s): %s", conversation_id, e)
+            return None
+        return self._conv_from_vm(rows[0]) if rows else None
+
+    async def list_all(self, *, tenant_id: str, limit: int = 50) -> list[dict]:
+        """Admin org-wide list — every conversation in the tenant (no user filter).
+        Returns dicts with the asker's user_id so the caller can resolve a name."""
+        try:
+            rows = await self._submit(
+                "g.V().has('conversation','tenant_id', tid)"
+                ".order().by('updated_at', decr).limit(lim)"
+                ".project('id','title','updated_at','turn_count','user_id')"
+                ".by('conv_id').by('title').by('updated_at').by('turn_count').by('user_id')",
+                {"tid": tenant_id, "lim": limit},
+            )
+        except Exception as e:  # noqa: BLE001 - degrade to empty
+            logger.warning("conversation list_all failed: %s", e)
+            return []
+        out: list[dict] = []
+        for r in rows:
+            try:
+                out.append({"id": r["id"], "title": r["title"], "updated_at": r["updated_at"],
+                            "turn_count": int(r["turn_count"]), "user_id": r.get("user_id", "")})
+            except Exception:  # noqa: BLE001 - skip malformed
+                continue
+        return out
+
+    async def get_any(self, *, tenant_id: str, conversation_id: str) -> dict | None:
+        """Admin fetch — any conversation in the tenant (no user filter). Returns the
+        Conversation plus the asker's user_id."""
+        try:
+            rows = await self._submit(
+                "g.V().has('conversation','conv_id', cid).has('tenant_id', tid)"
+                ".valueMap('conv_id','title','created_at','updated_at','turns_json','user_id')",
+                {"cid": conversation_id, "tid": tenant_id},
+            )
+        except Exception as e:  # noqa: BLE001 - degrade to None
+            logger.warning("conversation get_any failed (cid=%s): %s", conversation_id, e)
+            return None
+        if not rows:
+            return None
+        return {"conversation": self._conv_from_vm(rows[0]), "user_id": _one(rows[0], "user_id") or ""}

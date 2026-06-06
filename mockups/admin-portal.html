@@ -191,6 +191,7 @@
   .flow-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 22px;border-bottom:1px solid var(--line-soft);font-size:13.5px;color:var(--ink-dim)}
   .flow-head b{color:var(--ink)}
   .flow-badge{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.04em;font-weight:600;padding:5px 12px;border-radius:20px;background:var(--amber-bg);color:#7a5410}
+  .flow-badge.ok{background:#e2f0e8;color:var(--green)}
   .flow-step{display:flex;gap:15px;padding:17px 22px;border-bottom:1px solid var(--line-soft)}
   .flow-step:last-child{border-bottom:none}
   .flow-ic{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700}
@@ -1047,64 +1048,61 @@
 
       <div class="runs-list">
         <div class="run-row active" onclick="selectRun(this)">
-          <div class="pb">Refund playbook<span>refund_v1 · #RB-4471</span></div>
-          <div class="trig">Triggered from Slack #refunds</div>
+          <div class="pb">What is our PTO policy?<span>conversation · web</span></div>
+          <div class="trig">Maya Iyer · Web chat</div>
+          <span class="rst auto">Answered</span>
+          <span class="time">10:41 AM</span>
+        </div>
+        <div class="run-row" onclick="selectRun(this)">
+          <div class="pb">Refund $1,200 · order #48213<span>refund playbook · slack</span></div>
+          <div class="trig">Tom Reyes · Slack #refunds</div>
           <span class="rst stopped">Stopped for approval</span>
           <span class="time">10:32 AM</span>
         </div>
         <div class="run-row" onclick="selectRun(this)">
-          <div class="pb">Refund playbook<span>refund_v1 · #RB-4470</span></div>
-          <div class="trig">Triggered from Slack #refunds</div>
-          <span class="rst auto">Auto-approved</span>
-          <span class="time">09:15 AM</span>
-        </div>
-        <div class="run-row" onclick="selectRun(this)">
-          <div class="pb">Discount playbook<span>discount_v1 · #DC-2208</span></div>
-          <div class="trig">Triggered from Teams</div>
-          <span class="rst completed">Completed</span>
-          <span class="time">Yesterday</span>
+          <div class="pb">Payments service alert — how to respond?<span>conversation · teams</span></div>
+          <div class="trig">Raj Patel · Microsoft Teams</div>
+          <span class="rst completed">Answered</span>
+          <span class="time">09:58 AM</span>
         </div>
       </div>
 
-      <!-- run detail: execution flow -->
-      <div class="run-eyebrow">Live run</div>
-      <h2 class="run-title">Refund playbook</h2>
-      <p class="run-meta">Triggered from Slack #refunds · run #RB-4471 · 10:32 AM</p>
+      <!-- run detail: conversation execution flow -->
+      <div class="run-eyebrow">Conversation</div>
+      <h2 class="run-title">What is our PTO policy?</h2>
+      <p class="run-meta">Web chat · conversation #c8f2a1 · 10:41 AM</p>
 
       <div class="flow-card">
-        <div class="flow-head"><span><b>refund_v1</b> · version 3 · owner: D. Rao</span><span class="flow-badge">Stopped for approval</span></div>
+        <div class="flow-head"><span><b>Grounded Q&amp;A</b> · web chat · 1 turn</span><span class="flow-badge ok">Answered</span></div>
         <div class="flow-step">
           <div class="flow-ic ok">✓</div>
-          <div><h4>Who's asking</h4><p>Tom Reyes · verified via <b>Microsoft Entra ID</b> · Support team</p></div>
+          <div><h4>Who's asking</h4><p>Maya Iyer · verified via <b>Microsoft Entra ID</b> · via Web chat</p></div>
         </div>
         <div class="flow-step">
           <div class="flow-ic ok">✓</div>
-          <div><h4>Gather the facts</h4><p>Order <b>#48213</b> · amount <b>$1,200</b> · age <b>45 days</b> · customer Priya Sharma · policy <b>refund-policy v3</b></p></div>
+          <div><h4>Gather the facts</h4><p>Retrieved <b>1 source</b> from SharePoint · ACL-rechecked · ranked for this user.</p></div>
         </div>
         <div class="flow-step">
-          <div class="flow-ic warn">!</div>
-          <div><h4>Check the rules</h4><p>Auto-approve allowed only when amount ≤ <b>$500</b> and age ≤ <b>30 days</b>.<br><span class="rule-hit">Rule hit</span>$1,200 &gt; $500 · 45 days &gt; 30 days → not eligible for auto-approval.</p></div>
+          <div class="flow-ic ok">✓</div>
+          <div><h4>Ground the answer</h4><p>Grounded answer with <b>1 citation</b> · nothing out of corpus refused.</p></div>
         </div>
         <div class="flow-step">
-          <div class="flow-ic act">→</div>
-          <div><h4>Decision</h4><p>Hold the action. Route to a <b>Support Manager</b> for approval before anything is issued.</p></div>
+          <div class="flow-ic ok">✓</div>
+          <div><h4>Answered</h4><p>Delivered to <b>Web chat</b> · 340 ms · feedback fed back to the activity pillar.</p></div>
         </div>
       </div>
 
-      <!-- run detail: audit log -->
+      <!-- run detail: audit log (conversation turns) -->
       <div class="audit-wrap">
         <div class="audit-eyebrow">Audit log</div>
-        <h3>Refund playbook · run #RB-4471</h3>
-        <p class="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
+        <h3>Conversation #c8f2a1</h3>
+        <p class="sub">A complete, tamper-evident record of every turn — nothing is a black box.</p>
         <table class="audit-table">
           <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>
           <tbody>
-            <tr><td class="a-time">10:32:04</td><td class="a-step">Request received</td><td class="a-detail">Refund $1,200 · order #48213 · from Slack #refunds</td><td class="a-who">Tom Reyes<span class="chip-entra">Entra</span></td></tr>
-            <tr><td class="a-time">10:32:05</td><td class="a-step">Facts gathered</td><td class="a-detail">Order, amount, age (45d), customer, policy v3</td><td class="a-who">SubstrateOS</td></tr>
-            <tr><td class="a-time">10:32:06</td><td class="a-step">Rule evaluated</td><td class="a-detail">$1,200 &gt; $500 and 45d &gt; 30d →<span class="chip-over">over limit</span></td><td class="a-who">refund_v1 · v3</td></tr>
-            <tr><td class="a-time">10:33:10</td><td class="a-step">Routed for approval</td><td class="a-detail">Sent to Support Manager in Microsoft Teams</td><td class="a-who">SubstrateOS</td></tr>
-            <tr><td class="a-time">10:34:58</td><td class="a-step">Approved</td><td class="a-detail">Manager approved the over-limit refund<span class="chip-appr">approved</span></td><td class="a-who">Diane Foster<span class="chip-entra">Entra</span></td></tr>
-            <tr><td class="a-time">10:35:01</td><td class="a-step">Refund issued</td><td class="a-detail">$1,200 refunded to Priya Sharma · confirmation sent</td><td class="a-who">SubstrateOS</td></tr>
+            <tr><td class="a-time">10:41:02</td><td class="a-step">Asked</td><td class="a-detail">"What is our PTO policy, and who owns it?"</td><td class="a-who">Maya Iyer<span class="chip-entra">Entra</span></td></tr>
+            <tr><td class="a-time">10:41:02</td><td class="a-step">Facts gathered</td><td class="a-detail">1 source · SharePoint /sites/hr/pto.md<span class="chip-appr">grounded</span></td><td class="a-who">SubstrateOS</td></tr>
+            <tr><td class="a-time">10:41:03</td><td class="a-step">Answered</td><td class="a-detail">"Full-time employees accrue 20 days PTO… owned by People Ops" [1]</td><td class="a-who">SubstrateOS</td></tr>
           </tbody>
         </table>
       </div>
