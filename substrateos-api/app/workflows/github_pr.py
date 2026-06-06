@@ -146,6 +146,11 @@ class GithubFlow:
             return err
         s = get_settings()
         tenant = s.substrateos_tenant_id
+        if not await self._tool_enabled(tenant):
+            await self._store.add_event(run.id, step="Blocked",
+                                        detail="GitHub tool disabled by admin — confirm refused",
+                                        actor="SubstrateOS")
+            return ActionResult(ok=False, status=run.status, message=_DISABLED)
         cfg = await self._github.get_config(tenant)
         token = await self._github.get_user_token(tenant, run.requester_email)
         if cfg is None or not token:

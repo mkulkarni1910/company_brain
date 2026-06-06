@@ -282,6 +282,28 @@ async def test_cancel_by_non_requester_rejected(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_confirm_refused_when_tool_disabled_after_preview(monkeypatch):
+    _creds(monkeypatch)
+    conn = _Connections(enabled=True)
+    store = RunStore(client=None, force_memory=True)
+    github = GithubStore(client=None, force_memory=True)
+    client = _Client()
+    flow = GithubFlow(store=store, github=github, connections=conn,
+                      engine=_Engine(), client_factory=lambda tok: client)
+    await _seed(github)
+    r = await flow.start("update window", requester_name="Tom", requester_email="tom@x",
+                         surface="web")
+    conn._enabled = False  # admin kills the tool between preview and confirm
+    out = await flow.confirm(r.run.id, actor_email="tom@x", actor_name="Tom")
+    assert not out.ok and "disabled" in out.message.lower()
+    assert (await store.get(r.run.id)).status == "pending_confirm"
+    assert all(c[0] != "create_pr" for c in client.calls)
+    # cancel still allowed while disabled
+    out2 = await flow.cancel(r.run.id, actor_email="tom@x", actor_name="Tom")
+    assert out2.ok
+
+
+@pytest.mark.asyncio
 async def test_tool_check_fails_open_on_store_outage(monkeypatch):
     """list_surfaces raises RuntimeError → _tool_enabled returns True (fail-open), start succeeds."""
     _creds(monkeypatch)

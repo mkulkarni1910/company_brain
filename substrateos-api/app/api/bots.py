@@ -157,6 +157,13 @@ async def teams_webhook(
     value = body.get("value")
     if (body.get("type") == "message" and isinstance(value, dict)
             and str(value.get("action", "")).startswith("github_") and github_flow is not None):
+        if not await _surface_enabled(store, "teams"):
+            await send_teams_activity(
+                incoming=body,
+                activity={"type": "message", "text": _DISABLED_TEXT.format(surface="Teams")},
+                app_id=s.teams_bot_app_id, app_password=s.teams_bot_app_password,
+                tenant_id=s.teams_bot_tenant_id)
+            return {}
         email = await get_teams_member_email(
             incoming=body, app_id=s.teams_bot_app_id,
             app_password=s.teams_bot_app_password, tenant_id=s.teams_bot_tenant_id)

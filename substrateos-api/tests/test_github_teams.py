@@ -183,6 +183,53 @@ def test_teams_action_submit_routes_to_confirm(monkeypatch):
         get_settings.cache_clear()
 
 
+def test_teams_action_submit_blocked_when_surface_disabled(monkeypatch):
+    """Action.Submit with teams surface disabled → flow.confirm NOT called,
+    sent activity text mentions 'disabled'."""
+    get_settings = _teams_env(monkeypatch)
+    flow = _FakeGithubFlow()
+
+    class _DisabledTeamsStore:
+        async def list_surfaces(self, tenant):
+            return [
+                SurfaceConfig(name="teams", enabled=False),
+                SurfaceConfig(name="slack", enabled=True),
+            ]
+
+    app.dependency_overrides[get_connection_store] = lambda: _DisabledTeamsStore()
+    app.dependency_overrides[get_github_flow] = lambda: flow
+    try:
+        with patch("app.api.bots.verify_teams_jwt", new=AsyncMock(return_value=True)):
+            with patch("app.api.bots.send_teams_activity",
+                       new=AsyncMock(return_value=True)) as mock_send:
+                with patch("app.api.bots.get_teams_member_email",
+                           new=AsyncMock(return_value="tom@acme.com")):
+                    with TestClient(app) as client:
+                        resp = client.post(
+                            "/bot/teams",
+                            json={
+                                "type": "message",
+                                "text": "",
+                                "value": {"action": "github_create", "run_id": "RB-7"},
+                                "from": {"id": "29:user", "name": "Tom"},
+                                "conversation": {"id": "c:1"},
+                                "serviceUrl": "https://smba.example",
+                            },
+                            headers={"Authorization": "Bearer fake-jwt"},
+                        )
+
+        assert resp.status_code == 200
+        # confirm must NOT have been called
+        assert len(flow.confirm_calls) == 0
+        # A disabled-surface reply must have been sent
+        mock_send.assert_awaited_once()
+        activity = mock_send.await_args.kwargs["activity"]
+        assert "disabled" in activity["text"].lower()
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
 def test_teams_github_skill_routes_to_start(monkeypatch):
     """Text message whose skill resolves to workflow='github' calls flow.start
     with surface='teams' and the member email, then sends an adaptive card
