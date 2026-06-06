@@ -105,10 +105,10 @@ class ApprovalFlow:
             run.status = "error"
             await self._store.save(run)
             await self._store.add_event(run.id, step="No approver",
-                                        detail="Couldn't resolve a manager or fallback approver", actor="SubstrateOS")
+                                        detail="Couldn't resolve a manager to approve this", actor="SubstrateOS")
             await self._post(token, channel, thread_ts,
                              text=(f"On it, {first} — but I couldn't work out who should approve this. "
-                                   "Tell me who to send it to (or set a default approver) and I'll route it."))
+                                   "Ask an admin to set your manager in the directory and I'll route it."))
             return
 
         run.status = "pending_approval"

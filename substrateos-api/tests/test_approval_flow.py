@@ -32,8 +32,8 @@ def _slack_recorder():
         calls.append((method, payload))
         if method == "users.info":
             uid = payload.get("user")
-            prof = {"U_TOM": ("Tom Reyes", "tom@x"), "U_DIANA": ("Diana Foster", "diana@x"),
-                    "U_FB": ("Sam Approver", "sam@x")}.get(uid, ("Someone", ""))
+            prof = {"U_TOM": ("Tom Reyes", "tom@x"),
+                    "U_DIANA": ("Diana Foster", "diana@x")}.get(uid, ("Someone", ""))
             return {"ok": True, "user": {"real_name": prof[0],
                                          "profile": {"display_name": prof[0], "email": prof[1]}}}
         if method == "users.lookupByEmail":
