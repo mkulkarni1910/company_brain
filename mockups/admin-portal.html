@@ -168,6 +168,54 @@
   .setup-code{display:block;font-family:"JetBrains Mono",monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:8px;padding:8px 11px;margin-top:8px;color:var(--ink-dim);word-break:break-all;line-height:1.5}
   .setup-step .t code{font-family:"JetBrains Mono",monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;color:var(--amber)}
 
+  /* ── runs (execution flow + audit log) ── */
+  .runs-list{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:30px}
+  .run-row{display:grid;grid-template-columns:1.4fr 1.2fr auto auto;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:.14s}
+  .run-row:last-child{border-bottom:none}
+  .run-row:hover{background:var(--paper-2)}
+  .run-row.active{background:linear-gradient(90deg,var(--amber-bg),transparent);box-shadow:inset 2px 0 0 var(--amber)}
+  .run-row .pb{font-weight:600;font-size:14px}
+  .run-row .pb span{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint);font-weight:400;margin-top:1px}
+  .run-row .trig{font-size:12.5px;color:var(--ink-dim)}
+  .run-row .time{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-faint)}
+  .rst{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
+  .rst.stopped{background:var(--amber-bg);color:#7a5410}
+  .rst.auto,.rst.approved,.rst.completed{background:#e2f0e8;color:var(--green)}
+  .rst.rejected,.rst.error{background:#fdecec;color:var(--rose)}
+  .rst.running{background:var(--teal-bg);color:var(--teal)}
+
+  .run-eyebrow{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);font-weight:600}
+  .run-title{font-family:"Fraunces",serif;font-size:26px;font-weight:600;margin:4px 0 3px}
+  .run-meta{color:var(--ink-faint);font-size:13.5px;margin:0 0 18px}
+  .flow-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .flow-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 22px;border-bottom:1px solid var(--line-soft);font-size:13.5px;color:var(--ink-dim)}
+  .flow-head b{color:var(--ink)}
+  .flow-badge{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.04em;font-weight:600;padding:5px 12px;border-radius:20px;background:var(--amber-bg);color:#7a5410}
+  .flow-step{display:flex;gap:15px;padding:17px 22px;border-bottom:1px solid var(--line-soft)}
+  .flow-step:last-child{border-bottom:none}
+  .flow-ic{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700}
+  .flow-ic.ok{background:var(--green)} .flow-ic.warn{background:var(--amber)} .flow-ic.act{background:var(--amber)}
+  .flow-step h4{margin:0 0 3px;font-size:15px;font-weight:700;color:var(--ink)}
+  .flow-step p{margin:0;font-size:13.5px;color:var(--ink-dim)}
+  .flow-step p b{color:var(--ink);font-weight:600}
+  .rule-hit{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;background:var(--amber-bg);color:#7a5410;border-radius:5px;padding:2px 7px;margin-right:7px}
+
+  .audit-wrap{margin-top:36px}
+  .audit-eyebrow{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);font-weight:600}
+  .audit-wrap h3{font-family:"Fraunces",serif;font-size:21px;font-weight:600;margin:4px 0 2px}
+  .audit-wrap .sub{color:var(--ink-faint);font-size:13.5px;margin:0 0 16px}
+  .audit-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+  .audit-table thead th{text-align:left;background:var(--ink);color:#f3ece0;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;padding:13px 18px}
+  .audit-table tbody td{padding:14px 18px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:top}
+  .audit-table tbody tr:last-child td{border-bottom:none}
+  .audit-table .a-time{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint)}
+  .audit-table .a-step{font-weight:700;color:var(--ink)}
+  .audit-table .a-detail{color:var(--ink-dim)}
+  .audit-table .a-who{color:var(--ink-dim)}
+  .chip-entra{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:#e6edfb;color:#3a5bd0;border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
+  .chip-over{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;background:var(--amber-bg);color:#7a5410;border-radius:5px;padding:2px 8px;margin-left:6px}
+  .chip-appr{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;background:#e2f0e8;color:var(--green);border-radius:5px;padding:2px 8px;margin-left:6px}
+
   /* ── overview ── */
   .ov-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
   .ov-stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px 20px 16px;box-shadow:var(--shadow)}
@@ -311,6 +359,7 @@
     </div>
     <div><h2>Workspace</h2><nav class="nav">
       <a href="#" class="active" data-view="overview"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</a>
+      <a href="#" data-view="runs"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Runs</a>
     </nav></div>
     <div><h2>Connect</h2><nav class="nav">
       <a href="#" data-view="sources"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"/><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>Data Sources</a>
@@ -988,6 +1037,80 @@
     </div>
   </div><!-- /#view-skills -->
 
+  <!-- ── Runs (execution flow + audit log) ── -->
+  <div id="view-runs" style="display:none">
+    <div class="wrap">
+      <div class="head" style="margin-bottom:22px">
+        <h1>Runs</h1>
+        <p>Every playbook execution — the live flow, and the full audit trail behind it.</p>
+      </div>
+
+      <div class="runs-list">
+        <div class="run-row active" onclick="selectRun(this)">
+          <div class="pb">Refund playbook<span>refund_v1 · #RB-4471</span></div>
+          <div class="trig">Triggered from Slack #refunds</div>
+          <span class="rst stopped">Stopped for approval</span>
+          <span class="time">10:32 AM</span>
+        </div>
+        <div class="run-row" onclick="selectRun(this)">
+          <div class="pb">Refund playbook<span>refund_v1 · #RB-4470</span></div>
+          <div class="trig">Triggered from Slack #refunds</div>
+          <span class="rst auto">Auto-approved</span>
+          <span class="time">09:15 AM</span>
+        </div>
+        <div class="run-row" onclick="selectRun(this)">
+          <div class="pb">Discount playbook<span>discount_v1 · #DC-2208</span></div>
+          <div class="trig">Triggered from Teams</div>
+          <span class="rst completed">Completed</span>
+          <span class="time">Yesterday</span>
+        </div>
+      </div>
+
+      <!-- run detail: execution flow -->
+      <div class="run-eyebrow">Live run</div>
+      <h2 class="run-title">Refund playbook</h2>
+      <p class="run-meta">Triggered from Slack #refunds · run #RB-4471 · 10:32 AM</p>
+
+      <div class="flow-card">
+        <div class="flow-head"><span><b>refund_v1</b> · version 3 · owner: D. Rao</span><span class="flow-badge">Stopped for approval</span></div>
+        <div class="flow-step">
+          <div class="flow-ic ok">✓</div>
+          <div><h4>Who's asking</h4><p>Tom Reyes · verified via <b>Microsoft Entra ID</b> · Support team</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-ic ok">✓</div>
+          <div><h4>Gather the facts</h4><p>Order <b>#48213</b> · amount <b>$1,200</b> · age <b>45 days</b> · customer Priya Sharma · policy <b>refund-policy v3</b></p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-ic warn">!</div>
+          <div><h4>Check the rules</h4><p>Auto-approve allowed only when amount ≤ <b>$500</b> and age ≤ <b>30 days</b>.<br><span class="rule-hit">Rule hit</span>$1,200 &gt; $500 · 45 days &gt; 30 days → not eligible for auto-approval.</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-ic act">→</div>
+          <div><h4>Decision</h4><p>Hold the action. Route to a <b>Support Manager</b> for approval before anything is issued.</p></div>
+        </div>
+      </div>
+
+      <!-- run detail: audit log -->
+      <div class="audit-wrap">
+        <div class="audit-eyebrow">Audit log</div>
+        <h3>Refund playbook · run #RB-4471</h3>
+        <p class="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
+        <table class="audit-table">
+          <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>
+          <tbody>
+            <tr><td class="a-time">10:32:04</td><td class="a-step">Request received</td><td class="a-detail">Refund $1,200 · order #48213 · from Slack #refunds</td><td class="a-who">Tom Reyes<span class="chip-entra">Entra</span></td></tr>
+            <tr><td class="a-time">10:32:05</td><td class="a-step">Facts gathered</td><td class="a-detail">Order, amount, age (45d), customer, policy v3</td><td class="a-who">SubstrateOS</td></tr>
+            <tr><td class="a-time">10:32:06</td><td class="a-step">Rule evaluated</td><td class="a-detail">$1,200 &gt; $500 and 45d &gt; 30d →<span class="chip-over">over limit</span></td><td class="a-who">refund_v1 · v3</td></tr>
+            <tr><td class="a-time">10:33:10</td><td class="a-step">Routed for approval</td><td class="a-detail">Sent to Support Manager in Microsoft Teams</td><td class="a-who">SubstrateOS</td></tr>
+            <tr><td class="a-time">10:34:58</td><td class="a-step">Approved</td><td class="a-detail">Manager approved the over-limit refund<span class="chip-appr">approved</span></td><td class="a-who">Diane Foster<span class="chip-entra">Entra</span></td></tr>
+            <tr><td class="a-time">10:35:01</td><td class="a-step">Refund issued</td><td class="a-detail">$1,200 refunded to Priya Sharma · confirmation sent</td><td class="a-who">SubstrateOS</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /#view-runs -->
+
   </main>
 </div>
 
@@ -1146,6 +1269,7 @@
     surfaces: document.getElementById('view-surfaces'),
     permissions: document.getElementById('view-permissions'),
     skills: document.getElementById('view-skills'),
+    runs: document.getElementById('view-runs'),
   };
   function showView(name) {
     Object.entries(views).forEach(([k, el]) => {
@@ -1163,6 +1287,12 @@
       if (v && v !== 'none') showView(v);
     });
   });
+
+  function selectRun(row) {
+    document.querySelectorAll('.run-row').forEach(r => r.classList.remove('active'));
+    row.classList.add('active');
+    // (mockup: detail stays on #RB-4471; in the app this loads the clicked run)
+  }
 
   // ── surface toggles ─────────────────────────────────────────────────────────
   document.querySelectorAll('[data-surface]').forEach(btn => {

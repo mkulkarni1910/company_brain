@@ -619,6 +619,52 @@
   .skill-used-badge{display:inline-block;font-family:var(--font-mono),monospace;font-size:10.5px;color:var(--teal);background:var(--teal-bg);border:1px solid rgba(15,137,126,.25);padding:3px 10px;border-radius:20px;margin-bottom:10px}
 
   /* ── Admin skills table ── */
+  /* ── runs: execution flow + audit log ── */
+  .runs-list{background:var(--surface);border:1px solid var(--line-soft);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .run-row{display:grid;grid-template-columns:1.4fr 1.2fr auto auto;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:.14s}
+  .run-row:last-child{border-bottom:none}
+  .run-row:hover{background:var(--paper-2)}
+  .run-row.active{background:linear-gradient(90deg,var(--amber-bg),transparent);box-shadow:inset 2px 0 0 var(--amber)}
+  .run-row .pb{font-weight:600;font-size:14px}
+  .run-row .pb span{display:block;font-family:var(--font-mono),monospace;font-size:11px;color:var(--ink-faint);font-weight:400;margin-top:1px}
+  .run-row .trig{font-size:12.5px;color:var(--ink-dim)}
+  .run-row .time{font-family:var(--font-mono),monospace;font-size:11.5px;color:var(--ink-faint)}
+  .rst{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
+  .rst.stopped{background:var(--amber-bg);color:#7a5410}
+  .rst.auto,.rst.approved,.rst.completed{background:#e2f0e8;color:var(--green)}
+  .rst.rejected,.rst.error{background:#fdecec;color:var(--rose)}
+  .rst.running{background:var(--teal-bg);color:var(--teal)}
+
+  .run-detail{margin-top:6px}
+  .run-eyebrow{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);font-weight:600}
+  .run-title{font-family:var(--font-fraunces),serif;font-size:26px;font-weight:600;margin:4px 0 3px}
+  .run-meta{color:var(--ink-faint);font-size:13.5px;margin:0 0 18px}
+  .flow-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .flow-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:15px 22px;border-bottom:1px solid var(--line-soft);font-size:13.5px;color:var(--ink-dim)}
+  .flow-head b{color:var(--ink)}
+  .flow-badge{font-family:var(--font-mono),monospace;font-size:10.5px;letter-spacing:.04em;font-weight:600;padding:5px 12px;border-radius:20px;background:var(--amber-bg);color:#7a5410}
+  .flow-step{display:flex;gap:15px;padding:17px 22px;border-bottom:1px solid var(--line-soft)}
+  .flow-step:last-child{border-bottom:none}
+  .flow-ic{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:700}
+  .flow-ic.ok{background:var(--green)} .flow-ic.warn,.flow-ic.act{background:var(--amber)} .flow-ic.bad{background:var(--rose)}
+  .flow-step h4{margin:0 0 3px;font-size:15px;font-weight:700;color:var(--ink)}
+  .flow-step p{margin:0;font-size:13.5px;color:var(--ink-dim)}
+  .flow-step p b{color:var(--ink);font-weight:600}
+  .rule-hit{display:inline-block;font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;background:var(--amber-bg);color:#7a5410;border-radius:5px;padding:2px 7px;margin-right:7px}
+
+  .audit-wrap{margin-top:36px}
+  .audit-eyebrow{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);font-weight:600}
+  .audit-wrap h3{font-family:var(--font-fraunces),serif;font-size:21px;font-weight:600;margin:4px 0 2px}
+  .audit-wrap .sub{color:var(--ink-faint);font-size:13.5px;margin:0 0 16px}
+  .audit-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line-soft);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .audit-table thead th{text-align:left;background:var(--ink);color:#f3ece0;font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;font-weight:600;padding:13px 18px}
+  .audit-table tbody td{padding:14px 18px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:top}
+  .audit-table tbody tr:last-child td{border-bottom:none}
+  .audit-table .a-time{font-family:var(--font-mono),monospace;font-size:12px;color:var(--ink-faint);white-space:nowrap}
+  .audit-table .a-step{font-weight:700;color:var(--ink)}
+  .audit-table .a-detail,.audit-table .a-who{color:var(--ink-dim)}
+  .chip-entra{display:inline-block;font-family:var(--font-mono),monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:#e6edfb;color:#3a5bd0;border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
+
   .skills-table{width:100%;border-collapse:collapse;font-size:13.5px}
   .skills-table th{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:10px 14px;text-align:left;border-bottom:1px solid var(--line-soft);font-weight:500}
   .skills-table td{padding:12px 14px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
