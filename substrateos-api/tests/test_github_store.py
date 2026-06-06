@@ -32,3 +32,31 @@ async def test_oauth_state_is_one_shot():
     assert await store.consume_connect_state(state) == ("t-test", "tom@x")  # callback: consumed
     assert await store.consume_connect_state(state) is None              # reuse rejected
     assert await store.consume_connect_state("bogus") is None
+
+
+@pytest.mark.asyncio
+async def test_consume_fails_closed_when_redis_errors():
+    from redis.exceptions import RedisError
+
+    class _BrokenRedis:
+        async def set(self, *a, **kw): raise RedisError("down")
+        async def get(self, *a, **kw): raise RedisError("down")
+        async def getdel(self, *a, **kw): raise RedisError("down")
+
+    store = GithubStore(client=_BrokenRedis())
+    state = await store.mint_connect_state("t-test", "tom@x")  # mirrored to memory
+    # Redis configured but erroring at consume time → fail closed, never replayable.
+    assert await store.consume_connect_state(state) is None
+
+
+@pytest.mark.asyncio
+async def test_memory_mirror_honors_ttl(monkeypatch):
+    import app.connectors.github_store as _mod
+    store = GithubStore(client=None, force_memory=True)
+    state = await store.mint_connect_state("t-test", "tom@x")
+    import time as _time
+    real = _time.monotonic()
+    # Advance the clock so the TTL looks expired inside the module
+    monkeypatch.setattr(_mod.time, "monotonic", lambda: real + 100000.0)
+    assert await store.peek_connect_state(state) is None
+    assert await store.consume_connect_state(state) is None

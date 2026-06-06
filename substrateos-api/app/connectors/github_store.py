@@ -1,13 +1,19 @@
 """Redis-backed state for the GitHub tool: admin repo config, per-user OAuth
 tokens, and one-shot connect states. Mirrors writes to an in-process dict so
 the flow keeps working within a single process when Redis is unavailable
-(same degradation philosophy as RunStore)."""
+(same degradation philosophy as RunStore).
+
+Memory mirror honors TTLs — expired states are never returned even in
+memory-only mode. Consume (_getdel) fails closed when Redis is configured but
+errors at call time — the caller receives None and the callback is rejected,
+preserving the one-shot CSRF guarantee."""
 
 from __future__ import annotations
 
 import contextlib
 import logging
 import secrets
+import time
 
 import redis.asyncio as redis
 from redis.exceptions import RedisError
@@ -27,6 +33,7 @@ def _state_key(state: str) -> str: return f"github:oauth:{state}"
 class GithubStore:
     def __init__(self, client: redis.Redis | None = None, *, force_memory: bool = False) -> None:
         self._mem: dict[str, str] = {}
+        self._mem_exp: dict[str, float] = {}
         if force_memory:
             self._r = None
             return
@@ -50,8 +57,21 @@ class GithubStore:
 
     # ── shared get/set with memory mirror ──────────────────────────────────────
 
+    def _mem_expired(self, key: str) -> bool:
+        """Return True and evict from _mem if the key's TTL has passed."""
+        exp = self._mem_exp.get(key)
+        if exp is not None and time.monotonic() > exp:
+            self._mem.pop(key, None)
+            self._mem_exp.pop(key, None)
+            return True
+        return False
+
     async def _set(self, key: str, value: str, *, ex: int | None = None) -> None:
         self._mem[key] = value
+        if ex is not None:
+            self._mem_exp[key] = time.monotonic() + ex
+        else:
+            self._mem_exp.pop(key, None)
         if self._r is None:
             return
         try:
@@ -67,17 +87,25 @@ class GithubStore:
                     return v
             except _ERRORS as e:
                 logger.warning("GithubStore get failed: %s", e)
+        self._mem_expired(key)
         return self._mem.get(key)
 
     async def _getdel(self, key: str) -> str | None:
-        """One-shot read: removes from BOTH redis and the memory mirror."""
-        redis_val: str | None = None
-        if self._r is not None:
-            try:
-                redis_val = await self._r.getdel(key)
-            except _ERRORS as e:
-                logger.warning("GithubStore getdel failed: %s", e)
+        """One-shot read: removes from BOTH redis and the memory mirror.
+        Fails CLOSED if Redis is configured but unreachable — otherwise the
+        key would survive in Redis and the one-shot guarantee would break."""
+        expired = self._mem_expired(key)  # evicts from _mem/_mem_exp if stale
         mem_val = self._mem.pop(key, None)
+        self._mem_exp.pop(key, None)
+        if expired:
+            mem_val = None
+        if self._r is None:
+            return mem_val
+        try:
+            redis_val = await self._r.getdel(key)
+        except _ERRORS as e:
+            logger.warning("GithubStore getdel failed (failing closed): %s", e)
+            return None
         return redis_val if redis_val is not None else mem_val
 
     # ── admin repo config ───────────────────────────────────────────────────────
