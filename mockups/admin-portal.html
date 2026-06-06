@@ -170,7 +170,7 @@
 
   /* ── runs (master/detail: list ⟷ flow + audit log) ── */
   /* filter + search toolbar */
-  .runs-toolbar{display:flex;align-items:center;gap:14px;margin:20px 0 18px;flex-wrap:wrap}
+  .runs-toolbar{display:flex;flex-direction:column;align-items:stretch;gap:12px;margin:20px 0 18px}
   .run-chips{display:flex;gap:7px;flex-wrap:wrap}
   .run-chip{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.03em;font-weight:600;text-transform:uppercase;color:var(--ink-dim);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:7px 13px;cursor:pointer;transition:.14s}
   .run-chip:hover{border-color:#cabd9f;color:var(--ink)}
@@ -647,15 +647,33 @@
   <!-- ── Surfaces ── -->
   <div id="view-surfaces">
     <div class="wrap">
-      <div class="head" style="margin-bottom:24px">
+      <div class="head" style="margin-bottom:0">
         <h1>Surfaces</h1>
         <p>Where SubstrateOS shows up — enable surfaces and install integrations for your team.</p>
+      </div>
+
+      <!-- filter + search toolbar (same pattern as Runs) -->
+      <div class="runs-toolbar">
+        <div class="search run-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="surf-search-input" placeholder="Search surfaces…" />
+        </div>
+        <div class="run-chips" id="surf-chips">
+          <button class="run-chip active" data-filter="all">All <span class="ct">5</span></button>
+          <button class="run-chip" data-filter="enabled">Enabled <span class="ct">4</span></button>
+          <button class="run-chip" data-filter="disabled">Disabled <span class="ct">1</span></button>
+          <button class="run-chip" data-filter="installed">Installed <span class="ct">1</span></button>
+          <button class="run-chip" data-filter="needs-setup">Needs setup <span class="ct">1</span></button>
+          <button class="run-chip" data-filter="builtin">Built-in <span class="ct">3</span></button>
+        </div>
       </div>
 
       <div class="surf-grid">
 
         <!-- Slack — installed & enabled -->
-        <div class="surf-card" id="sc-slack">
+        <div class="surf-card" id="sc-slack" data-status="enabled" data-setup="installed" data-text="slack individual all employees answers questions channel dm mentions">
+
+
           <div class="surf-top">
             <div class="surf-head">
               <div class="surf-logo sl-slack">
@@ -680,7 +698,7 @@
         </div>
 
         <!-- Teams — not installed, enabled -->
-        <div class="surf-card" id="sc-teams">
+        <div class="surf-card" id="sc-teams" data-status="enabled" data-setup="needs-setup" data-text="teams microsoft team all employees adaptive cards meeting side panel">
           <div class="surf-top">
             <div class="surf-head">
               <div class="surf-logo sl-teams">
@@ -704,7 +722,7 @@
         </div>
 
         <!-- Web — enabled -->
-        <div class="surf-card" id="sc-web">
+        <div class="surf-card" id="sc-web" data-status="enabled" data-setup="builtin" data-text="web all employees first-party chat search url">
           <div class="surf-top">
             <div class="surf-head">
               <div class="surf-logo sl-web">
@@ -728,7 +746,7 @@
         </div>
 
         <!-- API — enabled -->
-        <div class="surf-card" id="sc-api">
+        <div class="surf-card" id="sc-api" data-status="enabled" data-setup="builtin" data-text="api platform developers rest endpoint context layer integrations">
           <div class="surf-top">
             <div class="surf-head">
               <div class="surf-logo sl-api">
@@ -752,7 +770,7 @@
         </div>
 
         <!-- MCP — disabled (showing blocked state) -->
-        <div class="surf-card surf-off" id="sc-mcp">
+        <div class="surf-card surf-off" id="sc-mcp" data-status="disabled" data-setup="builtin" data-text="mcp platform developers copilot studio azure ai foundry client server">
           <div class="surf-top">
             <div class="surf-head">
               <div class="surf-logo sl-mcp">
@@ -774,6 +792,8 @@
             <span class="surf-url" style="opacity:.4">mcp.substrateos.ai/contoso</span>
           </div>
         </div>
+
+        <div class="runs-empty" id="surf-empty" style="grid-column:1/-1">No surfaces match this filter.</div>
 
       </div><!-- /.surf-grid -->
     </div>
@@ -1073,16 +1093,16 @@
 
       <!-- filter + search toolbar -->
       <div class="runs-toolbar">
+        <div class="search run-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="run-search-input" placeholder="Search runs, people, orders…" />
+        </div>
         <div class="run-chips" id="run-chips">
           <button class="run-chip active" data-status="all">All <span class="ct">9</span></button>
           <button class="run-chip" data-status="stopped">Stopped <span class="ct">3</span></button>
           <button class="run-chip" data-status="running">Running <span class="ct">1</span></button>
           <button class="run-chip" data-status="answered">Answered <span class="ct">4</span></button>
           <button class="run-chip" data-status="rejected">Rejected <span class="ct">1</span></button>
-        </div>
-        <div class="search run-search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="run-search-input" placeholder="Search runs, people, orders…" />
         </div>
       </div>
 
@@ -1396,6 +1416,38 @@
       apply();
     }));
     if (search) search.addEventListener('input', apply);
+  })();
+
+  // ── surfaces: chip + search filtering ────────────────────────────────────────
+  (function () {
+    const chips = document.querySelectorAll('#surf-chips .run-chip');
+    const search = document.getElementById('surf-search-input');
+    const cards = () => Array.from(document.querySelectorAll('.surf-grid .surf-card'));
+    const emptyEl = document.getElementById('surf-empty');
+    let f = 'all';
+    function matchFilter(card) {
+      if (f === 'all') return true;
+      if (f === 'enabled' || f === 'disabled') return card.dataset.status === f;
+      return card.dataset.setup === f; // installed | needs-setup | builtin
+    }
+    function apply() {
+      const term = (search.value || '').trim().toLowerCase();
+      let shown = 0;
+      cards().forEach(c => {
+        const ok = matchFilter(c) && (!term || (c.dataset.text || '').includes(term));
+        c.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+      });
+      if (emptyEl) emptyEl.style.display = shown === 0 ? 'block' : 'none';
+    }
+    chips.forEach(c => c.addEventListener('click', () => {
+      chips.forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      f = c.dataset.filter;
+      apply();
+    }));
+    if (search) search.addEventListener('input', apply);
+    apply();
   })();
 
   // ── surface toggles ─────────────────────────────────────────────────────────

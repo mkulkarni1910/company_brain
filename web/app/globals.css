@@ -621,7 +621,7 @@
   /* ── Admin skills table ── */
   /* ── runs: master/detail (list ⟷ flow + audit log) ── */
   /* filter + search toolbar */
-  .runs-toolbar{display:flex;align-items:center;gap:14px;margin:20px 0 18px;flex-wrap:wrap}
+  .runs-toolbar{display:flex;flex-direction:column;align-items:stretch;gap:12px;margin:20px 0 18px}
   .run-chips{display:flex;gap:7px;flex-wrap:wrap}
   .run-chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono),monospace;font-size:11px;letter-spacing:.03em;font-weight:600;text-transform:uppercase;color:var(--ink-dim);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:7px 13px;cursor:pointer;transition:.14s}
   .run-chip:hover{border-color:#cabd9f;color:var(--ink)}

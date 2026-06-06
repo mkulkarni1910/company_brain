@@ -53,6 +53,25 @@ const SURFACES: SurfaceMeta[] = [
   },
 ];
 
+type SurfFilter = "all" | "enabled" | "disabled" | "installed" | "needs-setup" | "builtin";
+type SetupState = "installed" | "needs-setup" | "builtin";
+
+const FILTERS: { key: SurfFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "enabled", label: "Enabled" },
+  { key: "disabled", label: "Disabled" },
+  { key: "installed", label: "Installed" },
+  { key: "needs-setup", label: "Needs setup" },
+  { key: "builtin", label: "Built-in" },
+];
+
+// A surface that can't be installed (web/api/mcp) is always-on "built-in";
+// installable ones (slack/teams) are either connected or still need setup.
+function setupOf(meta: SurfaceMeta, config: SurfaceConfig): SetupState {
+  if (!meta.installable) return "builtin";
+  return config.installed ? "installed" : "needs-setup";
+}
+
 const ICONS: Record<string, React.ReactNode> = {
   slack: (
     <svg viewBox="0 0 24 24" fill="currentColor" width={20} height={20}>
@@ -248,6 +267,8 @@ export default function Surfaces() {
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
   const [installModal, setInstallModal] = useState<"teams" | "slack" | null>(null);
   const [err, setErr] = useState(false);
+  const [filter, setFilter] = useState<SurfFilter>("all");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     Promise.all([getSurfaces(), getBotStatus()])
@@ -288,6 +309,33 @@ export default function Surfaces() {
     if (name === "teams" || name === "slack") setInstallModal(name);
   };
 
+  const enriched = SURFACES.map((meta) => {
+    const config = configOf(meta.name);
+    return {
+      meta,
+      config,
+      setup: setupOf(meta, config),
+      status: (config.enabled ? "enabled" : "disabled") as SurfFilter,
+      search: `${meta.label} ${meta.tag} ${meta.scope} ${meta.desc}`.toLowerCase(),
+    };
+  });
+
+  const counts = enriched.reduce<Record<string, number>>((acc, s) => {
+    acc.all = (acc.all ?? 0) + 1;
+    acc[s.status] = (acc[s.status] ?? 0) + 1;
+    acc[s.setup] = (acc[s.setup] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const q = query.trim().toLowerCase();
+  const shown = enriched.filter((s) => {
+    const matchesFilter =
+      filter === "all" ? true
+      : filter === "enabled" || filter === "disabled" ? s.status === filter
+      : s.setup === filter;
+    return matchesFilter && (!q || s.search.includes(q));
+  });
+
   return (
     <div className="admin-page">
     <div className="admin-wrap">
@@ -296,8 +344,32 @@ export default function Surfaces() {
         <p>Where SubstrateOS shows up — enable surfaces and install integrations for your team.</p>
       </header>
       {err && <div className="admin-note">Couldn&apos;t load surface config. Check the admin key / API.</div>}
+
+      <div className="runs-toolbar">
+        <div className="search run-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <input
+            placeholder="Search surfaces…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <div className="run-chips">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              className={`run-chip${filter === f.key ? " active" : ""}`}
+              onClick={() => setFilter(f.key)}
+            >
+              {f.label}
+              {counts[f.key] ? <span className="ct">{counts[f.key]}</span> : null}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="surf-grid">
-        {SURFACES.map((meta) => {
+        {shown.map(({ meta, config }) => {
           const bc =
             meta.name === "teams" ? (botStatus?.teams.configured ?? false) :
             meta.name === "slack" ? (botStatus?.slack.configured ?? false) : false;
@@ -305,13 +377,14 @@ export default function Surfaces() {
             <SurfaceCard
               key={meta.name}
               meta={meta}
-              config={configOf(meta.name)}
+              config={config}
               onToggle={(enabled) => handleToggle(meta.name, enabled)}
               onInstall={() => handleInstall(meta.name)}
               botConfigured={bc}
             />
           );
         })}
+        {shown.length === 0 && <div className="runs-empty" style={{ gridColumn: "1/-1" }}>No surfaces match this filter.</div>}
       </div>
       {installModal === "teams" && <TeamsInstallModal onClose={() => setInstallModal(null)} />}
       {installModal === "slack" && <SlackInstallModal onClose={() => setInstallModal(null)} />}

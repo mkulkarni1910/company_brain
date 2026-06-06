@@ -192,6 +192,14 @@ export default function AdminRunsPage() {
         ) : (
           <>
             <div className="runs-toolbar">
+              <div className="search run-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                <input
+                  placeholder="Search runs, people, orders…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
               <div className="run-chips">
                 {FILTERS.map((f) => (
                   <button
@@ -203,14 +211,6 @@ export default function AdminRunsPage() {
                     {counts[f.key] ? <span className="ct">{counts[f.key]}</span> : null}
                   </button>
                 ))}
-              </div>
-              <div className="search run-search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-                <input
-                  placeholder="Search runs, people, orders…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
               </div>
             </div>
 
