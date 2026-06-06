@@ -112,3 +112,11 @@ def get_refund_flow(request: Request):
 
 def get_approval_flow(request: Request):
     return getattr(request.app.state, "approval_flow", None)
+
+
+def get_github_store(request: Request):
+    return getattr(request.app.state, "github_store", None)
+
+
+def get_github_flow(request: Request):
+    return getattr(request.app.state, "github_flow", None)
