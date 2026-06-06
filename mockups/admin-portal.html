@@ -168,21 +168,46 @@
   .setup-code{display:block;font-family:"JetBrains Mono",monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:8px;padding:8px 11px;margin-top:8px;color:var(--ink-dim);word-break:break-all;line-height:1.5}
   .setup-step .t code{font-family:"JetBrains Mono",monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;color:var(--amber)}
 
-  /* ── runs (execution flow + audit log) ── */
-  .runs-list{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:30px}
-  .run-row{display:grid;grid-template-columns:1.4fr 1.2fr auto auto;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:.14s}
+  /* ── runs (master/detail: list ⟷ flow + audit log) ── */
+  /* filter + search toolbar */
+  .runs-toolbar{display:flex;align-items:center;gap:14px;margin:20px 0 18px;flex-wrap:wrap}
+  .run-chips{display:flex;gap:7px;flex-wrap:wrap}
+  .run-chip{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.03em;font-weight:600;text-transform:uppercase;color:var(--ink-dim);background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:7px 13px;cursor:pointer;transition:.14s}
+  .run-chip:hover{border-color:#cabd9f;color:var(--ink)}
+  .run-chip.active{background:linear-gradient(180deg,#fff5e1,var(--amber-bg));border-color:#e3c489;color:#7a5410;box-shadow:inset 0 0 0 1px rgba(176,110,13,.12)}
+  .run-chip .ct{font-size:10px;color:var(--ink-faint);background:var(--paper-2);border-radius:99px;padding:1px 6px;min-width:18px;text-align:center}
+  .run-chip.active .ct{color:#7a5410;background:rgba(255,255,255,.6)}
+  .run-search{flex:1;min-width:220px}
+
+  /* two-pane shell */
+  .runs-split{display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start}
+  .runs-col{position:sticky;top:0;max-height:calc(100vh - 96px);overflow-y:auto;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .runs-col::-webkit-scrollbar{width:9px}
+  .runs-col::-webkit-scrollbar-thumb{background:var(--line);border:3px solid var(--surface);border-radius:99px}
+  .runs-col-head{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(246,243,236,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line-soft);font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+  .runs-col-head em{font-style:normal;color:var(--ink-dim)}
+  .runs-empty{display:none;padding:34px 18px;text-align:center;color:var(--ink-faint);font-size:13px}
+  .runs-empty.show{display:block}
+
+  /* compact run row (stacked for the narrow column) */
+  .run-row{display:flex;flex-direction:column;gap:6px;padding:13px 16px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:.14s}
   .run-row:last-child{border-bottom:none}
   .run-row:hover{background:var(--paper-2)}
   .run-row.active{background:linear-gradient(90deg,var(--amber-bg),transparent);box-shadow:inset 2px 0 0 var(--amber)}
-  .run-row .pb{font-weight:600;font-size:14px}
-  .run-row .pb span{display:block;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint);font-weight:400;margin-top:1px}
-  .run-row .trig{font-size:12.5px;color:var(--ink-dim)}
-  .run-row .time{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-faint)}
+  .run-row .pb{font-weight:600;font-size:13.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .run-row .sub{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .run-row .row-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:1px}
+  .run-row .time{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-faint);flex:none}
   .rst{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
   .rst.stopped{background:var(--amber-bg);color:#7a5410}
   .rst.auto,.rst.approved,.rst.completed{background:#e2f0e8;color:var(--green)}
   .rst.rejected,.rst.error{background:#fdecec;color:var(--rose)}
   .rst.running{background:var(--teal-bg);color:var(--teal)}
+
+  /* detail column (right pane) — reuses flow-card / audit-table below */
+  .run-detail-col{min-width:0}
+  .run-placeholder{display:grid;place-items:center;min-height:340px;text-align:center;color:var(--ink-faint);background:var(--surface);border:1px dashed var(--line);border-radius:var(--radius)}
+  .run-placeholder svg{width:30px;height:30px;color:var(--line);margin-bottom:12px}
 
   .run-eyebrow{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);font-weight:600}
   .run-title{font-family:"Fraunces",serif;font-size:26px;font-weight:600;margin:4px 0 3px}
@@ -1041,77 +1066,122 @@
   <!-- ── Runs (execution flow + audit log) ── -->
   <div id="view-runs" style="display:none">
     <div class="wrap">
-      <div class="head" style="margin-bottom:22px">
+      <div class="head" style="margin-bottom:0">
         <h1>Runs</h1>
-        <p>Every playbook execution — the live flow, and the full audit trail behind it.</p>
+        <p>Every playbook execution and conversation — the live flow, and the full audit trail behind it.</p>
       </div>
 
-      <div class="runs-list">
-        <div class="run-row active" onclick="selectRun(this)">
-          <div class="pb">Discount exception — 18% off Acme<span>request-approval · slack</span></div>
-          <div class="trig">Tom Reyes · Slack #deals</div>
-          <span class="rst stopped">Stopped for approval</span>
-          <span class="time">12:00 PM</span>
+      <!-- filter + search toolbar -->
+      <div class="runs-toolbar">
+        <div class="run-chips" id="run-chips">
+          <button class="run-chip active" data-status="all">All <span class="ct">9</span></button>
+          <button class="run-chip" data-status="stopped">Stopped <span class="ct">3</span></button>
+          <button class="run-chip" data-status="running">Running <span class="ct">1</span></button>
+          <button class="run-chip" data-status="answered">Answered <span class="ct">4</span></button>
+          <button class="run-chip" data-status="rejected">Rejected <span class="ct">1</span></button>
         </div>
-        <div class="run-row" onclick="selectRun(this)">
-          <div class="pb">What is our PTO policy?<span>conversation · web</span></div>
-          <div class="trig">Maya Iyer · Web chat</div>
-          <span class="rst auto">Answered</span>
-          <span class="time">10:41 AM</span>
-        </div>
-        <div class="run-row" onclick="selectRun(this)">
-          <div class="pb">Refund $1,200 · order #48213<span>refund playbook · slack</span></div>
-          <div class="trig">Tom Reyes · Slack #refunds</div>
-          <span class="rst stopped">Stopped for approval</span>
-          <span class="time">10:32 AM</span>
-        </div>
-        <div class="run-row" onclick="selectRun(this)">
-          <div class="pb">Payments service alert — how to respond?<span>conversation · teams</span></div>
-          <div class="trig">Raj Patel · Microsoft Teams</div>
-          <span class="rst completed">Answered</span>
-          <span class="time">09:58 AM</span>
+        <div class="search run-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="run-search-input" placeholder="Search runs, people, orders…" />
         </div>
       </div>
 
-      <!-- run detail: request-approval playbook flow -->
-      <div class="run-eyebrow">Live run</div>
-      <h2 class="run-title">Discount exception — 18% off Acme</h2>
-      <p class="run-meta">Slack #deals · request-approval · run #AP-7782 · 12:00 PM</p>
+      <!-- two-pane: list (left, scrolls independently) ⟷ detail (right, stays in view) -->
+      <div class="runs-split">
+        <aside class="runs-col" id="runs-col">
+          <div class="runs-col-head"><span>Runs</span><em><span id="run-count">9</span> shown</em></div>
 
-      <div class="flow-card">
-        <div class="flow-head"><span><b>request-approval</b> · routed to manager</span><span class="flow-badge">Stopped for approval</span></div>
-        <div class="flow-step">
-          <div class="flow-ic ok">✓</div>
-          <div><h4>Who's asking</h4><p>Tom Reyes · verified via <b>Microsoft Entra ID</b> · Support team</p></div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-ic ok">✓</div>
-          <div><h4>The request</h4><p>&ldquo;Send this discount exception to my support manager for sign-off&rdquo; — <b>18% off</b> to close the Acme renewal (over the 12% desk limit).</p></div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-ic ok">✓</div>
-          <div><h4>Find the approver</h4><p>Resolved <b>Diana Foster</b> — Tom&rsquo;s manager via the Entra <code style="font-family:'JetBrains Mono',monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;color:var(--amber)">manages</code> edge.</p></div>
-        </div>
-        <div class="flow-step">
-          <div class="flow-ic act">→</div>
-          <div><h4>Decision</h4><p>Hold the action. Sent an <b>Approve / Reject</b> card to Diana Foster in Slack. Awaiting sign-off — nothing acts until she approves.</p></div>
-        </div>
-      </div>
+          <div class="run-row" data-status="stopped" data-text="discount exception 18% off acme tom reyes slack deals request-approval ap-7782" onclick="selectRun(this)">
+            <div class="pb">Discount exception — 18% off Acme</div>
+            <div class="sub">request-approval · Tom Reyes</div>
+            <div class="row-foot"><span class="rst stopped">Stopped for approval</span><span class="time">12:00 PM</span></div>
+          </div>
+          <div class="run-row" data-status="answered" data-text="pto policy maya iyer web chat conversation" onclick="selectRun(this)">
+            <div class="pb">What is our PTO policy?</div>
+            <div class="sub">conversation · Maya Iyer · web</div>
+            <div class="row-foot"><span class="rst auto">Answered</span><span class="time">10:41 AM</span></div>
+          </div>
+          <div class="run-row active" data-status="stopped" data-text="refund 1200 order 48213 tom reyes slack refunds refund playbook rb-4483" onclick="selectRun(this)">
+            <div class="pb">Refund $1,200 · order #48213</div>
+            <div class="sub">refund playbook · Tom Reyes</div>
+            <div class="row-foot"><span class="rst stopped">Stopped for approval</span><span class="time">10:32 AM</span></div>
+          </div>
+          <div class="run-row" data-status="answered" data-text="payments service alert how to respond raj patel microsoft teams conversation" onclick="selectRun(this)">
+            <div class="pb">Payments service alert — how to respond?</div>
+            <div class="sub">conversation · Raj Patel · teams</div>
+            <div class="row-foot"><span class="rst completed">Answered</span><span class="time">09:58 AM</span></div>
+          </div>
+          <div class="run-row" data-status="running" data-text="refund 240 order 51902 priya nair slack refunds refund playbook rb-4486" onclick="selectRun(this)">
+            <div class="pb">Refund $240 · order #51902</div>
+            <div class="sub">refund playbook · Priya Nair</div>
+            <div class="row-foot"><span class="rst running">Running</span><span class="time">09:41 AM</span></div>
+          </div>
+          <div class="run-row" data-status="answered" data-text="how do i request vacation maya iyer web chat conversation" onclick="selectRun(this)">
+            <div class="pb">How do I request vacation?</div>
+            <div class="sub">conversation · Maya Iyer · web</div>
+            <div class="row-foot"><span class="rst auto">Answered</span><span class="time">09:20 AM</span></div>
+          </div>
+          <div class="run-row" data-status="rejected" data-text="refund 980 order 47781 tom reyes slack refunds refund playbook rb-4479" onclick="selectRun(this)">
+            <div class="pb">Refund $980 · order #47781</div>
+            <div class="sub">refund playbook · Tom Reyes</div>
+            <div class="row-foot"><span class="rst rejected">Rejected</span><span class="time">Yesterday</span></div>
+          </div>
+          <div class="run-row" data-status="stopped" data-text="discount exception 15% off globex sara kim slack deals request-approval ap-7771" onclick="selectRun(this)">
+            <div class="pb">Discount exception — 15% off Globex</div>
+            <div class="sub">request-approval · Sara Kim</div>
+            <div class="row-foot"><span class="rst stopped">Stopped for approval</span><span class="time">Yesterday</span></div>
+          </div>
+          <div class="run-row" data-status="answered" data-text="what is the expense limit raj patel microsoft teams conversation" onclick="selectRun(this)">
+            <div class="pb">What is the expense limit?</div>
+            <div class="sub">conversation · Raj Patel · teams</div>
+            <div class="row-foot"><span class="rst completed">Answered</span><span class="time">Yesterday</span></div>
+          </div>
 
-      <!-- run detail: audit log -->
-      <div class="audit-wrap">
-        <div class="audit-eyebrow">Audit log</div>
-        <h3>request-approval · run #AP-7782</h3>
-        <p class="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
-        <table class="audit-table">
-          <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>
-          <tbody>
-            <tr><td class="a-time">12:00:01</td><td class="a-step">Request received</td><td class="a-detail">"Send this discount exception to my support manager" · from Slack #deals</td><td class="a-who">Tom Reyes<span class="chip-entra">Entra</span></td></tr>
-            <tr><td class="a-time">12:00:02</td><td class="a-step">Approver resolved</td><td class="a-detail">Diana Foster — Tom's manager (Entra <code style="font-family:'JetBrains Mono',monospace;font-size:11px">manages</code> edge)<span class="chip-appr">manager</span></td><td class="a-who">SubstrateOS</td></tr>
-            <tr><td class="a-time">12:00:03</td><td class="a-step">Routed for approval</td><td class="a-detail">Approve/Reject card DM'd to Diana Foster in Slack</td><td class="a-who">SubstrateOS</td></tr>
-            <tr><td class="a-time">—</td><td class="a-step">Awaiting decision</td><td class="a-detail">Pending Diana Foster's sign-off · nothing acts until approved</td><td class="a-who">—</td></tr>
-          </tbody>
-        </table>
+          <div class="runs-empty" id="runs-empty">No runs match this filter.</div>
+        </aside>
+
+        <!-- detail column: updates in place, never scrolls off as the list grows -->
+        <section class="run-detail-col">
+          <div class="run-eyebrow">Live run</div>
+          <h2 class="run-title">Refund playbook</h2>
+          <p class="run-meta">Slack #refunds · refund · run #RB-4483 · 10:32 AM</p>
+
+          <div class="flow-card">
+            <div class="flow-head"><span><b>refund_v1</b> · owner: Diana Foster</span><span class="flow-badge">Stopped for approval</span></div>
+            <div class="flow-step">
+              <div class="flow-ic ok">✓</div>
+              <div><h4>Who's asking</h4><p>Tom Reyes · verified via <b>Microsoft Entra ID</b></p></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-ic ok">✓</div>
+              <div><h4>Gather the facts</h4><p>Order <b>#48213</b> · amount <b>$1,200</b> · age <b>9 days</b> · customer Acme Corp · policy <b>refund-policy</b></p></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-ic warn">!</div>
+              <div><h4>Check the rules</h4><p>Auto-approve allowed only when amount ≤ <b>$500</b> and age ≤ <b>30 days</b>.<br /><span class="rule-hit">Rule hit</span>$1,200 &gt; $500 → not eligible for auto-approval.</p></div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-ic act">→</div>
+              <div><h4>Decision</h4><p>Hold the action. Route to <b>Diana Foster</b> for approval before anything is issued.</p></div>
+            </div>
+          </div>
+
+          <div class="audit-wrap">
+            <div class="audit-eyebrow">Audit log</div>
+            <h3>Refund playbook · run #RB-4483</h3>
+            <p class="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
+            <table class="audit-table">
+              <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>
+              <tbody>
+                <tr><td class="a-time">10:32:01</td><td class="a-step">Request received</td><td class="a-detail">"Refund order #48213 for Acme Corp" · from Slack #refunds</td><td class="a-who">Tom Reyes<span class="chip-entra">Entra</span></td></tr>
+                <tr><td class="a-time">10:32:02</td><td class="a-step">Facts gathered</td><td class="a-detail">Order #48213 · $1,200 · 9 days old · customer Acme Corp</td><td class="a-who">SubstrateOS</td></tr>
+                <tr><td class="a-time">10:32:02</td><td class="a-step">Policy checked</td><td class="a-detail">$1,200 &gt; $500 desk limit<span class="chip-over">over limit</span></td><td class="a-who">SubstrateOS</td></tr>
+                <tr><td class="a-time">10:32:03</td><td class="a-step">Routed for approval</td><td class="a-detail">Approve/Reject card DM'd to Diana Foster in Slack<span class="chip-appr">owner</span></td><td class="a-who">SubstrateOS</td></tr>
+                <tr><td class="a-time">—</td><td class="a-step">Awaiting decision</td><td class="a-detail">Pending Diana Foster's sign-off · nothing acts until approved</td><td class="a-who">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
   </div><!-- /#view-runs -->
@@ -1296,8 +1366,37 @@
   function selectRun(row) {
     document.querySelectorAll('.run-row').forEach(r => r.classList.remove('active'));
     row.classList.add('active');
-    // (mockup: detail stays on #RB-4471; in the app this loads the clicked run)
+    // (mockup: detail stays on #RB-4483; in the app this loads the clicked run)
   }
+
+  // ── runs: chip + search filtering ────────────────────────────────────────────
+  (function () {
+    const chips = document.querySelectorAll('#run-chips .run-chip');
+    const search = document.getElementById('run-search-input');
+    const rows = () => Array.from(document.querySelectorAll('#runs-col .run-row'));
+    const countEl = document.getElementById('run-count');
+    const emptyEl = document.getElementById('runs-empty');
+    let status = 'all';
+    function apply() {
+      const term = (search.value || '').trim().toLowerCase();
+      let shown = 0;
+      rows().forEach(r => {
+        const ok = (status === 'all' || r.dataset.status === status)
+          && (!term || (r.dataset.text || '').includes(term));
+        r.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+      });
+      if (countEl) countEl.textContent = shown;
+      if (emptyEl) emptyEl.classList.toggle('show', shown === 0);
+    }
+    chips.forEach(c => c.addEventListener('click', () => {
+      chips.forEach(x => x.classList.remove('active'));
+      c.classList.add('active');
+      status = c.dataset.status;
+      apply();
+    }));
+    if (search) search.addEventListener('input', apply);
+  })();
 
   // ── surface toggles ─────────────────────────────────────────────────────────
   document.querySelectorAll('[data-surface]').forEach(btn => {

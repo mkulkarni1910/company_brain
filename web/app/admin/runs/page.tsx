@@ -105,7 +105,24 @@ function convAudit(c: ConvRunDetail): AuditRow[] {
   return rows;
 }
 
-type RunItem = { kind: "conversation" | "workflow"; id: string; title: string; sub: string; trigger: string; cls: string; label: string; ts: string };
+type RunFilter = "all" | "stopped" | "running" | "answered" | "rejected";
+type RunItem = { kind: "conversation" | "workflow"; id: string; title: string; sub: string; trigger: string; cls: string; label: string; ts: string; filter: RunFilter; search: string };
+
+// Map a status class to the coarse filter bucket the chips expose.
+function filterBucket(cls: string): RunFilter {
+  if (cls === "stopped") return "stopped";
+  if (cls === "running") return "running";
+  if (cls === "rejected" || cls === "error") return "rejected";
+  return "answered"; // auto / approved / completed
+}
+
+const FILTERS: { key: RunFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "stopped", label: "Stopped" },
+  { key: "running", label: "Running" },
+  { key: "answered", label: "Answered" },
+  { key: "rejected", label: "Rejected" },
+];
 
 export default function AdminRunsPage() {
   const [items, setItems] = useState<RunItem[]>([]);
@@ -114,18 +131,27 @@ export default function AdminRunsPage() {
   const [wf, setWf] = useState<RunDetail | null>(null);
   const [kind, setKind] = useState<"conversation" | "workflow" | null>(null);
   const [err, setErr] = useState(false);
+  const [filter, setFilter] = useState<RunFilter>("all");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     Promise.all([getConversationRuns(), getRuns()]).then(([convs, runs]) => {
       const merged: RunItem[] = [
         ...convs.map((c: ConvRunSummary): RunItem => ({
           kind: "conversation", id: c.id, title: c.title || "Conversation",
-          sub: `conversation · ${c.surface}`, trigger: surfaceLabel(c.surface),
-          cls: "auto", label: "Answered", ts: c.updated_at,
+          sub: `conversation · ${surfaceLabel(c.surface)} · ${c.surface}`, trigger: surfaceLabel(c.surface),
+          cls: "auto", label: "Answered", ts: c.updated_at, filter: "answered",
+          search: `${c.title ?? ""} ${surfaceLabel(c.surface)} ${c.surface}`.toLowerCase(),
         })),
         ...runs.map((r: RunSummary): RunItem => {
           const sm = wfStatus(r);
-          return { kind: "workflow", id: r.id, title: wfTitle(r), sub: `${isApproval(r) ? "request-approval" : "refund playbook"} · slack`, trigger: `${r.requester_name} · Slack`, cls: sm.cls, label: sm.label, ts: r.created_at };
+          const type = isApproval(r) ? "request-approval" : "refund playbook";
+          return {
+            kind: "workflow", id: r.id, title: wfTitle(r), sub: `${type} · ${r.requester_name}`,
+            trigger: `${r.requester_name} · Slack`, cls: sm.cls, label: sm.label, ts: r.created_at,
+            filter: filterBucket(sm.cls),
+            search: `${wfTitle(r)} ${r.requester_name} ${type} ${r.id} ${r.decision?.order_id ?? ""}`.toLowerCase(),
+          };
         }),
       ].sort((a, b) => (a.ts < b.ts ? 1 : -1));
       setItems(merged);
@@ -139,6 +165,16 @@ export default function AdminRunsPage() {
     if (it.kind === "conversation") getConversationRun(it.id).then(setConv);
     else getRun(it.id).then(setWf);
   };
+
+  const counts = items.reduce<Record<string, number>>((acc, it) => {
+    acc.all = (acc.all ?? 0) + 1;
+    acc[it.filter] = (acc[it.filter] ?? 0) + 1;
+    return acc;
+  }, {});
+  const q = query.trim().toLowerCase();
+  const shown = items.filter(
+    (it) => (filter === "all" || it.filter === filter) && (!q || it.search.includes(q)),
+  );
 
   return (
     <div className="admin-page">
@@ -155,17 +191,46 @@ export default function AdminRunsPage() {
           </div>
         ) : (
           <>
-            <div className="runs-list">
-              {items.map((it) => (
-                <div key={`${it.kind}:${it.id}`} className={`run-row${selectedId === it.id ? " active" : ""}`} onClick={() => select(it)}>
-                  <div className="pb">{it.title}<span>{it.sub}</span></div>
-                  <div className="trig">{it.trigger}</div>
-                  <span className={`rst ${it.cls}`}>{it.label}</span>
-                  <span className="time">{fmtClock(it.ts)}</span>
-                </div>
-              ))}
+            <div className="runs-toolbar">
+              <div className="run-chips">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f.key}
+                    className={`run-chip${filter === f.key ? " active" : ""}`}
+                    onClick={() => setFilter(f.key)}
+                  >
+                    {f.label}
+                    {counts[f.key] ? <span className="ct">{counts[f.key]}</span> : null}
+                  </button>
+                ))}
+              </div>
+              <div className="search run-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+                <input
+                  placeholder="Search runs, people, orders…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
             </div>
 
+            <div className="runs-split">
+              <aside className="runs-col">
+                <div className="runs-col-head"><span>Runs</span><em>{shown.length} shown</em></div>
+                {shown.map((it) => (
+                  <div key={`${it.kind}:${it.id}`} className={`run-row${selectedId === it.id ? " active" : ""}`} onClick={() => select(it)}>
+                    <div className="pb">{it.title}</div>
+                    <div className="sub">{it.sub}</div>
+                    <div className="row-foot"><span className={`rst ${it.cls}`}>{it.label}</span><span className="time">{fmtClock(it.ts)}</span></div>
+                  </div>
+                ))}
+                {shown.length === 0 && <div className="runs-empty">No runs match this filter.</div>}
+              </aside>
+
+              <section className="run-detail-col">
+            {!selectedId && (
+              <div className="run-placeholder">Select a run to see its flow and audit trail.</div>
+            )}
             {kind === "conversation" && conv && (
               <div className="run-detail">
                 <div className="run-eyebrow">Conversation</div>
@@ -219,6 +284,8 @@ export default function AdminRunsPage() {
                 </div>
               </div>
             )}
+              </section>
+            </div>
           </>
         )}
       </div>
