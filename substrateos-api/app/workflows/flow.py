@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from app.audit.log import AuditLog
 from app.bots.refund_cards import (
     approval_dm_blocks,
     auto_approved_blocks,
@@ -11,6 +12,8 @@ from app.bots.refund_cards import (
 )
 from app.bots.slack import slack_call
 from app.config import get_settings
+from app.connectors.act.stripe_mock import StripeRefundConnector
+from app.domain.audit import Actor
 from app.domain.identity import User
 from app.domain.policy import Policy
 from app.domain.workflow import RefundDecision
@@ -48,6 +51,8 @@ class RefundFlow:
         policy_engine: PolicyEngine | None = None,
         policy_store: PolicyStore | None = None,
         policy_id: str = "refund.v1",
+        audit_log: AuditLog | None = None,
+        refund_connector: StripeRefundConnector | None = None,
     ) -> None:
         self._engine = engine
         self._store = store
@@ -55,6 +60,9 @@ class RefundFlow:
         self._policy_store = policy_store or PolicyStore()
         self._policy_id = policy_id
         self._policy_cache: Policy | None = None
+        # seams: provenance + the act connector (the flow calls services, not inline logic)
+        self._audit = audit_log or AuditLog()
+        self._refund_connector = refund_connector or StripeRefundConnector()
 
     def _policy(self) -> Policy:
         if self._policy_cache is None:
@@ -158,8 +166,23 @@ class RefundFlow:
                     f"(limits ${(limit_usd or 0):,.0f} / {limit_days} days): {guardrail.reason}"),
             actor=rule,
         )
+        # provenance: typed, identity-stamped audit trail (the receipt), via the AuditLog seam
+        await self._audit.record(
+            run_id=run.id, step="Facts gathered", actor=Actor.agent("refund-engine"),
+            target={"order_id": decision.order_id},
+            detail=f"${(decision.amount_usd or 0):,.0f} · {decision.order_age_days}d · {decision.customer}",
+        )
+        await self._audit.record(
+            run_id=run.id, step="Rule evaluated", actor=Actor.agent(rule),
+            rule={"id": guardrail.rule_id, "version": guardrail.rule_version,
+                  "result": guardrail.result},
+            decision=guardrail.result, detail=guardrail.reason,
+        )
 
         if guardrail.result == "allow":
+            receipt = await self._refund_connector.refund(
+                order_id=decision.order_id, amount_usd=decision.amount_usd
+            )
             run.status = "completed"
             await self._store.save(run)
             await self._store.add_event(run.id, step="Auto-approved",
@@ -167,8 +190,13 @@ class RefundFlow:
             await self._store.add_event(
                 run.id, step="Refund issued",
                 detail=(f"${decision.amount_usd:,.0f} refunded to {decision.customer} · "
-                        "confirmation sent"),
+                        f"{receipt.refund_id}"),
                 actor="SubstrateOS",
+            )
+            await self._audit.record(
+                run_id=run.id, step="Refund issued", actor=Actor.system(),
+                action="stripe.refund",
+                target={"order_id": decision.order_id, "refund_id": receipt.refund_id},
             )
             await self._post(token, channel, thread_ts,
                              text="Auto-approved within policy — refund issued.",
@@ -253,6 +281,14 @@ class RefundFlow:
                     f"of ${d.amount_usd:,.0f} on order #{d.order_id}"),
             actor=approver_name,
         )
+        # provenance: the human decision, identity-stamped (Slack identity for now;
+        # Entra-resolved identity + role authZ lands when handle_action calls ApprovalService).
+        await self._audit.record(
+            run_id=run.id, step="Approved" if approved else "Rejected",
+            actor=Actor(type="human", id=approver_id or approver_name, idp="slack"),
+            decision="approve" if approved else "reject",
+            detail=f"{approver_name} {'approved' if approved else 'rejected'}",
+        )
         if dm_channel and dm_ts:
             await slack_call(token, "chat.update", {
                 "channel": dm_channel, "ts": dm_ts,
@@ -260,10 +296,18 @@ class RefundFlow:
                 "blocks": decided_dm_blocks(d, approved=approved, approver_name=approver_name),
             })
         if approved:
+            receipt = await self._refund_connector.refund(
+                order_id=d.order_id, amount_usd=d.amount_usd
+            )
             await self._store.add_event(
                 run.id, step="Refund issued",
-                detail=f"${d.amount_usd:,.0f} refunded to {d.customer} · confirmation sent",
+                detail=f"${d.amount_usd:,.0f} refunded to {d.customer} · {receipt.refund_id}",
                 actor="SubstrateOS",
+            )
+            await self._audit.record(
+                run_id=run.id, step="Refund issued", actor=Actor.system(),
+                action="stripe.refund",
+                target={"order_id": d.order_id, "refund_id": receipt.refund_id},
             )
             run.status = "completed"
             await self._store.save(run)

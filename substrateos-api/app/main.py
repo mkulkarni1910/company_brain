@@ -11,6 +11,7 @@ from app.activity.signal import ActivitySignal
 from app.activity.store import ActivityStore
 from app.api.admin import callback_router as admin_callback_router
 from app.api.admin import router as admin_router
+from app.api.bots import router as bots_router
 from app.api.context import router as context_router
 from app.api.conversations import router as conversations_router
 from app.api.discover import router as discover_router
@@ -18,16 +19,19 @@ from app.api.feedback import router as feedback_router
 from app.api.history import router as history_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
-from app.api.bots import router as bots_router
+from app.api.runs import router as runs_router
 from app.api.search import router as search_router
+from app.api.skills import admin_router as skills_admin_router
+from app.api.skills import router as skills_router
 from app.api.sources import router as sources_router
 from app.api.surfaces import router as surfaces_router
 from app.api.tokens import router as tokens_router
-from app.api.runs import router as runs_router
-from app.api.skills import admin_router as skills_admin_router
-from app.api.skills import router as skills_router
+from app.approvals.service import ApprovalService
+from app.approvals.store import ApprovalStore
+from app.audit.log import AuditLog
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
+from app.connectors.act.stripe_mock import StripeRefundConnector
 from app.connectors.cosmos_store import CosmosConnectionStore
 from app.connectors.sharepoint import SharePointConnector
 from app.connectors.store import ConnectionStore
@@ -41,16 +45,18 @@ from app.history.store import HistoryStore
 from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.mcp.server import build_mcp_asgi, mcp_bind, run_session_manager
 from app.metrics.store import MetricsStore
-from app.skills.store import SkillStore
-from app.skills.service import SkillRouter as SkillRouterSvc
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.orchestrator.planner import QueryPlanner
 from app.people.graph_client import PeopleGraphClient
 from app.people.proximity import PeopleProximity
+from app.policy.engine import PolicyEngine
+from app.policy.store import PolicyStore
 from app.ranking.personalized_ranker import PersonalizedRanker
 from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
 from app.search.service import SearchService
+from app.skills.service import SkillRouter as SkillRouterSvc
+from app.skills.store import SkillStore
 from app.tokens.store import CosmosTokenStore, NullTokenStore
 from app.workflows.engine import RefundEngine
 from app.workflows.flow import RefundFlow
@@ -160,9 +166,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         llm=app.state.llm,
     )
     app.state.run_store = RunStore()
+    # Governed-act-layer platform services (one impl each), shared across playbooks.
+    app.state.audit_log = AuditLog()
+    app.state.policy_engine = PolicyEngine()
+    app.state.policy_store = PolicyStore()
+    app.state.approval_store = ApprovalStore()
+    app.state.approval_service = ApprovalService(
+        store=app.state.approval_store, audit=app.state.audit_log,
+    )
+    app.state.refund_connector = StripeRefundConnector()
     app.state.refund_flow = RefundFlow(
         engine=RefundEngine(retriever=app.state.retriever, llm=app.state.llm),
         store=app.state.run_store,
+        policy_engine=app.state.policy_engine,
+        policy_store=app.state.policy_store,
+        audit_log=app.state.audit_log,
+        refund_connector=app.state.refund_connector,
     )
     # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
     # configured (e.g. India has no Redis), else Redis (no-op without a host).
@@ -185,6 +204,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     finally:
         await app.state.orchestrator.aclose()
         await app.state.run_store.aclose()
+        await app.state.audit_log.aclose()
+        await app.state.approval_store.aclose()
         await app.state.acl_store.aclose()
         await app.state.people_graph.aclose()
         await app.state.activity_store.aclose()

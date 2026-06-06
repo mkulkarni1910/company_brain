@@ -108,3 +108,15 @@ def get_run_store(request: Request):
 
 def get_refund_flow(request: Request):
     return getattr(request.app.state, "refund_flow", None)
+
+
+def get_audit_log(request: Request):
+    return getattr(request.app.state, "audit_log", None)
+
+
+def get_approval_service(request: Request):
+    return getattr(request.app.state, "approval_service", None)
+
+
+def get_policy_engine(request: Request):
+    return getattr(request.app.state, "policy_engine", None)
