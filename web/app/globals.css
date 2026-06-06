@@ -729,3 +729,26 @@
   .skill-list-add .plus{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--teal);color:#fff;font-size:13px;line-height:1}
   .skill-rating{font-family:var(--font-mono),monospace;font-size:12.5px;color:var(--amber);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .skill-rating .skill-star{font-size:17px;line-height:1}
+
+  /* ── PR preview / created card (raise-a-PR from chat) ── */
+  .pr-card{margin:16px 0 0 36px;background:linear-gradient(180deg,#fffdf7,var(--surface));border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .pr-head{display:flex;align-items:center;gap:10px}
+  .pr-icon{width:16px;height:16px;flex:none;color:var(--ink-dim);display:grid;place-items:center}
+  .pr-icon svg{width:16px;height:16px}
+  .pr-title{font-family:var(--font-fraunces),serif;font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.3}
+  .pr-chip{margin-left:auto;flex:none;font-family:var(--font-mono),monospace;font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:99px;padding:4px 10px}
+  .pr-chip.done{color:var(--green);background:rgba(63,143,94,.10);border-color:rgba(63,143,94,.3)}
+  .pr-meta{font-family:var(--font-mono),monospace;font-size:11px;color:var(--ink-faint);margin-top:10px}
+  .pr-meta code{font-family:var(--font-mono),monospace;font-size:11px;color:var(--ink-dim);background:var(--panel);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px}
+  .pr-summary{font-size:13.5px;line-height:1.6;color:var(--ink-dim);margin-top:11px}
+  .pr-actions{display:flex;align-items:center;gap:9px;margin-top:15px}
+  .pr-create{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:10px;padding:9px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:#3a2606;background:linear-gradient(180deg,#ffcf7e,var(--amber));box-shadow:0 6px 14px -6px rgba(196,122,22,.6);transition:.15s;text-decoration:none}
+  .pr-create:hover{transform:translateY(-1px)}
+  .pr-create:disabled{opacity:.6;cursor:not-allowed;transform:none}
+  .pr-cancel{border:1px solid var(--line);border-radius:10px;padding:9px 16px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink-dim);background:var(--surface-2);transition:.15s}
+  .pr-cancel:hover{color:var(--ink);border-color:#cabd9f}
+  .pr-cancel:disabled{opacity:.6;cursor:not-allowed}
+  .pr-link{display:inline-flex;align-items:center;gap:7px;text-decoration:none;font-family:var(--font-mono),monospace;font-size:12.5px;font-weight:500;color:var(--teal);background:var(--teal-bg);border:1px solid rgba(15,137,126,.3);border-radius:10px;padding:8px 14px;transition:.15s}
+  .pr-link:hover{background:var(--teal);color:#fff}
+  .pr-foot{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-soft);font-size:11.5px;color:var(--ink-faint);display:flex;align-items:center;gap:7px}
+  .pr-err{margin-top:10px;font-size:12.5px;color:var(--rose);background:rgba(200,84,106,.07);border:1px solid rgba(200,84,106,.25);border-radius:8px;padding:8px 12px}
