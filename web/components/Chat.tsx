@@ -9,7 +9,6 @@ import { postQuery, postQueryAck, postFeedback, getConversations, getConversatio
 import PrActionCard from "@/components/PrActionCard";
 import { getSkills, SkillSummary } from "@/lib/skillsApi";
 import SkillsPage from "@/app/skills/page";
-import RunsPage from "@/app/runs/page";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean; ack?: string };
 
@@ -416,7 +415,7 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
 export default function Chat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
-  const [view, setView] = useState<"ask" | "discover" | "history" | "skills" | "runs">("ask");
+  const [view, setView] = useState<"ask" | "discover" | "history" | "skills">("ask");
   const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
   const [connectSurface, setConnectSurface] = useState<Surface | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -519,12 +518,6 @@ export default function Chat() {
               </svg>
               Skills
             </button>
-            <button className={view === "runs" ? "active" : ""} onClick={() => setView("runs")}>
-              <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><path d="M9 12h6M9 16h6" />
-              </svg>
-              Runs
-            </button>
           </nav>
           <button className="newchat" onClick={newChat}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14" /></svg>New chat
@@ -554,7 +547,6 @@ export default function Chat() {
 
       {/* HISTORY / DISCOVER / ASK views */}
       {view === "skills" && <SkillsPage />}
-      {view === "runs" && <RunsPage />}
       {view === "history" && <ConversationsView onOpen={async (id) => {
         const conv = await getConversation(id);
         if (!conv) return;
