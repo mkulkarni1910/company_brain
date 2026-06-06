@@ -20,3 +20,31 @@ def test_settings_loads_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.azure_openai_api_version == "2024-10-21"  # default
     assert s.substrateos_tenant_id == "t-test"               # default
     assert s.azure_redis_port == 6380                  # default
+
+
+def test_github_settings_default_unset(monkeypatch):
+    monkeypatch.delenv("GITHUB_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GITHUB_CLIENT_SECRET", raising=False)
+    from app.config import Settings
+    s = Settings()
+    assert s.github_client_id is None
+    assert s.github_client_secret is None
+
+
+def test_github_secret_loaded_from_keyvault():
+    from app.config import Settings, load_secrets_from_keyvault
+
+    class _FakeSecret:
+        def __init__(self, value): self.value = value
+
+    class _FakeKV:
+        def get_secret(self, name):
+            if name == "github-client-secret":
+                return _FakeSecret("gh-secret")
+            raise KeyError(name)
+
+    s = Settings()
+    s.use_key_vault = True
+    s.azure_key_vault_url = "https://kv.example"
+    load_secrets_from_keyvault(s, client=_FakeKV())
+    assert s.github_client_secret == "gh-secret"
