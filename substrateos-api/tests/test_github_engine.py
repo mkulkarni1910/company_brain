@@ -77,3 +77,26 @@ async def test_edit_step_can_refuse():
     draft, clarify = await engine.draft("update the window", client=_FakeClient(), config=CFG)
     assert draft is None
     assert "three windows" in clarify
+
+
+@pytest.mark.asyncio
+async def test_path_outside_tree_is_rejected():
+    llm = _FakeLLM(json.dumps({"found": True, "path": "secrets/keys.env"}))
+    engine = PrDraftEngine(llm=llm)
+    draft, clarify = await engine.draft("update keys", client=_FakeClient(), config=CFG)
+    assert draft is None
+    assert "secrets/keys.env" in clarify
+
+
+@pytest.mark.asyncio
+async def test_json_with_trailing_brace_text_still_parses():
+    reply = (json.dumps({"found": True, "path": "docs/refund-policy.md"})
+             + "\nNote: the {} placeholder is filled.")
+    llm = _FakeLLM(
+        reply,
+        json.dumps({"new_content": "# new", "summary": "s", "title": "t", "body": "b"}),
+    )
+    engine = PrDraftEngine(llm=llm)
+    draft, clarify = await engine.draft("update the refund window",
+                                        client=_FakeClient(), config=CFG)
+    assert clarify is None and draft is not None

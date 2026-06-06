@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 
 from app.connectors.models import GithubConfig
 from app.domain.workflow import PrDraft
@@ -30,8 +29,8 @@ TARGET_PROMPT = (
 
 EDIT_PROMPT = (
     "You are SubstrateOS drafting a pull request. Given the CURRENT content of the file and "
-    "the requested change, produce the FULL new file content with the change applied — keep "
-    "all unrelated content byte-identical. Respond ONLY with valid JSON, no other text:\n"
+    "the requested change, produce the FULL new file content with the change applied — "
+    "preserve all unrelated content unchanged. Respond ONLY with valid JSON, no other text:\n"
     '{"new_content": "...", "summary": "one line describing what changed", '
     '"title": "PR title", "body": "PR description in markdown"}\n'
     "If the request cannot be applied to this file or is ambiguous, respond with "
@@ -40,13 +39,17 @@ EDIT_PROMPT = (
 
 
 def _json_or_none(raw: str) -> dict | None:
-    match = re.search(r"\{.*\}", raw, re.DOTALL)
-    if not match:
-        return None
-    try:
-        return json.loads(match.group(0))
-    except ValueError:
-        return None
+    decoder = json.JSONDecoder()
+    idx = raw.find("{")
+    while idx != -1:
+        try:
+            obj, _ = decoder.raw_decode(raw[idx:])
+            if isinstance(obj, dict):
+                return obj
+        except ValueError:
+            pass
+        idx = raw.find("{", idx + 1)
+    return None
 
 
 class PrDraftEngine:
@@ -75,6 +78,9 @@ class PrDraftEngine:
             return None, target.get("question") or _FALLBACK_QUESTION
 
         path = target["path"]
+        if path not in paths:
+            return None, (f"I picked `{path}` but it isn't in the repository tree — "
+                          "name the exact file and I'll draft the PR.")
         content, sha = await client.get_file(config.owner, config.repo, path,
                                              ref=config.base_branch)
         raw = await self._llm.complete(
