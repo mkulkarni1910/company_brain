@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import os
+import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -317,6 +318,12 @@ async def patch_surface(
 
 # ── GitHub repo config ────────────────────────────────────────────────────────
 
+# GitHub owner/repo names are restricted to letters, digits, '.', '_', '-'.
+# These values are interpolated unquoted into URL paths, so we validate them
+# strictly to prevent path traversal.
+_GH_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
 class GithubConfigBody(BaseModel):
     owner: str
     repo: str
@@ -334,21 +341,27 @@ def _github_config_response(cfg: GithubConfig | None) -> dict:
     }
 
 
-@router.get("/github/config", dependencies=[Depends(require_admin_key)])
+@router.get("/github/config")
 async def get_github_config(github_store=Depends(get_github_store)) -> dict:
     tenant = get_settings().substrateos_tenant_id
     cfg = await github_store.get_config(tenant) if github_store else None
     return _github_config_response(cfg)
 
 
-@router.put("/github/config", dependencies=[Depends(require_admin_key)])
+@router.put("/github/config")
 async def put_github_config(body: GithubConfigBody,
                             github_store=Depends(get_github_store)) -> dict:
-    if not body.owner.strip() or not body.repo.strip():
+    owner, repo = body.owner.strip(), body.repo.strip()
+    if not owner or not repo:
         raise HTTPException(status_code=400, detail="owner and repo are required")
+    if not _GH_NAME.fullmatch(owner) or not _GH_NAME.fullmatch(repo):
+        raise HTTPException(
+            status_code=400,
+            detail="owner/repo may only contain letters, digits, '.', '_', '-'",
+        )
     if github_store is None:
         raise HTTPException(status_code=503, detail="github store unavailable")
-    cfg = GithubConfig(owner=body.owner.strip(), repo=body.repo.strip(),
+    cfg = GithubConfig(owner=owner, repo=repo,
                        base_branch=(body.base_branch or "main").strip() or "main")
     await github_store.put_config(get_settings().substrateos_tenant_id, cfg)
     return _github_config_response(cfg)

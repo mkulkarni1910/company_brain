@@ -74,6 +74,33 @@ async def test_put_config_roundtrip(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_put_config_rejects_invalid_charset(monkeypatch):
+    """owner/repo with path-traversal chars must return 400 and not clobber existing config."""
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "cid")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "sec")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    github = GithubStore(client=None, force_memory=True)
+    async with AsyncClient(transport=ASGITransport(app=_app(github)), base_url="http://t") as c:
+        # Seed a good config first
+        r0 = await c.put("/admin/github/config", headers=ADMIN,
+                         json={"owner": "acme", "repo": "policies"})
+        assert r0.status_code == 200
+        # owner with a slash (path traversal attempt) must be rejected
+        r1 = await c.put("/admin/github/config", headers=ADMIN,
+                         json={"owner": "acme/evil", "repo": "x"})
+        assert r1.status_code == 400
+        # repo with a slash must also be rejected
+        r2 = await c.put("/admin/github/config", headers=ADMIN,
+                         json={"owner": "acme", "repo": "x/y"})
+        assert r2.status_code == 400
+        # Confirm the original config was not clobbered
+        r3 = await c.get("/admin/github/config", headers=ADMIN)
+        assert r3.json()["owner"] == "acme"
+        assert r3.json()["repo"] == "policies"
+
+
+@pytest.mark.asyncio
 async def test_admin_key_required(monkeypatch):
     github = GithubStore(client=None, force_memory=True)
     async with AsyncClient(transport=ASGITransport(app=_app(github)), base_url="http://t") as c:
