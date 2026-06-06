@@ -4,16 +4,14 @@ import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { postQuery, postQueryAck, postFeedback, getConversations, getConversation, logClick, postSearch,
-  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources,
-  Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource } from "@/lib/api";
+  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources, getMe,
+  Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource, Me } from "@/lib/api";
 import PrActionCard from "@/components/PrActionCard";
 import { getSkills, SkillSummary } from "@/lib/skillsApi";
 import SkillsPage from "@/app/skills/page";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean; ack?: string };
 
-const USER_NAME = process.env.NEXT_PUBLIC_USER_NAME ?? "Lokesh Bhoyar";
-const USER_ROLE = process.env.NEXT_PUBLIC_USER_ROLE ?? "Central · Sales";
 const SUGGESTIONS: { text: string; live?: boolean }[] = [
   { text: "Who is on call right now?", live: true },
   { text: "What are our planning priorities?" },
@@ -421,6 +419,8 @@ export default function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [surfaceMap, setSurfaceMap] = useState<Record<string, boolean>>({});
   const [connectedSources, setConnectedSources] = useState<ConnectedSource[]>([]);
+  // Signed-in identity (Entra name + optional Slack title); null until /me resolves.
+  const [me, setMe] = useState<Me | null>(null);
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [autocomplete, setAutocomplete] = useState<SkillSummary[]>([]);
   const searchParams = useSearchParams();
@@ -432,6 +432,7 @@ export default function Chat() {
       setSurfaceMap(map);
     });
     getConnectedSources().then(setConnectedSources);
+    getMe().then(setMe);
   }, []);
 
   useEffect(() => { getSkills().then(setSkills); }, []);
@@ -540,8 +541,8 @@ export default function Chat() {
           )}
         </div>
         <div className="foot">
-          <div className="avatar">{initials(USER_NAME)}</div>
-          <div className="who">{USER_NAME}<span>{USER_ROLE}</span></div>
+          <div className="avatar">{me ? initials(me.display_name) : ""}</div>
+          {me && <div className="who">{me.display_name}{me.title && <span>{me.title}</span>}</div>}
         </div>
       </aside>
 
@@ -680,7 +681,9 @@ export default function Chat() {
             <span className="t">Why this ranked</span>
           </div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", margin: "6px 0 14px" }}>
-            {latest?.answer ? `Personalized for ${USER_NAME} · ${USER_ROLE}` : "Ask a question to see ranking"}
+            {latest?.answer
+              ? `Personalized for ${me?.display_name ?? "you"}${me?.title ? ` · ${me.title}` : ""}`
+              : "Ask a question to see ranking"}
           </div>
           <div className="bars">
             {SIGNAL_META.map((m) => {

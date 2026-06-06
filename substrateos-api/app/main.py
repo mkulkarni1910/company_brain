@@ -16,6 +16,7 @@ from app.api.conversations import router as conversations_router
 from app.api.discover import router as discover_router
 from app.api.feedback import router as feedback_router
 from app.api.history import router as history_router
+from app.api.me import router as me_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
 from app.api.bots import router as bots_router
@@ -236,6 +237,7 @@ app.include_router(query_router)
 app.include_router(retrieve_router)
 app.include_router(feedback_router)
 app.include_router(history_router)
+app.include_router(me_router)
 app.include_router(discover_router)
 app.include_router(search_router)
 app.include_router(conversations_router)

@@ -32,6 +32,20 @@ export async function postRunAction(runId: string, action: "create" | "cancel"):
   return (await resp.json()) as RunActionResult;
 }
 
+// Signed-in identity: name from the Entra login, title from the user's Slack
+// profile (null when they have none — the UI then shows the name alone).
+export type Me = { display_name: string; email: string; title: string | null };
+
+export async function getMe(): Promise<Me | null> {
+  try {
+    const resp = await authedFetch(`${API_BASE}/me`);
+    if (!resp.ok) return null;
+    return (await resp.json()) as Me;
+  } catch {
+    return null;
+  }
+}
+
 export type HistoryEntry = { query: string; query_id: string; ts: string };
 export type TrendingDoc = {
   doc_id: string; title: string; source: string; source_url: string; snippet: string; score: number;

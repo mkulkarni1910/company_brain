@@ -66,6 +66,27 @@ async def post_slack_reply(
         return "request_failed"
 
 
+async def slack_get(token: str, method: str, params: dict) -> dict | None:
+    """GET a Slack Web API method (for methods like users.lookupByEmail that
+    don't accept JSON bodies); return the body when ok=true, else None."""
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://slack.com/api/{method}",
+                headers={"Authorization": f"Bearer {token}"},
+                params=params,
+                timeout=10.0,
+            )
+        body = resp.json()
+        if not body.get("ok"):
+            logger.warning("Slack %s failed: %s", method, body.get("error", "unknown_error"))
+            return None
+        return body
+    except Exception:  # noqa: BLE001
+        logger.exception("Slack %s request failed", method)
+        return None
+
+
 async def slack_call(token: str, method: str, payload: dict) -> dict | None:
     """POST a Slack Web API method; return the body when ok=true, else None.
 
