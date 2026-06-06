@@ -8,15 +8,26 @@ export type RefundDecision = {
   auto_approve: boolean; reasoning: string;
 };
 
+export type PrDraft = {
+  path?: string | null;
+  summary?: string | null;
+  title?: string | null;
+  branch?: string | null;
+  commit_message?: string | null;
+};
+
 export type RunSummary = {
   id: string;
-  kind?: "refund" | "approval";
-  status: "running" | "pending_approval" | "approved" | "rejected" | "completed" | "error";
+  kind?: "refund" | "approval" | "github_pr";
+  status: "running" | "pending_approval" | "approved" | "rejected" | "completed" | "error" | "pending_confirm" | "cancelled";
   requester_name: string;
   approver_name: string | null;
   decision: RefundDecision | null;
   request_text?: string | null;
   approver_source?: string | null;
+  surface?: string | null;
+  pr_url?: string | null;
+  pr_draft?: PrDraft | null;
   created_at: string;
   updated_at: string;
 };
