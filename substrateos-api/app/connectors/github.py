@@ -89,6 +89,8 @@ class GithubClient:
         if r.status_code != 200:
             raise GithubApiError(f"get file failed ({r.status_code})")
         d = r.json()
+        if isinstance(d, list):
+            raise GithubApiError(f"{path} is a directory, not a file")
         content = base64.b64decode(d.get("content") or "").decode("utf-8", errors="replace")
         return content, d["sha"]
 

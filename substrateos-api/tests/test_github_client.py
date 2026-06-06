@@ -93,3 +93,39 @@ async def test_other_errors_raise_api_error():
         return_value=Response(404, json={"message": "Not Found"}))
     with pytest.raises(GithubApiError):
         await c.branch_sha("acme", "nope", "main")
+
+
+# Finding 1 — get_file on a directory path must raise GithubApiError
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_file_on_directory_raises_api_error():
+    c = GithubClient("gho_xyz")
+    respx.get(f"{API}/repos/acme/policies/contents/docs").mock(
+        return_value=Response(200, json=[{"path": "docs/a.md"}, {"path": "docs/b.md"}]))
+    with pytest.raises(GithubApiError, match="directory"):
+        await c.get_file("acme", "policies", "docs", ref="main")
+
+
+# Finding 2 — put_file and create_pr must send the correct JSON bodies
+@pytest.mark.asyncio
+@respx.mock
+async def test_put_file_and_create_pr_send_correct_bodies():
+    import json
+    c = GithubClient("gho_xyz")
+    put_route = respx.put(f"{API}/repos/acme/policies/contents/docs/refund-policy.md").mock(
+        return_value=Response(200, json={"commit": {"sha": "new"}}))
+    pr_route = respx.post(f"{API}/repos/acme/policies/pulls").mock(
+        return_value=Response(201, json={"html_url": "https://github.com/acme/policies/pull/7"}))
+
+    await c.put_file("acme", "policies", "docs/refund-policy.md",
+                     content="# 30 days", message="Update window",
+                     branch="substrateos/rb-1", sha="file-sha")
+    sent = json.loads(put_route.calls.last.request.content)
+    assert sent["message"] == "Update window" and sent["branch"] == "substrateos/rb-1"
+    assert sent["sha"] == "file-sha"
+    assert base64.b64decode(sent["content"]).decode() == "# 30 days"
+
+    await c.create_pr("acme", "policies", title="T", body="B",
+                      head="substrateos/rb-1", base="main")
+    pr_sent = json.loads(pr_route.calls.last.request.content)
+    assert pr_sent == {"title": "T", "body": "B", "head": "substrateos/rb-1", "base": "main"}
