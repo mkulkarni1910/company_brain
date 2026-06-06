@@ -8,6 +8,8 @@ from pydantic import BaseModel
 RunStatus = Literal[
     "running", "pending_approval", "pending_confirm",
     "approved", "rejected", "completed", "cancelled", "error",
+    "needs_attention",    # stopped: no eligible approver / identity unknown
+    "routed_to_support",  # customer request handed to the support channel
 ]
 
 
@@ -59,6 +61,7 @@ class RefundRun(BaseModel):
     dm_ts: str | None = None
     decision: RefundDecision | None = None
     approver_name: str | None = None
+    approver_slack_id: str | None = None  # the routed approver — click enforcement key
     # generic approval playbook
     request_text: str | None = None
     approver_source: str | None = None  # "manager" | "fallback" | "mention"

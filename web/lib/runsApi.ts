@@ -21,7 +21,7 @@ export type PrDraft = {
 export type RunSummary = {
   id: string;
   kind?: "refund" | "approval" | "github_pr";
-  status: "running" | "pending_approval" | "approved" | "rejected" | "completed" | "error" | "pending_confirm" | "cancelled";
+  status: "running" | "pending_approval" | "approved" | "rejected" | "completed" | "error" | "pending_confirm" | "cancelled" | "needs_attention" | "routed_to_support";
   requester_name: string;
   approver_name: string | null;
   decision: RefundDecision | null;

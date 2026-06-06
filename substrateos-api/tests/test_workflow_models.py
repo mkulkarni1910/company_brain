@@ -65,3 +65,19 @@ async def test_router_auto_routing_carries_workflow():
     assert resolved is not None
     assert resolved.workflow == "refund"
     assert resolved.clean_query == query
+
+
+def test_routing_statuses_and_approver_slack_id():
+    from datetime import UTC, datetime
+
+    from app.domain.workflow import RefundRun
+
+    now = datetime.now(UTC)
+    stopped = RefundRun(id="RB-1", requester_name="Tom", status="needs_attention",
+                        approver_slack_id="U_DIANA", created_at=now, updated_at=now)
+    assert stopped.status == "needs_attention"
+    assert stopped.approver_slack_id == "U_DIANA"
+    routed = RefundRun(id="RB-2", requester_name="Priya", status="routed_to_support",
+                       created_at=now, updated_at=now)
+    assert routed.status == "routed_to_support"
+    assert routed.approver_slack_id is None
