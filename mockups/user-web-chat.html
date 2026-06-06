@@ -184,6 +184,26 @@
   .fb .sep{flex:1}
   .fb .cached{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-faint)}
 
+  /* ── PR preview / created card (raise-a-PR from chat) ─────────────── */
+  .pr-card{margin:16px 0 0 36px;background:linear-gradient(180deg,#fffdf7,var(--surface));border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .pr-head{display:flex;align-items:center;gap:10px}
+  .pr-icon{width:16px;height:16px;flex:none;color:var(--ink-dim);display:grid;place-items:center}
+  .pr-icon svg{width:16px;height:16px}
+  .pr-title{font-family:"Fraunces",serif;font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.3}
+  .pr-chip{margin-left:auto;flex:none;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:99px;padding:4px 10px}
+  .pr-chip.done{color:var(--green);background:rgba(63,143,94,.10);border-color:rgba(63,143,94,.3)}
+  .pr-meta{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint);margin-top:10px}
+  .pr-meta code{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-dim);background:var(--panel);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px}
+  .pr-summary{font-size:13.5px;line-height:1.6;color:var(--ink-dim);margin-top:11px}
+  .pr-actions{display:flex;align-items:center;gap:9px;margin-top:15px}
+  .pr-create{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:10px;padding:9px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;color:#3a2606;background:linear-gradient(180deg,#ffcf7e,var(--amber));box-shadow:0 6px 14px -6px rgba(196,122,22,.6);transition:.15s}
+  .pr-create:hover{transform:translateY(-1px)}
+  .pr-cancel{border:1px solid var(--line);border-radius:10px;padding:9px 16px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;color:var(--ink-dim);background:var(--surface-2);transition:.15s}
+  .pr-cancel:hover{color:var(--ink);border-color:#cabd9f}
+  .pr-link{display:inline-flex;align-items:center;gap:7px;text-decoration:none;font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:500;color:var(--teal);background:var(--teal-bg);border:1px solid rgba(15,137,126,.3);border-radius:10px;padding:8px 14px;transition:.15s}
+  .pr-link:hover{background:var(--teal);color:#fff}
+  .pr-foot{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-soft);font-size:11.5px;color:var(--ink-faint);display:flex;align-items:center;gap:7px}
+
   .composer{padding:16px 30px 26px;border-top:1px solid var(--line-soft);background:rgba(254,253,251,.74);backdrop-filter:blur(10px)}
   .composer .box{max-width:780px;margin:0 auto;background:var(--surface-2);border:1px solid var(--line);border-radius:16px;padding:6px 6px 6px 18px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);transition:.2s}
   .composer .box:focus-within{border-color:#cabd9f;box-shadow:var(--shadow),0 0 0 3px rgba(196,122,22,.1)}
@@ -528,6 +548,75 @@
             <span class="step"><span class="num">•</span>ground</span>
           </div>
           <div class="a-ack">On it, <strong>Tom</strong> — pulling up order <strong>#48213</strong> and checking the refund policy…</div>
+        </section>
+
+        <div class="user-row"><div class="user-msg">Raise a PR updating the refund policy to a 30-day window</div></div>
+
+        <section class="answer">
+          <div class="a-head">
+            <div class="a-glyph"></div>
+            <div class="a-name">Substrate<b>OS</b></div>
+            <div class="badge-fresh"><span class="pulse"></span>action · needs confirm</div>
+          </div>
+          <div class="trace">
+            <span class="step done"><span class="num">✓</span>plan</span><span class="arrow"></span>
+            <span class="step done"><span class="num">✓</span>retrieve</span><span class="arrow"></span>
+            <span class="step done"><span class="num">✓</span>draft change</span><span class="arrow"></span>
+            <span class="step active"><span class="num">•</span>your confirm</span>
+          </div>
+          <div class="a-body">
+            <p>Here's the change I drafted — review and confirm before anything touches GitHub.</p>
+          </div>
+          <!-- The React PrActionCard (web/components/PrActionCard.tsx) also has a third
+               "connect-GitHub" variant (action.type === "github_connect"): a single
+               "Connect GitHub ↗" button shown the first time a user raises a PR before
+               they've linked their GitHub. Not mocked as a separate turn here. -->
+          <div class="pr-card">
+            <div class="pr-head">
+              <span class="pr-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></span>
+              <span class="pr-title">Update refund policy to a 30-day window</span>
+              <span class="pr-chip">pending your confirm</span>
+            </div>
+            <div class="pr-meta">acme/policies · <code>docs/refund-policy.md</code> · branch <code>substrateos/rb-4474</code></div>
+            <div class="pr-summary">Changes the auto-approve window from 14 days to 30 days; everything else unchanged.</div>
+            <div class="pr-actions">
+              <button class="pr-create">Create PR</button>
+              <button class="pr-cancel">Cancel</button>
+            </div>
+            <div class="pr-foot">🔒 Nothing reaches GitHub until you confirm — the PR will be authored as you.</div>
+          </div>
+        </section>
+
+        <div class="user-row"><div class="user-msg">Create PR</div></div>
+
+        <section class="answer">
+          <div class="a-head">
+            <div class="a-glyph"></div>
+            <div class="a-name">Substrate<b>OS</b></div>
+            <div class="badge-fresh"><span class="pulse"></span>action · done</div>
+          </div>
+          <div class="trace">
+            <span class="step done"><span class="num">✓</span>plan</span><span class="arrow"></span>
+            <span class="step done"><span class="num">✓</span>draft change</span><span class="arrow"></span>
+            <span class="step done"><span class="num">✓</span>confirmed</span><span class="arrow"></span>
+            <span class="step done"><span class="num">✓</span>PR opened</span>
+          </div>
+          <div class="a-body">
+            <p>Done — PR #128 is up, authored as you. The run is in the audit log.</p>
+          </div>
+          <div class="pr-card">
+            <div class="pr-head">
+              <span class="pr-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></span>
+              <span class="pr-title">Update refund policy to a 30-day window</span>
+              <span class="pr-chip done">PR created</span>
+            </div>
+            <div class="pr-meta">acme/policies · <code>docs/refund-policy.md</code> · branch <code>substrateos/rb-4474</code></div>
+            <div class="pr-summary">Changes the auto-approve window from 14 days to 30 days; everything else unchanged.</div>
+            <div class="pr-actions">
+              <a class="pr-link" href="#">View PR #128 ↗</a>
+            </div>
+            <div class="pr-foot">🔒 Authored as you · awaiting review from a code owner.</div>
+          </div>
         </section>
       </div>
     </div>

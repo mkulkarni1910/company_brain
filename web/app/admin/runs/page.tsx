@@ -19,10 +19,12 @@ function snippet(t: string, n = 90): string { return t.length > n ? t.slice(0, n
 
 const WF_STATUS: Record<string, { cls: string; label: string }> = {
   pending_approval: { cls: "stopped", label: "Stopped for approval" },
+  pending_confirm: { cls: "stopped", label: "Awaiting confirm" },
   running: { cls: "running", label: "Running" },
   approved: { cls: "approved", label: "Approved" },
   completed: { cls: "completed", label: "Completed" },
   rejected: { cls: "rejected", label: "Rejected" },
+  cancelled: { cls: "error", label: "Cancelled" },
   error: { cls: "error", label: "Error" },
 };
 function wfStatus(r: RunSummary) {
@@ -31,10 +33,12 @@ function wfStatus(r: RunSummary) {
 }
 function wfTitle(r: RunSummary): string {
   if (r.kind === "approval") return snippet(r.request_text || "Approval request", 60);
+  if (r.kind === "github_pr") return snippet(r.pr_draft?.title || r.request_text || "PR request", 60);
   const d = r.decision;
   return d?.order_id ? `Refund ${usd(d.amount_usd)} · order #${d.order_id}` : "Refund run";
 }
 const isApproval = (r: RunSummary) => r.kind === "approval";
+const isGithubPr = (r: RunSummary) => r.kind === "github_pr";
 
 function approvalStages(run: RunSummary): Stage[] {
   const s: Stage[] = [
@@ -51,6 +55,39 @@ function approvalStages(run: RunSummary): Stage[] {
   else if (run.status === "rejected") s.push({ icon: "bad", sym: "✕", title: "Decision", body: <>Rejected by <b>{run.approver_name}</b> — no action taken.</> });
   else if (run.status === "error") s.push({ icon: "bad", sym: "✕", title: "Decision", body: <>Couldn&rsquo;t route this for approval.</> });
   else s.push({ icon: "act", sym: "→", title: "Decision", body: <>In progress…</> });
+  return s;
+}
+
+function githubStages(run: RunSummary): Stage[] {
+  const s: Stage[] = [
+    {
+      icon: "ok", sym: "✓", title: "Request received",
+      body: <>&ldquo;{run.request_text || "—"}&rdquo;{run.surface ? <> · via <b>{surfaceLabel(run.surface)}</b></> : null}</>,
+    },
+  ];
+  if (run.pr_draft) {
+    s.push({
+      icon: "ok", sym: "✓", title: "Draft the change",
+      body: <>{run.pr_draft.path ? <><b>{run.pr_draft.path}</b> · </> : null}{run.pr_draft.summary || "Draft prepared."}</>,
+    });
+  }
+  if (run.status === "pending_confirm") {
+    s.push({ icon: "act", sym: "→", title: "Decision", body: <>Preview shown — waiting for the requester to confirm. Nothing reaches GitHub until they do.</> });
+  } else if (run.status === "completed") {
+    s.push({ icon: "ok", sym: "✓", title: "Decision", body: <>Confirmed by the requester.</> });
+  } else if (run.status === "cancelled") {
+    s.push({ icon: "bad", sym: "✕", title: "Decision", body: <>Cancelled by the requester — nothing reached GitHub.</> });
+  } else if (run.status === "error") {
+    s.push({ icon: "bad", sym: "✕", title: "Decision", body: <>The run stopped on an error.</> });
+  } else {
+    s.push({ icon: "act", sym: "→", title: "Decision", body: <>In progress…</> });
+  }
+  if (run.status === "completed" && run.pr_url) {
+    s.push({
+      icon: "ok", sym: "✓", title: "PR created",
+      body: <>PR created — authored as the requester. <a href={run.pr_url} target="_blank" rel="noopener noreferrer">View PR ↗</a></>,
+    });
+  }
   return s;
 }
 
@@ -145,7 +182,9 @@ export default function AdminRunsPage() {
         })),
         ...runs.map((r: RunSummary): RunItem => {
           const sm = wfStatus(r);
-          const type = isApproval(r) ? "request-approval" : "refund playbook";
+          const type = isApproval(r) ? "request-approval"
+            : isGithubPr(r) ? "raise-pr playbook"
+            : "refund playbook";
           return {
             kind: "workflow", id: r.id, title: wfTitle(r), sub: `${type} · ${r.requester_name}`,
             trigger: `${r.requester_name} · Slack`, cls: sm.cls, label: sm.label, ts: r.created_at,
@@ -260,18 +299,18 @@ export default function AdminRunsPage() {
 
             {kind === "workflow" && wf && (
               <div className="run-detail">
-                <div className="run-eyebrow">{wf.run.status === "pending_approval" || wf.run.status === "running" ? "Live run" : "Run"}</div>
-                <h2 className="run-title">{isApproval(wf.run) ? wfTitle(wf.run) : "Refund playbook"}</h2>
-                <p className="run-meta">Slack · {isApproval(wf.run) ? "request-approval" : "refund"} · run #{wf.run.id} · {fmtClock(wf.run.created_at)}</p>
+                <div className="run-eyebrow">{wf.run.status === "pending_approval" || wf.run.status === "pending_confirm" || wf.run.status === "running" ? "Live run" : "Run"}</div>
+                <h2 className="run-title">{isApproval(wf.run) || isGithubPr(wf.run) ? wfTitle(wf.run) : "Refund playbook"}</h2>
+                <p className="run-meta">{wf.run.surface ? surfaceLabel(wf.run.surface) : "Slack"} · {isApproval(wf.run) ? "request-approval" : isGithubPr(wf.run) ? "raise-pr playbook" : "refund"} · run #{wf.run.id} · {fmtClock(wf.run.created_at)}</p>
                 <div className="flow-card">
-                  <div className="flow-head"><span>{isApproval(wf.run) ? <><b>request-approval</b> · routed to manager</> : <><b>refund_v1</b>{wf.run.approver_name ? <> · owner: {wf.run.approver_name}</> : null}</>}</span><span className={`flow-badge${["approved", "auto", "completed"].includes(wfStatus(wf.run).cls) ? " ok" : ""}`}>{wfStatus(wf.run).label}</span></div>
-                  {(isApproval(wf.run) ? approvalStages(wf.run) : wfStages(wf.run)).map((s, i) => (
+                  <div className="flow-head"><span>{isApproval(wf.run) ? <><b>request-approval</b> · routed to manager</> : isGithubPr(wf.run) ? <><b>raise-pr</b> · authored as requester</> : <><b>refund_v1</b>{wf.run.approver_name ? <> · owner: {wf.run.approver_name}</> : null}</>}</span><span className={`flow-badge${["approved", "auto", "completed"].includes(wfStatus(wf.run).cls) ? " ok" : ""}`}>{wfStatus(wf.run).label}</span></div>
+                  {(isApproval(wf.run) ? approvalStages(wf.run) : isGithubPr(wf.run) ? githubStages(wf.run) : wfStages(wf.run)).map((s, i) => (
                     <div className="flow-step" key={i}><div className={`flow-ic ${s.icon}`}>{s.sym}</div><div><h4>{s.title}</h4><p>{s.body}</p></div></div>
                   ))}
                 </div>
                 <div className="audit-wrap">
                   <div className="audit-eyebrow">Audit log</div>
-                  <h3>{isApproval(wf.run) ? "request-approval" : "Refund playbook"} · run #{wf.run.id}</h3>
+                  <h3>{isApproval(wf.run) ? "request-approval" : isGithubPr(wf.run) ? "raise-pr playbook" : "Refund playbook"} · run #{wf.run.id}</h3>
                   <p className="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
                   <table className="audit-table">
                     <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>

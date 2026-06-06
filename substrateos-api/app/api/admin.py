@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import os
+import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -12,7 +13,7 @@ from pydantic import BaseModel
 from app.activity.store import ActivityStore
 from app.config import get_settings
 from app.connectors.factory import connector_for
-from app.connectors.models import Connection, SurfaceConfig
+from app.connectors.models import Connection, GithubConfig, SurfaceConfig
 from app.connectors.oauth import admin_consent_url
 from app.connectors.realtime import (
     bootstrap_subscriptions,
@@ -27,6 +28,7 @@ from app.deps import (
     get_acl_store,
     get_ai_search,
     get_connection_store,
+    get_github_store,
     get_ingest_pipeline,
     get_metrics_store,
     get_sharepoint,
@@ -280,7 +282,7 @@ async def seed_activity(body: SeedActivityRequest) -> dict:
         await store.aclose()
 
 
-_VALID_SURFACES = {"slack", "teams", "web", "api", "mcp"}
+_VALID_SURFACES = {"slack", "teams", "github", "web", "api", "mcp"}
 
 
 @router.get("/surfaces")
@@ -312,6 +314,57 @@ async def patch_surface(
         surface.workspace_name = body.workspace_name
     await store.put_surface(tenant, surface)
     return surface.model_dump()
+
+
+# ── GitHub repo config ────────────────────────────────────────────────────────
+
+# GitHub owner/repo names are restricted to letters, digits, '.', '_', '-'.
+# These values are interpolated unquoted into URL paths, so we validate them
+# strictly to prevent path traversal.
+_GH_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+class GithubConfigBody(BaseModel):
+    owner: str
+    repo: str
+    base_branch: str = "main"
+
+
+def _github_config_response(cfg: GithubConfig | None) -> dict:
+    s = get_settings()
+    return {
+        "owner": cfg.owner if cfg else None,
+        "repo": cfg.repo if cfg else None,
+        "base_branch": cfg.base_branch if cfg else "main",
+        "app_configured": bool(s.github_client_id and s.github_client_secret),
+        "repo_configured": cfg is not None,
+    }
+
+
+@router.get("/github/config")
+async def get_github_config(github_store=Depends(get_github_store)) -> dict:
+    tenant = get_settings().substrateos_tenant_id
+    cfg = await github_store.get_config(tenant) if github_store else None
+    return _github_config_response(cfg)
+
+
+@router.put("/github/config")
+async def put_github_config(body: GithubConfigBody,
+                            github_store=Depends(get_github_store)) -> dict:
+    owner, repo = body.owner.strip(), body.repo.strip()
+    if not owner or not repo:
+        raise HTTPException(status_code=400, detail="owner and repo are required")
+    if not _GH_NAME.fullmatch(owner) or not _GH_NAME.fullmatch(repo):
+        raise HTTPException(
+            status_code=400,
+            detail="owner/repo may only contain letters, digits, '.', '_', '-'",
+        )
+    if github_store is None:
+        raise HTTPException(status_code=503, detail="github store unavailable")
+    cfg = GithubConfig(owner=owner, repo=repo,
+                       base_branch=(body.base_branch or "main").strip() or "main")
+    await github_store.put_config(get_settings().substrateos_tenant_id, cfg)
+    return _github_config_response(cfg)
 
 
 @router.post("/purge", response_model=PurgeResult)

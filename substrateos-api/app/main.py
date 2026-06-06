@@ -24,12 +24,14 @@ from app.api.sources import router as sources_router
 from app.api.surfaces import router as surfaces_router
 from app.api.tokens import router as tokens_router
 from app.api.admin_runs import router as admin_runs_router
+from app.api.github import router as github_router
 from app.api.runs import router as runs_router
 from app.api.skills import admin_router as skills_admin_router
 from app.api.skills import router as skills_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
 from app.connectors.cosmos_store import CosmosConnectionStore
+from app.connectors.github_store import GithubStore
 from app.connectors.sharepoint import SharePointConnector
 from app.connectors.store import ConnectionStore
 from app.connectors.subscriptions import CosmosSubscriptionStore, SubscriptionStore
@@ -56,6 +58,8 @@ from app.tokens.store import CosmosTokenStore, NullTokenStore
 from app.workflows.approval import ApprovalFlow
 from app.workflows.engine import RefundEngine
 from app.workflows.flow import RefundFlow
+from app.workflows.github_engine import PrDraftEngine
+from app.workflows.github_pr import GithubFlow
 from app.workflows.store import RunStore
 
 logger = logging.getLogger("app.startup")
@@ -169,6 +173,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.approval_flow = ApprovalFlow(
         store=app.state.run_store, people=app.state.people_graph,
     )
+    app.state.github_store = GithubStore()
+    app.state.github_flow = GithubFlow(
+        store=app.state.run_store,
+        github=app.state.github_store,
+        connections=app.state.connection_store,
+        engine=PrDraftEngine(llm=app.state.llm),
+    )
     # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
     # configured (e.g. India has no Redis), else Redis (no-op without a host).
     if _s.cosmos_gremlin_endpoint and _s.cosmos_gremlin_key:
@@ -204,6 +215,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await app.state.metrics_store.aclose()
         await app.state.skill_store.aclose()
         await app.state.token_store.aclose()
+        await app.state.github_store.aclose()
 
 
 app = FastAPI(title="substrateos-api", version="0.1.0", lifespan=lifespan)
@@ -236,6 +248,7 @@ app.include_router(skills_router)
 app.include_router(skills_admin_router)
 app.include_router(runs_router)
 app.include_router(admin_runs_router)
+app.include_router(github_router)
 
 if get_settings().mcp_enabled:
     app.mount("/mcp", build_mcp_asgi())

@@ -117,9 +117,21 @@ export const patchSurface = (
 export type BotStatus = {
   teams: { configured: boolean; app_id: string | null };
   slack: { configured: boolean };
+  github: { configured: boolean };
 };
 
 export const getBotStatus = () => call<BotStatus>("/admin/bot/status");
+
+export type GithubConfig = {
+  owner: string | null; repo: string | null; base_branch: string;
+  app_configured: boolean; repo_configured: boolean;
+};
+export const getGithubConfig = () => call<GithubConfig>("/admin/github/config");
+export const putGithubConfig = (owner: string, repo: string, base_branch: string) =>
+  call<GithubConfig>("/admin/github/config", {
+    method: "PUT",
+    body: JSON.stringify({ owner, repo, base_branch }),
+  });
 
 export async function downloadTeamsManifest(): Promise<void> {
   const resp = await fetch(`${API_BASE}/admin/bot/teams/manifest`, {

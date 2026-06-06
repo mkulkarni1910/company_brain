@@ -31,6 +31,7 @@ _ACTIVITY_MAX = 50
 _DEFAULT_SURFACES: list[SurfaceConfig] = [
     SurfaceConfig(name="slack"),
     SurfaceConfig(name="teams"),
+    SurfaceConfig(name="github"),
     SurfaceConfig(name="web"),
     SurfaceConfig(name="api"),
     SurfaceConfig(name="mcp"),

@@ -42,4 +42,5 @@ class Answer(BaseModel):
     citations: list[Citation]
     query_id: str
     skill_used: dict | None = None
+    pending_action: dict | None = None  # e.g. github_pr preview awaiting confirm
     debug: dict | None = None

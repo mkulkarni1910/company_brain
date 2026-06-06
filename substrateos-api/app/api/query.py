@@ -21,6 +21,26 @@ from app.orchestrator.kernel import SemanticKernelOrchestrator
 router = APIRouter(tags=["query"])
 
 
+def github_answer(result, *, repo_label: str | None) -> Answer:
+    """Render a GithubFlow StartResult as a web Answer."""
+    if result.status == "preview":
+        d = result.run.pr_draft
+        return Answer(
+            text="Here's the change I drafted — review and confirm before anything touches GitHub.",
+            citations=[], query_id=f"github-{result.run.id}",
+            pending_action={
+                "type": "github_pr", "run_id": result.run.id, "title": d.title,
+                "summary": d.summary, "path": d.path, "repo": repo_label,
+                "branch": f"substrateos/{result.run.id.lower()}",
+            })
+    if result.status == "connect":
+        return Answer(text=result.message, citations=[], query_id="github-connect",
+                      pending_action={"type": "github_connect",
+                                      "connect_url": result.connect_url})
+    return Answer(text=result.message or "I couldn't action that.",
+                  citations=[], query_id=f"github-{result.status}")
+
+
 @router.post("/query/ack")
 async def query_ack(
     body: QueryRequest,
@@ -81,6 +101,20 @@ async def query(
         if skill_ctx and skill_ctx.clean_query != body.query
         else body
     )
+
+    if getattr(skill_ctx, "workflow", None) == "github":
+        github_flow = getattr(request.app.state, "github_flow", None)
+        github_store = getattr(request.app.state, "github_store", None)
+        if github_flow is not None:
+            result = await github_flow.start(
+                effective_body.query, requester_name=user.display_name or user.email or "You",
+                requester_email=user.email, surface="web")
+            repo_label = None
+            if github_store is not None:
+                cfg = await github_store.get_config(get_settings().substrateos_tenant_id)
+                if cfg:
+                    repo_label = f"{cfg.owner}/{cfg.repo}"
+            return github_answer(result, repo_label=repo_label)
 
     history = await memory.load_history(user=user, conversation_id=body.conversation_id)
     answer = await orchestrator.answer(

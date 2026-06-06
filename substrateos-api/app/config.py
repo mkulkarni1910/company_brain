@@ -105,6 +105,12 @@ class Settings(BaseSettings):
     slack_signing_secret: str | None = None    # SLACK_SIGNING_SECRET
     slack_refund_approver_id: str | None = None  # SLACK_REFUND_APPROVER_ID — Diana's Slack member ID
 
+    # GitHub tool (raise-PR action connector). App-level OAuth App credentials —
+    # per-user tokens are obtained through the user's own GitHub login and stored
+    # in GithubStore. Secret loaded from Key Vault in prod (github-client-secret).
+    github_client_id: str | None = None       # GITHUB_CLIENT_ID
+    github_client_secret: str | None = None   # GITHUB_CLIENT_SECRET
+
     # ACL store
     acl_doc_ttl_seconds: int | None = None  # None = persistent (live ACL is authoritative)
     acl_fail_closed_on_missing: bool = False  # strict: drop docs with no live ACL entry
@@ -152,6 +158,9 @@ def load_secrets_from_keyvault(settings: "Settings", client=None) -> None:
         _get("azure-api-client-secret") or settings.azure_api_client_secret
     )
     settings.gemini_api_key = _get("gemini-api-key") or settings.gemini_api_key
+    settings.github_client_secret = (
+        _get("github-client-secret") or settings.github_client_secret
+    )
 
 
 @lru_cache(maxsize=1)

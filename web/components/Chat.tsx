@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { postQuery, postQueryAck, postFeedback, getConversations, getConversation, logClick, postSearch,
   listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources,
   Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource } from "@/lib/api";
+import PrActionCard from "@/components/PrActionCard";
 import { getSkills, SkillSummary } from "@/lib/skillsApi";
 import SkillsPage from "@/app/skills/page";
 import RunsPage from "@/app/runs/page";
@@ -618,6 +619,9 @@ export default function Chat() {
                     <div className="a-body"><AnswerText text={t.answer.text} citations={t.answer.citations} /></div>
                     {t.answer.skill_used && (
                       <div className="skill-used-badge">▶ via {t.answer.skill_used.name}</div>
+                    )}
+                    {t.answer.pending_action && (
+                      <PrActionCard action={t.answer.pending_action} />
                     )}
                     {t.answer.citations.length > 0 && (
                       <div className="cites">

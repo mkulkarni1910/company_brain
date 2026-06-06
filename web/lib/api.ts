@@ -13,9 +13,24 @@ export type AnswerDebug = {
   related_people?: RelatedPerson[];
 };
 export type SkillUsed = { id: string; slug: string; name: string };
+export type PendingAction =
+  | { type: "github_pr"; run_id: string; title: string; summary: string; path: string; repo: string | null; branch: string }
+  | { type: "github_connect"; connect_url: string };
 export type Answer = {
-  query_id: string; text: string; citations: Citation[]; skill_used?: SkillUsed | null; debug?: AnswerDebug | null;
+  query_id: string; text: string; citations: Citation[]; skill_used?: SkillUsed | null; pending_action?: PendingAction | null; debug?: AnswerDebug | null;
 };
+
+export type RunActionResult = { ok: boolean; status: string; pr_url: string | null; message: string };
+
+export async function postRunAction(runId: string, action: "create" | "cancel"): Promise<RunActionResult> {
+  const resp = await authedFetch(`${API_BASE}/workflows/runs/${encodeURIComponent(runId)}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action }),
+  });
+  if (!resp.ok) throw new Error(`substrateos-api ${resp.status}`);
+  return (await resp.json()) as RunActionResult;
+}
 
 export type HistoryEntry = { query: string; query_id: string; ts: string };
 export type TrendingDoc = {
