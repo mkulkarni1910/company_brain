@@ -104,3 +104,18 @@ def test_store_loads_refund_policy_and_evaluates():
 def test_store_missing_policy_raises():
     with pytest.raises(PolicyNotFound):
         PolicyStore(POLICY_DIR).load("does-not-exist")
+
+
+def test_numeric_op_rejects_nonnumeric_value_at_load():
+    # a mis-authored policy must fail loudly when validated, not 500 at request time
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        Condition(fact="amount_usd", op="<=", value="500")  # string, not numeric
+
+
+def test_in_op_requires_a_container_value():
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        Condition(fact="channel", op="in", value="sms")  # must be a list
+    # a proper list is accepted
+    assert Condition(fact="channel", op="in", value=["sms", "email"]).op == "in"

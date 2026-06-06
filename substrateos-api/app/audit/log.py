@@ -20,6 +20,11 @@ from app.domain.audit import Actor, AuditEvent
 logger = logging.getLogger(__name__)
 _ERRORS = (RedisError, ConnectionError, TimeoutError, OSError)
 
+# Bound both stores so a long-running process can't leak heap and a run's Redis
+# list can't grow without limit. A single governed run emits a handful of events;
+# this cap is generous and only protects against pathological loops.
+_MAX_EVENTS_PER_RUN = 1000
+
 
 def _audit_key(run_id: str) -> str:
     return f"audit:{run_id}"
@@ -50,14 +55,24 @@ class AuditLog:
                 await self._r.aclose()
 
     async def append(self, event: AuditEvent) -> None:
+        """Append one event. Best-effort on the Redis hop: on a Redis error the
+        event is retained in the in-process mirror and the failure is logged
+        (NOT silently dropped) so it surfaces in telemetry. The in-memory mirror
+        is capped per run to bound heap; durable/tamper-evident storage is a
+        documented follow-up."""
         blob = event.model_dump_json()
-        self._mem.setdefault(event.run_id, []).append(blob)
+        bucket = self._mem.setdefault(event.run_id, [])
+        bucket.append(blob)
+        if len(bucket) > _MAX_EVENTS_PER_RUN:
+            del bucket[: len(bucket) - _MAX_EVENTS_PER_RUN]
         if self._r is None:
             return
         try:
-            await self._r.rpush(_audit_key(event.run_id), blob)
+            key = _audit_key(event.run_id)
+            await self._r.rpush(key, blob)
+            await self._r.ltrim(key, -_MAX_EVENTS_PER_RUN, -1)
         except _ERRORS as e:
-            logger.warning("AuditLog.append redis failed: %s", e)
+            logger.warning("AuditLog.append redis failed (kept in memory mirror): %s", e)
 
     async def record(self, *, run_id: str, step: str, actor: Actor, **fields) -> AuditEvent:
         event = AuditEvent(ts=datetime.now(UTC), run_id=run_id, step=step, actor=actor, **fields)

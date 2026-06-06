@@ -4,6 +4,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.approvals.service import ApprovalService
+from app.approvals.store import ApprovalStore
 from app.audit.log import AuditLog
 from app.domain.identity import User
 from app.domain.workflow import RefundDecision, RefundFacts
@@ -45,7 +47,9 @@ def _flow(decision=None, error=False):
         engine.evaluate.return_value = decision
     store = RunStore(client=None, force_memory=True)
     audit = AuditLog(client=None, force_memory=True)  # hermetic — no redis in unit tests
-    return RefundFlow(engine=engine, store=store, audit_log=audit), store
+    approvals = ApprovalService(store=ApprovalStore(client=None, force_memory=True), audit=audit)
+    return RefundFlow(engine=engine, store=store, audit_log=audit,
+                      approval_service=approvals), store
 
 
 def _slack_recorder():

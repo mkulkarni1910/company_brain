@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 
+from app.approvals.service import ApprovalService
+from app.approvals.store import ApprovalStore
 from app.audit.log import AuditLog
 from app.bots.refund_cards import (
     approval_dm_blocks,
@@ -28,13 +30,18 @@ _ERROR = "Sorry, I couldn't evaluate that refund request right now. Please try a
 
 
 def _policy_limits(policy: Policy) -> tuple[float | None, int | None]:
-    """Pull the display thresholds out of the policy conditions (for the cards)."""
+    """Pull the display thresholds out of the policy conditions (for the cards).
+
+    Defensive: only read numerically-typed condition values so a mis-authored
+    policy can never surface as an HTTP 500 on a refund request (the Condition
+    validator already rejects such policies at load — this is belt-and-braces).
+    """
     amount = age = None
     for cond in policy.all:
-        if cond.fact == "amount_usd":
-            amount = cond.value  # type: ignore[assignment]
-        elif cond.fact == "order_age_days":
-            age = cond.value  # type: ignore[assignment]
+        if cond.fact == "amount_usd" and isinstance(cond.value, int | float):
+            amount = float(cond.value)
+        elif cond.fact == "order_age_days" and isinstance(cond.value, int):
+            age = cond.value
     return amount, age
 
 
@@ -53,6 +60,7 @@ class RefundFlow:
         policy_id: str = "refund.v1",
         audit_log: AuditLog | None = None,
         refund_connector: StripeRefundConnector | None = None,
+        approval_service: ApprovalService | None = None,
     ) -> None:
         self._engine = engine
         self._store = store
@@ -60,9 +68,11 @@ class RefundFlow:
         self._policy_store = policy_store or PolicyStore()
         self._policy_id = policy_id
         self._policy_cache: Policy | None = None
-        # seams: provenance + the act connector (the flow calls services, not inline logic)
+        # seams: provenance + the act connector + the approval gate
+        # (the flow calls services, not inline logic)
         self._audit = audit_log or AuditLog()
         self._refund_connector = refund_connector or StripeRefundConnector()
+        self._approvals = approval_service or ApprovalService(store=ApprovalStore(), audit=self._audit)
 
     def _policy(self) -> Policy:
         if self._policy_cache is None:
@@ -203,8 +213,44 @@ class RefundFlow:
                              blocks=auto_approved_blocks(decision, run_id=run.id))
             return
 
-        # Needs approval — route to the configured manager.
+        if guardrail.result == "deny":
+            run.status = "denied"
+            await self._store.save(run)
+            await self._store.add_event(run.id, step="Denied",
+                                        detail=guardrail.reason, actor=rule)
+            await self._audit.record(
+                run_id=run.id, step="Denied", actor=Actor.agent(rule),
+                rule={"id": guardrail.rule_id, "version": guardrail.rule_version,
+                      "result": "deny"},
+                decision="deny", detail=guardrail.reason,
+            )
+            await self._post(token, channel, thread_ts,
+                             text=f"This refund is denied by policy. {guardrail.reason}")
+            return
+
+        if guardrail.result not in ("require_approval", "stop"):
+            # defensive fail-closed: never silently route an unknown verdict to a human
+            run.status = "error"
+            await self._store.save(run)
+            await self._store.add_event(run.id, step="Error",
+                                        detail=f"Unexpected guardrail result {guardrail.result!r}",
+                                        actor=rule)
+            await self._post(token, channel, thread_ts, text=_ERROR)
+            return
+
+        # require_approval | stop → human gate. Open a DURABLE, identity-aware pending
+        # approval (the platform primitive); the Slack card below mirrors it for the UX.
+        # ('stop' carries no required_role, so fall back to the policy's role.)
         run.status = "pending_approval"
+        required_role = guardrail.required_role or policy.required_role or "support_manager"
+        run.approval_id = await self._approvals.request(
+            run_id=run.id, step="approve", required_role=required_role,
+            decision_context={
+                "order_id": facts.order_id, "amount_usd": facts.amount_usd,
+                "order_age_days": facts.order_age_days, "result": guardrail.result,
+            },
+            rule_id=guardrail.rule_id, rule_version=guardrail.rule_version,
+        )
         await self._store.save(run)
         approver_id = s.slack_refund_approver_id
         approver_label = "a Support Manager"

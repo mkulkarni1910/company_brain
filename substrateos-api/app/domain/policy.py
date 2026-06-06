@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # allow         → proceed straight to act
 # require_approval → pause for a governed human decision
@@ -19,13 +19,34 @@ PolicyResult = Literal["allow", "require_approval", "deny", "stop"]
 
 ConditionOp = Literal["<=", ">=", "<", ">", "==", "!=", "in"]
 
+_NUMERIC_OPS = {"<=", ">=", "<", ">"}
+_CONTAINER_OPS = {"in"}
+
 
 class Condition(BaseModel):
-    """A single structured predicate over one typed fact."""
+    """A single structured predicate over one typed fact.
+
+    Value/op compatibility is validated at load time so a mis-authored policy
+    fails loudly when PolicyStore.load() validates it — never as a runtime 500.
+    """
 
     fact: str
     op: ConditionOp
     value: object
+
+    @model_validator(mode="after")
+    def _check_value_type(self) -> "Condition":
+        if self.op in _NUMERIC_OPS and not isinstance(self.value, int | float):
+            raise ValueError(
+                f"condition on {self.fact!r}: operator {self.op!r} needs a numeric value, "
+                f"got {type(self.value).__name__} ({self.value!r})"
+            )
+        if self.op in _CONTAINER_OPS and not isinstance(self.value, list | tuple | set):
+            raise ValueError(
+                f"condition on {self.fact!r}: operator 'in' needs a list value, "
+                f"got {type(self.value).__name__} ({self.value!r})"
+            )
+        return self
 
 
 class Policy(BaseModel):

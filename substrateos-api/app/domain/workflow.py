@@ -5,7 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-RunStatus = Literal["running", "pending_approval", "approved", "rejected", "completed", "error"]
+RunStatus = Literal[
+    "running", "pending_approval", "approved", "rejected", "denied", "completed", "error"
+]
 
 
 class RefundFacts(BaseModel):
@@ -57,5 +59,6 @@ class RefundRun(BaseModel):
     dm_ts: str | None = None
     decision: RefundDecision | None = None
     approver_name: str | None = None
+    approval_id: str | None = None  # the durable PendingApproval gating this run
     created_at: datetime
     updated_at: datetime

@@ -182,6 +182,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         policy_store=app.state.policy_store,
         audit_log=app.state.audit_log,
         refund_connector=app.state.refund_connector,
+        approval_service=app.state.approval_service,
     )
     # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
     # configured (e.g. India has no Redis), else Redis (no-op without a host).
