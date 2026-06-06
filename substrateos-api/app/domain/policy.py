@@ -35,7 +35,7 @@ class Condition(BaseModel):
     value: object
 
     @model_validator(mode="after")
-    def _check_value_type(self) -> "Condition":
+    def _check_value_type(self) -> Condition:
         if self.op in _NUMERIC_OPS and not isinstance(self.value, int | float):
             raise ValueError(
                 f"condition on {self.fact!r}: operator {self.op!r} needs a numeric value, "
