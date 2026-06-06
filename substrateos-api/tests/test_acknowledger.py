@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from app.generation.acknowledger import Acknowledger, _template_ack, first_name
+from app.generation.acknowledger import _SYSTEM, Acknowledger, _template_ack, first_name
+
+
+def test_system_prompt_forbids_inventing_details():
+    # Guards the fix for the "my name is Priya → researching refund for order #48213"
+    # hallucination: the prompt must forbid inventing details and show varied examples.
+    assert "NEVER invent" in _SYSTEM
+    assert "only reference" in _SYSTEM.lower()
+    # more than one example so the model can't parrot a single concrete one
+    assert _SYSTEM.count("→") >= 3
 
 
 class _FakeLLM:
