@@ -1,0 +1,11 @@
+id: refund.v1
+version: 1
+owner: support_manager
+description: "Refunds auto-approve only within limit and window."
+all:
+  - { fact: amount_usd,     op: "<=", value: 500 }
+  - { fact: order_age_days, op: "<=", value: 30 }
+on_pass: allow
+on_fail: require_approval
+required_role: support_manager
+on_missing_data: stop
