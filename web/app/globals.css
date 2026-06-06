@@ -413,6 +413,7 @@
   .sl-web{background:radial-gradient(circle at 30% 25%,#ffcf7e,var(--amber) 60%,#9a5e0e)}
   .sl-api{background:var(--teal)}
   .sl-mcp{background:#1e1b2e}
+  .sl-github{background:#24292f;color:#fff}
   .surf-name{font-family:var(--font-fraunces),serif;font-size:16px;font-weight:600;line-height:1.2}
   .surf-chip{font-family:var(--font-mono),monospace;font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-faint);border:1px solid var(--line-soft);border-radius:99px;padding:2px 8px;margin-top:3px;display:inline-block}
   .surf-desc{font-size:13px;color:var(--ink-faint);line-height:1.56;flex:1}
@@ -425,6 +426,7 @@
   .surf-install-btn:disabled{opacity:.5;cursor:not-allowed}
   .btn-slack{background:#4A154B;color:#fff}.btn-slack:hover:not(:disabled){background:#3d1140}
   .btn-teams{background:#5059C9;color:#fff}.btn-teams:hover:not(:disabled){background:#404db0}
+  .btn-github{background:#24292f;color:#fff}.btn-github:hover:not(:disabled){background:#16191d}
   .surf-installed{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:500;color:var(--green);white-space:nowrap}
   .surf-installed .d{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none}
   .setup-err{color:var(--rose);font-size:12px;margin:10px 0 0}
@@ -450,6 +452,15 @@
   .setup-step .t b{font-weight:600;color:var(--ink)}
   .setup-code{display:block;font-family:var(--font-mono),monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:8px;padding:8px 11px;margin-top:8px;color:var(--ink-dim);word-break:break-all;line-height:1.5}
   .setup-step .t code{font-family:var(--font-mono),monospace;font-size:11.5px;background:var(--paper-2);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px;color:var(--amber)}
+  .setup-repo{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+  .setup-repo input{font-family:var(--font-mono),monospace;font-size:12px;background:var(--surface);border:1px solid var(--line-soft);border-radius:8px;padding:7px 10px;color:var(--ink);outline:none;transition:.15s}
+  .setup-repo input:focus{border-color:#cabd9f}
+  .setup-repo .repo-owner{flex:1;min-width:160px}
+  .setup-repo .repo-branch{width:120px}
+  .setup-repo .setup-save{font-size:12px;font-weight:600;color:var(--ink-dim);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:7px 13px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .setup-repo .setup-save:hover:not(:disabled){border-color:#cabd9f;color:var(--ink);background:var(--surface)}
+  .setup-repo .setup-save:disabled{opacity:.5;cursor:not-allowed}
+  .setup-repo-err{color:var(--rose);font-size:12px;margin:6px 0 0;width:100%}
   @media(max-width:960px){.surf-grid{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:640px){.surf-grid{grid-template-columns:1fr}}
   @media(max-width:880px){.tiles{grid-template-columns:repeat(2,1fr)}.admin-cols{grid-template-columns:1fr}}

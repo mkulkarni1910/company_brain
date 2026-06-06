@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import {
   getBotStatus, getSurfaces, patchSurface, downloadTeamsManifest,
-  BotStatus, SurfaceConfig,
+  getGithubConfig, putGithubConfig,
+  BotStatus, SurfaceConfig, GithubConfig,
 } from "@/lib/adminApi";
 
 type SurfaceMeta = {
@@ -29,6 +30,12 @@ const SURFACES: SurfaceMeta[] = [
     desc: "Personal and channel bot in Microsoft Teams. Answers render as Adaptive Cards; meeting context appears in the side panel during calls.",
     scope: "All employees", installable: true,
     blockedMsg: "Teams surface disabled — all Teams access is blocked.",
+  },
+  {
+    name: "github", label: "GitHub", tag: "Tool", logoClass: "sl-github",
+    desc: "Action connector — where SubstrateOS acts. Users raise AI-drafted pull requests to your configured repo from chat. Each PR is authored by the requesting user via their own GitHub login.",
+    scope: "All employees", installable: true,
+    blockedMsg: "GitHub tool disabled — raise-PR requests are refused.",
   },
   {
     name: "web", label: "Web", tag: "All", logoClass: "sl-web",
@@ -97,6 +104,11 @@ const ICONS: Record<string, React.ReactNode> = {
   mcp: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" width={20} height={20}>
       <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </svg>
+  ),
+  github: (
+    <svg viewBox="0 0 24 24" fill="currentColor" width={20} height={20}>
+      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
     </svg>
   ),
 };
@@ -193,6 +205,121 @@ function SlackInstallModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function GithubInstallModal({ onClose, onSaved }: { onClose: () => void; onSaved: (cfg: GithubConfig) => void }) {
+  const [ownerRepo, setOwnerRepo] = useState("");
+  const [base, setBase] = useState("main");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    getGithubConfig().then((c) => {
+      if (c.owner && c.repo) { setOwnerRepo(`${c.owner}/${c.repo}`); setSaved(true); }
+      setBase(c.base_branch || "main");
+    }).catch(() => {});
+  }, []);
+
+  const save = async () => {
+    const [owner, repo] = ownerRepo.split("/").map((s) => s.trim());
+    if (!owner || !repo) { setErr("Enter the repo as owner/repo."); return; }
+    setSaving(true); setErr(null);
+    try {
+      const cfg = await putGithubConfig(owner, repo, base.trim() || "main");
+      onSaved(cfg);
+      setSaved(true);
+    } catch {
+      setErr("Save failed — check the admin key / API.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="admin-modal" onClick={onClose}>
+      <div className="admin-modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="setup-hd">
+          <div className="lg sl-github">{ICONS.github}</div>
+          <div>
+            <h3>Connect SubstrateOS to GitHub</h3>
+            <div className="sub">One-time setup · ~5 minutes · a GitHub account that can create OAuth Apps</div>
+          </div>
+        </div>
+        <div className="setup-note">
+          <InfoIcon />
+          One app credential for SubstrateOS (this setup) — then each user connects their own GitHub from chat, so every PR is authored by the person who asked.
+        </div>
+        <ol className="setup-steps">
+          <li className="setup-step">
+            <span className="num">1</span>
+            <div className="t">
+              On GitHub go to <b>Settings → Developer settings → OAuth Apps → New OAuth App</b>. Set the callback URL to:
+              <code className="setup-code">{API_URL}/auth/github/callback</code>
+            </div>
+          </li>
+          <li className="setup-step">
+            <span className="num">2</span>
+            <div className="t">
+              Copy the <b>Client ID</b> and generate a <b>Client Secret</b>, add them to the server environment, and restart the API.
+              <code className="setup-code">GITHUB_CLIENT_ID=…   GITHUB_CLIENT_SECRET=…</code>
+            </div>
+          </li>
+          <li className="setup-step">
+            <span className="num">3</span>
+            <div className="t">
+              Enter the repository SubstrateOS raises PRs against.
+              <div className="setup-repo">
+                <input
+                  className="repo-owner"
+                  type="text"
+                  placeholder="owner/repo"
+                  aria-label="owner/repo"
+                  value={ownerRepo}
+                  onChange={(e) => setOwnerRepo(e.target.value)}
+                />
+                <input
+                  className="repo-branch"
+                  type="text"
+                  placeholder="base branch"
+                  aria-label="base branch"
+                  value={base}
+                  onChange={(e) => setBase(e.target.value)}
+                />
+                <button className="setup-save" onClick={save} disabled={saving}>
+                  {saving ? "Saving…" : saved ? "Saved ✓" : "Save repo"}
+                </button>
+              </div>
+              {err && <div className="setup-repo-err">{err}</div>}
+              {saved && !err && ownerRepo && (
+                <div style={{ fontSize: "12px", color: "var(--green)", marginTop: "6px" }}>
+                  Saved — {ownerRepo} · branch: {base || "main"}
+                </div>
+              )}
+            </div>
+          </li>
+          <li className="setup-step">
+            <span className="num">4</span>
+            <div className="t">
+              Done — the card shows <b>Connected to owner/repo</b>. Users connect their own GitHub the first time they ask for a PR.
+            </div>
+          </li>
+        </ol>
+        <div className="modal-foot">
+          <button className="modal-close" onClick={onClose}>Close</button>
+          <a
+            className="surf-install-btn btn-github"
+            href="https://github.com/settings/developers"
+            target="_blank"
+            rel="noreferrer"
+            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+          >
+            Open GitHub OAuth Apps ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type CardProps = {
   meta: SurfaceMeta;
   config: SurfaceConfig;
@@ -227,7 +354,7 @@ function SurfaceCard({ meta, config, onToggle, onInstall, botConfigured }: CardP
         onClick={onInstall}
         disabled={!enabled}
       >
-        Install to {meta.label}
+        {meta.name === "github" ? "Connect GitHub" : `Install to ${meta.label}`}
       </button>
     )
   ) : (
@@ -265,21 +392,23 @@ function SurfaceCard({ meta, config, onToggle, onInstall, botConfigured }: CardP
 export default function Surfaces() {
   const [configs, setConfigs] = useState<SurfaceConfig[]>([]);
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
-  const [installModal, setInstallModal] = useState<"teams" | "slack" | null>(null);
+  const [ghCfg, setGhCfg] = useState<GithubConfig | null>(null);
+  const [installModal, setInstallModal] = useState<"teams" | "slack" | "github" | null>(null);
   const [err, setErr] = useState(false);
   const [filter, setFilter] = useState<SurfFilter>("all");
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    Promise.all([getSurfaces(), getBotStatus()])
-      .then(([surfaces, status]) => {
+    Promise.all([getSurfaces(), getBotStatus(), getGithubConfig()])
+      .then(([surfaces, status, cfg]) => {
         setConfigs(surfaces);
         setBotStatus(status);
+        setGhCfg(cfg);
         // Auto-heal: if bot is configured but not yet marked installed, sync DB.
         const heal = (name: string, wsName: string, configured: boolean) => {
-          const cfg = surfaces.find((s) => s.name === name);
-          if (configured && cfg && !cfg.installed) {
-            patchSurface(name, cfg.enabled, { installed: true, workspace_name: wsName })
+          const sc = surfaces.find((s) => s.name === name);
+          if (configured && sc && !sc.installed) {
+            patchSurface(name, sc.enabled, { installed: true, workspace_name: wsName })
               .then((updated) =>
                 setConfigs((prev) => prev.map((c) => (c.name === name ? updated : c)))
               )
@@ -288,6 +417,9 @@ export default function Surfaces() {
         };
         heal("teams", "Microsoft Teams", status.teams.configured);
         heal("slack", "Slack", status.slack.configured);
+        if (cfg.app_configured && cfg.repo_configured) {
+          heal("github", `${cfg.owner}/${cfg.repo}`, true);
+        }
       })
       .catch(() => setErr(true));
   }, []);
@@ -306,7 +438,7 @@ export default function Surfaces() {
   };
 
   const handleInstall = (name: string) => {
-    if (name === "teams" || name === "slack") setInstallModal(name);
+    if (name === "teams" || name === "slack" || name === "github") setInstallModal(name);
   };
 
   const enriched = SURFACES.map((meta) => {
@@ -372,7 +504,8 @@ export default function Surfaces() {
         {shown.map(({ meta, config }) => {
           const bc =
             meta.name === "teams" ? (botStatus?.teams.configured ?? false) :
-            meta.name === "slack" ? (botStatus?.slack.configured ?? false) : false;
+            meta.name === "slack" ? (botStatus?.slack.configured ?? false) :
+            meta.name === "github" ? (botStatus?.github?.configured ?? false) : false;
           return (
             <SurfaceCard
               key={meta.name}
@@ -388,6 +521,7 @@ export default function Surfaces() {
       </div>
       {installModal === "teams" && <TeamsInstallModal onClose={() => setInstallModal(null)} />}
       {installModal === "slack" && <SlackInstallModal onClose={() => setInstallModal(null)} />}
+      {installModal === "github" && <GithubInstallModal onClose={() => setInstallModal(null)} onSaved={(c) => setGhCfg(c)} />}
     </div>
     </div>
   );
