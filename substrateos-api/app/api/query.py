@@ -31,6 +31,7 @@ def github_answer(result, *, repo_label: str | None) -> Answer:
             pending_action={
                 "type": "github_pr", "run_id": result.run.id, "title": d.title,
                 "summary": d.summary, "path": d.path, "repo": repo_label,
+                "branch": f"substrateos/{result.run.id.lower()}",
             })
     if result.status == "connect":
         return Answer(text=result.message, citations=[], query_id="github-connect",

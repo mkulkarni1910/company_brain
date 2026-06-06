@@ -21,6 +21,7 @@ def test_preview_answer_carries_pending_action():
     pa = a.pending_action
     assert pa["type"] == "github_pr" and pa["run_id"] == "RB-7"
     assert pa["path"] == "docs/p.md" and pa["repo"] == "acme/policies"
+    assert pa["branch"] == "substrateos/rb-7"
 
 
 def test_connect_answer_carries_url():

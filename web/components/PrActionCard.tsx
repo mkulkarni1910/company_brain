@@ -79,7 +79,7 @@ export default function PrActionCard({ action }: { action: PendingAction }) {
         </span>
       </div>
       <div className="pr-meta">
-        {action.repo ?? "configured repo"} · <code>{action.path}</code>
+        {action.repo ?? "configured repo"} · <code>{action.path}</code> · branch <code>{action.branch}</code>
       </div>
       <div className="pr-summary">{action.summary}</div>
       {state === "created" && prUrl && (

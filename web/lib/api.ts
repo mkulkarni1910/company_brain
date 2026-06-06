@@ -14,7 +14,7 @@ export type AnswerDebug = {
 };
 export type SkillUsed = { id: string; slug: string; name: string };
 export type PendingAction =
-  | { type: "github_pr"; run_id: string; title: string; summary: string; path: string; repo: string | null }
+  | { type: "github_pr"; run_id: string; title: string; summary: string; path: string; repo: string | null; branch: string }
   | { type: "github_connect"; connect_url: string };
 export type Answer = {
   query_id: string; text: string; citations: Citation[]; skill_used?: SkillUsed | null; pending_action?: PendingAction | null; debug?: AnswerDebug | null;
