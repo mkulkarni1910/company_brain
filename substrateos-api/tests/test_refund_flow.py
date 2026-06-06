@@ -5,21 +5,30 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from app.domain.identity import User
-from app.domain.workflow import RefundDecision
+from app.domain.workflow import RefundDecision, RefundFacts
 from app.workflows.engine import RefundEngineError
 from app.workflows.flow import RefundFlow
 from app.workflows.store import RunStore
 
+# The engine now returns RefundFacts; the flow's PolicyEngine decides the verdict
+# against the real policies/refund.v1.yaml (amount <= 500 AND age <= 30 → allow).
+_FACTS_OVER = RefundFacts(
+    found=True, order_id="48213", customer="Priya Sharma", amount_usd=1200,
+    order_age_days=45, reasoning="Order #48213 · $1,200 · 45 days · Priya Sharma.",
+)
+_FACTS_WITHIN = RefundFacts(
+    found=True, order_id="48190", customer="Marcus Lee", amount_usd=89.0,
+    order_age_days=12, reasoning="Order #48190 · $89 · 12 days · Marcus Lee.",
+)
+_FACTS_NF = RefundFacts(found=False, reasoning="No order matching #99999 in the context.")
+
+# RefundDecision render view — used directly by the handle_action (button) tests,
+# which read run.decision and never invoke the engine.
 _OVER_LIMIT = RefundDecision(
     found=True, order_id="48213", customer="Priya Sharma", amount_usd=1200,
     order_age_days=45, policy_limit_usd=500, policy_limit_days=30,
     auto_approve=False, reasoning="Over the $500 / 30 day auto-approve limit.",
 )
-_WITHIN = _OVER_LIMIT.model_copy(update={
-    "order_id": "48190", "customer": "Marcus Lee", "amount_usd": 89.0,
-    "order_age_days": 12, "auto_approve": True,
-    "reasoning": "Within the $500 / 30 day auto-approve limit.",
-})
 
 
 def _user() -> User:
@@ -63,7 +72,7 @@ async def test_needs_approval_path(monkeypatch):
     monkeypatch.setenv("SLACK_REFUND_APPROVER_ID", "U_DIANA")
     from app.config import get_settings
     get_settings.cache_clear()
-    flow, store = _flow(decision=_OVER_LIMIT)
+    flow, store = _flow(decision=_FACTS_OVER)
     calls, fake = _slack_recorder()
     with patch("app.workflows.flow.slack_call", new=fake):
         await flow.handle_request(text="refund $1,200 order 48213", channel="C_REFUNDS",
@@ -88,7 +97,7 @@ async def test_auto_approve_path(monkeypatch):
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
     from app.config import get_settings
     get_settings.cache_clear()
-    flow, store = _flow(decision=_WITHIN)
+    flow, store = _flow(decision=_FACTS_WITHIN)
     calls, fake = _slack_recorder()
     with patch("app.workflows.flow.slack_call", new=fake):
         await flow.handle_request(text="refund $89 order 48190", channel="C", thread_ts=None,
@@ -120,8 +129,7 @@ async def test_order_not_found(monkeypatch):
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
     from app.config import get_settings
     get_settings.cache_clear()
-    nf = RefundDecision(found=False, reasoning="No order matching #99999 in the context.")
-    flow, store = _flow(decision=nf)
+    flow, store = _flow(decision=_FACTS_NF)
     calls, fake = _slack_recorder()
     with patch("app.workflows.flow.slack_call", new=fake):
         await flow.handle_request(text="refund order 99999", channel="C", thread_ts=None,
@@ -137,7 +145,7 @@ async def test_no_approver_configured_still_posts_card(monkeypatch):
     monkeypatch.delenv("SLACK_REFUND_APPROVER_ID", raising=False)
     from app.config import get_settings
     get_settings.cache_clear()
-    flow, store = _flow(decision=_OVER_LIMIT)
+    flow, store = _flow(decision=_FACTS_OVER)
     calls, fake = _slack_recorder()
     with patch("app.workflows.flow.slack_call", new=fake):
         await flow.handle_request(text="refund", channel="C", thread_ts=None,

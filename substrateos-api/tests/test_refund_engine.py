@@ -50,29 +50,31 @@ def _user() -> User:
 _DECISION = {
     "found": True, "order_id": "48213", "customer": "Priya Sharma",
     "amount_usd": 1200, "order_age_days": 45,
-    "policy_limit_usd": 500, "policy_limit_days": 30,
-    "auto_approve": False,
-    "reasoning": "Amount and age exceed the auto-approve limits in refund policy v3.",
+    "reasoning": "Order #48213 is $1,200 placed 45 days ago by Priya Sharma.",
 }
 
 
 @pytest.mark.asyncio
-async def test_evaluate_parses_decision():
-    llm = _FakeLLM(json.dumps(_DECISION))
+async def test_evaluate_extracts_facts_only():
+    # The model returns facts only; even if it leaks a verdict, the engine ignores it.
+    llm = _FakeLLM(json.dumps({**_DECISION, "auto_approve": True, "policy_limit_usd": 500}))
     retriever = _FakeRetriever()
     engine = RefundEngine(retriever=retriever, llm=llm)
-    d = await engine.evaluate("refund $1,200 on order #48213", user=_user())
-    assert d.found is True
-    assert d.auto_approve is False
-    assert d.order_id == "48213"
-    assert d.amount_usd == 1200
-    # two retrievals: the request text and the policy lookup
-    assert len(retriever.queries) == 2
-    assert "refund policy" in retriever.queries[1].lower()
+    facts = await engine.evaluate("refund $1,200 on order #48213", user=_user())
+    assert facts.found is True
+    assert facts.order_id == "48213"
+    assert facts.amount_usd == 1200
+    assert facts.order_age_days == 45
+    # the verdict is NOT the model's job — RefundFacts has no auto_approve field
+    assert not hasattr(facts, "auto_approve")
+    # one retrieval (order context); the policy is code now, not a retrieval
+    assert len(retriever.queries) == 1
     # context + today's date reach the LLM
     user_msg = llm.messages[-1]["content"]
     assert "Order #48213" in user_msg
     assert "Today's date" in user_msg
+    # the prompt instructs facts-only extraction
+    assert "do not decide" in llm.messages[0]["content"].lower()
 
 
 @pytest.mark.asyncio

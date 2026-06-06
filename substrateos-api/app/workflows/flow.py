@@ -12,6 +12,10 @@ from app.bots.refund_cards import (
 from app.bots.slack import slack_call
 from app.config import get_settings
 from app.domain.identity import User
+from app.domain.policy import Policy
+from app.domain.workflow import RefundDecision
+from app.policy.engine import PolicyEngine
+from app.policy.store import PolicyNotFound, PolicyStore
 from app.workflows.engine import RefundEngine, RefundEngineError
 from app.workflows.store import RunStore
 
@@ -20,12 +24,42 @@ logger = logging.getLogger(__name__)
 _ERROR = "Sorry, I couldn't evaluate that refund request right now. Please try again."
 
 
-class RefundFlow:
-    """Drives the refund playbook over Slack: ack → evaluate → act/route → decide."""
+def _policy_limits(policy: Policy) -> tuple[float | None, int | None]:
+    """Pull the display thresholds out of the policy conditions (for the cards)."""
+    amount = age = None
+    for cond in policy.all:
+        if cond.fact == "amount_usd":
+            amount = cond.value  # type: ignore[assignment]
+        elif cond.fact == "order_age_days":
+            age = cond.value  # type: ignore[assignment]
+    return amount, age
 
-    def __init__(self, *, engine: RefundEngine, store: RunStore) -> None:
+
+class RefundFlow:
+    """Drives the refund playbook over Slack: ack → extract facts → guardrail
+    (policy-as-code) → act/route → decide. The verdict is decided by PolicyEngine,
+    in code — never by the model."""
+
+    def __init__(
+        self,
+        *,
+        engine: RefundEngine,
+        store: RunStore,
+        policy_engine: PolicyEngine | None = None,
+        policy_store: PolicyStore | None = None,
+        policy_id: str = "refund.v1",
+    ) -> None:
         self._engine = engine
         self._store = store
+        self._policy_engine = policy_engine or PolicyEngine()
+        self._policy_store = policy_store or PolicyStore()
+        self._policy_id = policy_id
+        self._policy_cache: Policy | None = None
+
+    def _policy(self) -> Policy:
+        if self._policy_cache is None:
+            self._policy_cache = self._policy_store.load(self._policy_id)
+        return self._policy_cache
 
     # ── helpers ──────────────────────────────────────────────────────────────
 
@@ -68,7 +102,7 @@ class RefundFlow:
                          text=f"On it, {first} — pulling up the order and checking the refund policy…")
 
         try:
-            decision = await self._engine.evaluate(text, user=user)
+            facts = await self._engine.evaluate(text, user=user)
         except RefundEngineError:
             run.status = "error"
             await self._store.save(run)
@@ -77,15 +111,40 @@ class RefundFlow:
             await self._post(token, channel, thread_ts, text=_ERROR)
             return
 
-        run.decision = decision
-        if not decision.found:
+        if not facts.found:
             run.status = "completed"
             await self._store.save(run)
             await self._store.add_event(run.id, step="Order not found",
-                                        detail=decision.reasoning, actor="SubstrateOS")
+                                        detail=facts.reasoning, actor="SubstrateOS")
             await self._post(token, channel, thread_ts,
-                             text=f"I couldn't find that order in our records. {decision.reasoning}")
+                             text=f"I couldn't find that order in our records. {facts.reasoning}")
             return
+
+        # ── Guardrail: deterministic policy-as-code decides the verdict (not the model) ──
+        try:
+            policy = self._policy()
+        except PolicyNotFound:
+            run.status = "error"
+            await self._store.save(run)
+            await self._store.add_event(run.id, step="Error",
+                                        detail=f"Policy {self._policy_id} not found",
+                                        actor="SubstrateOS")
+            await self._post(token, channel, thread_ts, text=_ERROR)
+            return
+
+        guardrail = self._policy_engine.evaluate(
+            policy, {"amount_usd": facts.amount_usd, "order_age_days": facts.order_age_days}
+        )
+        rule = f"{guardrail.rule_id}@v{guardrail.rule_version}"
+        limit_usd, limit_days = _policy_limits(policy)
+        decision = RefundDecision(
+            found=True, order_id=facts.order_id, customer=facts.customer,
+            amount_usd=facts.amount_usd, order_age_days=facts.order_age_days,
+            policy_limit_usd=limit_usd, policy_limit_days=limit_days,
+            auto_approve=(guardrail.result == "allow"),
+            reasoning=guardrail.reason or facts.reasoning,
+        )
+        run.decision = decision
 
         await self._store.add_event(
             run.id, step="Facts gathered",
@@ -95,17 +154,16 @@ class RefundFlow:
         )
         await self._store.add_event(
             run.id, step="Rule evaluated",
-            detail=(f"Auto-approve limits ${decision.policy_limit_usd:,.0f} / "
-                    f"{decision.policy_limit_days} days → "
-                    f"{'within limit' if decision.auto_approve else 'over limit'}"),
-            actor="refund_v1",
+            detail=(f"{rule} → {guardrail.result} "
+                    f"(limits ${(limit_usd or 0):,.0f} / {limit_days} days): {guardrail.reason}"),
+            actor=rule,
         )
 
-        if decision.auto_approve:
+        if guardrail.result == "allow":
             run.status = "completed"
             await self._store.save(run)
             await self._store.add_event(run.id, step="Auto-approved",
-                                        detail=decision.reasoning, actor="refund_v1")
+                                        detail=guardrail.reason, actor=rule)
             await self._store.add_event(
                 run.id, step="Refund issued",
                 detail=(f"${decision.amount_usd:,.0f} refunded to {decision.customer} · "
