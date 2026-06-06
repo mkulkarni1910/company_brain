@@ -152,6 +152,10 @@ New `app/workflows/github_pr.py`, shaped like `ApprovalFlow`; run kind
 - The `runs/{id}/action` endpoint authorizes the **requester only** for
   confirm/cancel; Slack/Teams button payloads are verified by the existing
   signature checks.
+- Confirm has no distributed lock: a double-click race is guarded only by the
+  run-status check (second action returns "already completed"). Worst case
+  under true concurrency is a duplicate branch attempt, which GitHub 422s —
+  acceptable demo-grade; a Redis SETNX lock is the production follow-up.
 
 ## Testing
 
