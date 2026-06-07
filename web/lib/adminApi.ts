@@ -127,6 +127,23 @@ export const putGithubConfig = (owner: string, repo: string, base_branch: string
     body: JSON.stringify({ owner, repo, base_branch }),
   });
 
+export type SkillSubmission = {
+  run_id: string; name: string; slug: string; status: string;
+  rejection_note: string | null; submitted_by: string; created_at: string;
+  source_text: string | null;
+  skill: {
+    slug: string; name: string; description: string; team: string;
+    run_scope: "org" | "team"; enabled?: boolean;
+    steps?: string[]; data_feeds?: string[]; system_prompt: string;
+  } | null;
+};
+
+export const getSkillSubmissions = () => call<SkillSubmission[]>("/admin/skill-submissions");
+export const decideSkillSubmission = (runId: string, approve: boolean, note = "") =>
+  call<SkillSubmission>(
+    `/admin/skill-submissions/${encodeURIComponent(runId)}/${approve ? "approve" : "reject"}`,
+    { method: "POST", body: approve ? undefined : JSON.stringify({ note }) });
+
 export async function downloadTeamsManifest(): Promise<void> {
   const resp = await fetch(`${API_BASE}/admin/bot/teams/manifest`, {
     headers: await headers(),
