@@ -6,6 +6,9 @@ from unittest.mock import patch
 
 import pytest
 
+from app.approvals.service import ApprovalService
+from app.approvals.store import ApprovalStore
+from app.audit.log import AuditLog
 from app.domain.identity import User
 from app.domain.workflow import RefundRun
 from app.workflows.approval import ApprovalFlow
@@ -159,3 +162,75 @@ async def test_ignores_non_approval_action():
     await flow.handle_action({"type": "block_actions",
                               "actions": [{"action_id": "refund_approve", "value": "x"}]})
     assert await store.list_runs() == []
+
+
+# ── governed resolution (ApprovalService + AuditLog) ─────────────────────────
+
+@pytest.mark.asyncio
+async def test_governed_approval_service_and_audit(monkeypatch):
+    """After handle_request: approval_id set + pending w/ required_role==manager.
+    After the routed approver's approve click: pending is 'approved' and
+    AuditLog.query contains a human-actor event with decision=='approve'."""
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    monkeypatch.setenv("SUBSTRATEOS_TENANT_ID", "t-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+
+    store = RunStore(client=None, force_memory=True)
+    audit = AuditLog(force_memory=True)
+    approval_service = ApprovalService(
+        store=ApprovalStore(force_memory=True), audit=audit
+    )
+    flow = ApprovalFlow(
+        store=store,
+        people=_People(_DIANA),
+        approval_service=approval_service,
+        audit_log=audit,
+    )
+
+    calls, fake = _slack_recorder()
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
+        await flow.handle_request(
+            text="please approve this expense",
+            channel="C_DEALS", thread_ts="9.9",
+            requester_slack_id="U_TOM", user=_user(),
+        )
+
+    runs = await store.list_runs()
+    assert len(runs) == 1
+    run = runs[0]
+    assert run.status == "pending_approval"
+    # approval_id must be set
+    assert run.approval_id is not None
+    # the pending approval must exist with required_role == "manager"
+    pending = await approval_service.get_pending(run.approval_id)
+    assert pending is not None
+    assert pending.status == "pending"
+    assert pending.required_role == "manager"
+
+    # now simulate the routed approver clicking Approve
+    payload = {
+        "type": "block_actions",
+        "user": {"id": "U_DIANA", "name": "diana"},
+        "actions": [{"action_id": "approval_approve", "value": run.id}],
+        "container": {"channel_id": "D_DIANA", "message_ts": "111.222"},
+    }
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
+        await flow.handle_action(payload)
+
+    updated = await store.get(run.id)
+    assert updated.status == "approved"
+
+    # pending must now be resolved
+    pending_after = await approval_service.get_pending(run.approval_id)
+    assert pending_after.status == "approved"
+
+    # AuditLog must have a human-actor event with decision == "approve"
+    events = await audit.query(run.id)
+    human_approve = [
+        e for e in events
+        if e.actor.type == "human" and e.decision == "approve"
+    ]
+    assert human_approve, f"No human approve audit event found; events={events}"

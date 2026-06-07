@@ -204,6 +204,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     app.state.approval_flow = ApprovalFlow(
         store=app.state.run_store, people=app.state.people_graph,
+        approval_service=app.state.approval_service, audit_log=app.state.audit_log,
     )
     app.state.github_store = GithubStore()
     app.state.github_flow = GithubFlow(
@@ -211,6 +212,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         github=app.state.github_store,
         connections=app.state.connection_store,
         engine=PrDraftEngine(llm=app.state.llm),
+        audit_log=app.state.audit_log,
     )
     # Outlook realtime subs + delta tokens: Cosmos (reuses people graph) when
     # configured (e.g. India has no Redis), else Redis (no-op without a host).

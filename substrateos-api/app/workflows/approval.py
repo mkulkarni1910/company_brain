@@ -11,6 +11,14 @@ from __future__ import annotations
 
 import logging
 
+from app.approvals.service import (
+    AlreadyResolved,
+    ApprovalService,
+    NotAuthorized,
+    UnknownApproval,
+)
+from app.approvals.store import ApprovalStore
+from app.audit.log import AuditLog
 from app.bots.approval_cards import (
     approval_dm_blocks,
     decided_dm_blocks,
@@ -19,6 +27,7 @@ from app.bots.approval_cards import (
 )
 from app.bots.slack import slack_call, slack_get
 from app.config import get_settings
+from app.domain.audit import Actor
 from app.domain.identity import User
 from app.people.graph_client import PeopleGraphClient
 from app.workflows.store import RunStore
@@ -29,9 +38,20 @@ logger = logging.getLogger(__name__)
 class ApprovalFlow:
     """Drives the approval playbook: ack → resolve approver → route → decide."""
 
-    def __init__(self, *, store: RunStore, people: PeopleGraphClient | None) -> None:
+    def __init__(
+        self,
+        *,
+        store: RunStore,
+        people: PeopleGraphClient | None,
+        approval_service: ApprovalService | None = None,
+        audit_log: AuditLog | None = None,
+    ) -> None:
         self._store = store
         self._people = people
+        self._audit = audit_log or AuditLog()
+        self._approvals = approval_service or ApprovalService(
+            store=ApprovalStore(), audit=self._audit
+        )
 
     # ── Slack helpers ──────────────────────────────────────────────────────────
 
@@ -92,12 +112,18 @@ class ApprovalFlow:
         token = s.slack_bot_token or ""
         tenant = s.substrateos_tenant_id
         requester = await self._display_name(token, requester_slack_id) or "A teammate"
+        requester_email = await self._email(token, requester_slack_id)
         run = await self._store.create(
             requester_name=requester, requester_slack_id=requester_slack_id,
             channel=channel, thread_ts=thread_ts, kind="approval", request_text=text,
         )
         await self._store.add_event(run.id, step="Request received",
                                     detail=f"{text[:160]} · from Slack", actor=requester)
+        await self._audit.record(
+            run_id=run.id, step="Request received",
+            actor=Actor(type="human", id=requester_email or requester),
+            inputs_summary=text[:160], surface="slack",
+        )
 
         approver_id, approver_name, source = await self._resolve_approver(token, requester_slack_id, tenant)
         first = requester.split()[0] if requester != "A teammate" else "there"
@@ -114,7 +140,13 @@ class ApprovalFlow:
 
         run.status = "pending_approval"
         run.approver_name = approver_name
+        run.approver_slack_id = approver_id
         run.approver_source = source
+        # Register a durable governed pending approval before saving the run.
+        run.approval_id = await self._approvals.request(
+            run_id=run.id, step="approve", required_role="manager",
+            decision_context={"request": text[:200]},
+        )
         await self._store.save(run)
         role = "requester's manager"
         await self._store.add_event(
@@ -180,6 +212,63 @@ class ApprovalFlow:
         approved = action_id == "approval_approve"
         approver_name = (await self._display_name(token, approver_id)
                          or (payload.get("user") or {}).get("name") or "Manager")
+
+        # Governed resolution: only the routed approver may act.
+        # Enforce via ApprovalService if a durable pending exists.
+        if run.approval_id:
+            pending = await self._approvals.get_pending(run.approval_id)
+            if pending is not None and pending.status == "pending":
+                # Check this clicker is the routed approver (slack id match).
+                is_routed = (run.approver_slack_id is not None
+                             and approver_id == run.approver_slack_id)
+                if not is_routed:
+                    await self._store.add_event(
+                        run.id, step="Approval denied",
+                        detail=f"{approver_name} tried to act but is not the routed approver",
+                        actor=approver_name,
+                    )
+                    if dm_channel and approver_id:
+                        await slack_call(token, "chat.postEphemeral", {
+                            "channel": dm_channel, "user": approver_id,
+                            "text": "Only the routed approver can act on this request.",
+                        })
+                    return
+                # Build a minimal User identity granting the manager role.
+                approver_email = await self._email(token, approver_id) or f"{approver_id}@slack"
+                identity = User(
+                    user_id=approver_email,
+                    tenant_id=s.substrateos_tenant_id,
+                    email=approver_email,
+                    display_name=approver_name,
+                    group_ids={"manager"},
+                )
+                try:
+                    await self._approvals.resolve(
+                        run.approval_id, "approve" if approved else "reject", identity
+                    )
+                except NotAuthorized:
+                    await self._store.add_event(
+                        run.id, step="Approval blocked",
+                        detail=f"{approver_name} is not in role {pending.required_role}",
+                        actor="SubstrateOS",
+                    )
+                    if dm_channel and approver_id:
+                        await slack_call(token, "chat.postEphemeral", {
+                            "channel": dm_channel, "user": approver_id,
+                            "text": "You are not authorized to approve this request.",
+                        })
+                    return
+                except (AlreadyResolved, UnknownApproval):
+                    pass  # already decided — proceed idempotently
+        else:
+            # legacy run with no durable approval: emit typed audit manually
+            await self._audit.record(
+                run_id=run.id, step="Approved" if approved else "Rejected",
+                actor=Actor(type="human", id=approver_id or approver_name),
+                decision="approve" if approved else "reject",
+                detail=f"{approver_name} {'approved' if approved else 'rejected'}",
+            )
+
         run.status = "approved" if approved else "rejected"
         run.approver_name = approver_name
         await self._store.save(run)
