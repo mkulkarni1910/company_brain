@@ -16,6 +16,16 @@ def test_system_prompt_forbids_inventing_details():
     assert _SYSTEM.count("→") >= 3
 
 
+def test_system_prompt_scopes_greeting_to_the_asker():
+    # Guards the "Alright, Priya —" bug: Tom asked about Priya's refund and the
+    # ack greeted Priya. Greeting must be scoped to the '(asked by …)' name or a
+    # self-introduction; people mentioned in the message are third parties.
+    assert "(asked by" in _SYSTEM
+    assert "third parties" in _SYSTEM
+    assert "NEVER greet" in _SYSTEM
+    assert "no name at all" in _SYSTEM
+
+
 class _FakeLLM:
     """Minimal stand-in for GeminiClient.complete."""
 
