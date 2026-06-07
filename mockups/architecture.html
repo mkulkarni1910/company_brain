@@ -390,7 +390,7 @@
       <tr><td><code>/auth/github/*</code> · <code>/workflows/runs/{id}/action</code> · <code>/admin/github/config</code></td><td>Per-user GitHub OAuth (start/callback); requester-only Create PR / Cancel; admin repo target.</td></tr>
       <tr><td><code>/retrieve</code> · <code>/search</code> · <code>/discover</code></td><td>Raw retrieval, search, and discover surfaces.</td></tr>
       <tr><td><code>/conversations</code> · <code>/history</code></td><td>Conversation list + turn history.</td></tr>
-      <tr><td><code>/me</code></td><td>Signed-in identity for the web UI — Entra display name + Slack profile title (Redis-cached, fail-soft).</td></tr>
+      <tr><td><code>/me</code></td><td>Signed-in identity for the web UI (chat + admin sidebars) — Entra display name + Slack profile title (Redis-cached, fail-soft).</td></tr>
       <tr><td><code>/feedback</code></td><td>Click/dwell → ADX (real activity signal).</td></tr>
       <tr><td><code>/admin</code> · <code>/sources</code> · <code>/surfaces</code></td><td>Ingest, connectors, source &amp; surface management (Admin Console).</td></tr>
       <tr><td><code>POST /admin/directory/sync</code> · <code>GET /admin/directory</code></td><td>Trigger an on-demand directory sync; inspect current directory state (emails redacted).</td></tr>

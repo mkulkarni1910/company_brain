@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { postQuery, postQueryAck, postFeedback, getConversations, getConversation, logClick, postSearch,
-  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources, getMe,
+  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources, getMe, initials,
   Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource, Me } from "@/lib/api";
 import PrActionCard from "@/components/PrActionCard";
 import { getSkills, SkillSummary } from "@/lib/skillsApi";
@@ -24,10 +24,6 @@ const SIGNAL_META: { key: keyof NonNullable<Answer["debug"]>["signals"]; label: 
   { key: "activity", label: "Engagement", color: "var(--rose)" },
   { key: "recency", label: "Recency", color: "var(--green)" },
 ];
-
-function initials(name: string) {
-  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-}
 
 function relTime(iso: string): string {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));

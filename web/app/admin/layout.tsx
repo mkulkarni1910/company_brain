@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getAdminKey, setAdminKey, getConnections } from "@/lib/adminApi";
+import { getMe, initials, Me } from "@/lib/api";
 
 const NAV = [
   {
@@ -119,6 +120,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [checked, setChecked] = useState(false); // true once we've read sessionStorage (avoids gate flash)
   const [unlocked, setUnlocked] = useState(false);
   const [authErr, setAuthErr] = useState(false);
+  // Signed-in identity (Entra name + optional Slack title); null until /me resolves.
+  const [me, setMe] = useState<Me | null>(null);
+  useEffect(() => { getMe().then(setMe); }, []);
   useEffect(() => {
     setUnlocked(!!getAdminKey());
     setChecked(true);
@@ -151,8 +155,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </nav>
           </div>
         ))}
-        <div className="foot"><div className="avatar">A</div>
-          <div className="who">Admin<span>t-eval</span></div></div>
+        <div className="foot">
+          <div className="avatar">{me ? initials(me.display_name) : ""}</div>
+          {me && <div className="who">{me.display_name}{me.title && <span>{me.title}</span>}</div>}
+        </div>
       </aside>
       <main className="main">{!checked ? null : unlocked ? children : <Gate error={authErr} onUnlock={() => { setAuthErr(false); setUnlocked(true); }} />}</main>
     </div>

@@ -36,6 +36,11 @@ export async function postRunAction(runId: string, action: "create" | "cancel"):
 // profile (null when they have none — the UI then shows the name alone).
 export type Me = { display_name: string; email: string; title: string | null };
 
+// Avatar initials for a display name, e.g. "Lokesh Bhoyar" -> "LB".
+export function initials(name: string) {
+  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
 export async function getMe(): Promise<Me | null> {
   try {
     const resp = await authedFetch(`${API_BASE}/me`);
