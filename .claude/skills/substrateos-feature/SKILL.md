@@ -9,9 +9,11 @@ description: >-
   screen for X", "expose a /something endpoint", "let users filter sources",
   "build the Teams connector UI". It enforces the project's rules: mockup-first
   for any frontend change (update the mockup and show a browser preview for
-  approval BEFORE writing React), keep mockups + `mockups/architecture.html` +
-  the tech-stack tracker in sync, write and run tests, then merge to main and
-  deploy via the substrateos-deploy skill only after explicit approval. Invoke
+  approval BEFORE writing React), every feature in its own git worktree (never
+  edit directly on main), parallel subagents for independent tasks, keep mockups
+  + `mockups/architecture.html` + the tech-stack tracker in sync, write and run
+  tests, then merge to main, clean up the worktree, and deploy via the
+  substrateos-deploy skill only after explicit approval. Invoke
   this even if the user doesn't name it — almost any build/change request on
   this repo should start here.
 ---
@@ -64,6 +66,30 @@ Work through these phases in order. Skip a phase only when it clearly doesn't
 apply (e.g. a backend-only change skips the mockup phase), and say so out loud.
 If the change is non-trivial, **brainstorm the design with the user first** — this
 workflow is about *how* to ship safely, not a license to skip thinking.
+
+### Where the work happens — a worktree per feature, never on main
+
+**Never edit files directly on `main` or in the primary checkout.** Every
+feature gets its own git worktree + branch so multiple features can proceed in
+parallel without stepping on each other:
+
+```bash
+git worktree add .worktrees/<feature> -b feat/<feature>
+```
+
+Do ALL phases below inside that worktree (use the native worktree tooling /
+superpowers:using-git-worktrees when available). The worktree is merged back to
+`main` and removed in Phase 5 — it never outlives the feature.
+
+### Parallelize independent tasks
+
+When the request decomposes into **2+ independent tasks** (no shared files, no
+sequential dependency), don't do them one after another — dispatch **one
+subagent per task, each in its own worktree**, and run them concurrently
+(superpowers:dispatching-parallel-agents / superpowers:subagent-driven-development).
+Tasks that share files or depend on each other's output stay sequential.
+Each parallel track still follows every phase below; merges to `main` in
+Phase 5 happen one at a time, re-running tests after each merge.
 
 ### Phase 0 — Orient
 
@@ -122,12 +148,25 @@ them before calling it done.
 Nothing ships untested. Add tests alongside the change, then run them and report
 real output — if something fails, say so.
 
-- **Backend:**
+**Ask the user which scope to run during development** (saves time on
+iteration; default to **targeted** if they don't say):
+
+- **Targeted (fast inner loop):** only the new/affected tests —
+  ```bash
+  cd substrateos-api && uv run pytest tests/test_<feature>.py -q
+  ```
+- **Full suite:** everything —
   ```bash
   cd substrateos-api && uv run pytest tests/ -q
   ```
-  Add a `tests/test_<feature>.py`; follow the patterns in the existing suite
-  (fakes/stubs for Azure clients, `respx` for HTTP, `pytest-asyncio`).
+
+Targeted runs are a development convenience, not a substitute: **the full suite
+must pass before the merge in Phase 5** — if only targeted tests have run so
+far, run the full suite then.
+
+- **Backend:** add a `tests/test_<feature>.py`; follow the patterns in the
+  existing suite (fakes/stubs for Azure clients, `respx` for HTTP,
+  `pytest-asyncio`).
 - **Frontend:**
   ```bash
   cd web && pnpm typecheck && pnpm lint && pnpm build
@@ -161,19 +200,29 @@ system, so drift makes the whole project look unmaintained.
 3. **Tech stack:** if you introduced anything new, add it to
    `references/techstack.md` with a one-line "why / where used" so it's reusable.
 
-### Phase 5 — Ship (only with approval)
+### Phase 5 — Merge & Deploy (only with approval)
 
-1. Confirm tests pass and the working tree is clean.
+1. Confirm the **full test suite** passes (not just the targeted subset from
+   Phase 3) and the worktree is clean.
 2. Merge the feature branch to `main` — confirm with the user before merging.
-3. **Get explicit approval to deploy.** Production (`centralindia`) is shared and
+   When several parallel tracks finish together, merge them one at a time and
+   re-run the full suite after each merge.
+3. **Delete the worktree and merged branch** — worktrees never outlive their
+   feature:
+   ```bash
+   git worktree remove .worktrees/<feature> && git branch -d feat/<feature>
+   ```
+4. **Get explicit approval to deploy.** Production (`centralindia`) is shared and
    live; never deploy on your own initiative.
-4. On approval, deploy with the **`substrateos-deploy`** skill (it handles
+5. On approval, deploy with the **`substrateos-deploy`** skill (it handles
    build → ACR push → Container Apps rollout → health check, and refuses to
    deploy from anything but `main`).
 
 ## Definition of done
 
-A feature is done when: the mockup (if any) was approved before implementation,
-the code matches it, tests are written and green, the mockups + `architecture.html`
-+ tech-stack tracker are updated, it's merged to `main`, and — if the user
-approved — deployed via `substrateos-deploy` and health-checked.
+A feature is done when: it was built in its own git worktree (never directly on
+`main`), the mockup (if any) was approved before implementation, the code matches
+it, tests are written and the **full suite** is green, the mockups +
+`architecture.html` + tech-stack tracker are updated, it's merged to `main`, the
+worktree and branch are deleted, and — if the user approved — deployed via
+`substrateos-deploy` and health-checked.
