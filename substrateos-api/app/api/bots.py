@@ -36,6 +36,7 @@ from app.deps import (
     get_github_store,
     get_orchestrator,
     get_refund_flow,
+    get_skill_publish_flow,
     get_skill_router_svc,
 )
 from app.domain.identity import User
@@ -421,6 +422,7 @@ async def slack_interactive(
     refund_flow=Depends(get_refund_flow),
     approval_flow=Depends(get_approval_flow),
     github_flow=Depends(get_github_flow),
+    skill_publish_flow=Depends(get_skill_publish_flow),
     x_slack_signature: str | None = Header(default=None),
     x_slack_request_timestamp: str | None = Header(default=None),
 ) -> dict:
@@ -447,6 +449,8 @@ async def slack_interactive(
     elif action_id.startswith("github_") and github_flow is not None:
         background_tasks.add_task(_github_slack_action, payload, github_flow,
                                   s.slack_bot_token or "")
+    elif action_id.startswith("skillpub_") and skill_publish_flow is not None:
+        background_tasks.add_task(skill_publish_flow.handle_action, payload)
     elif refund_flow is not None:
         background_tasks.add_task(refund_flow.handle_action, payload)
     return {}
