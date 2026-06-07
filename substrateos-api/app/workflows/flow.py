@@ -104,6 +104,7 @@ class RefundFlow:
         })
         if not posted:
             run.status = "needs_attention"
+            run.decision = None  # facts never reached the channel — don't show them on the run
             await self._store.save(run)
             await self._store.add_event(run.id, step="Routing failed",
                                         detail="Could not post to the refunds channel",
