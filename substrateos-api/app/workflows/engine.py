@@ -21,10 +21,13 @@ DECISION_PROMPT = (
     "evaluate the refund request. Extract the facts and decide whether the refund can be "
     "auto-approved under the policy. Compute the order age in days from the order date "
     "and today's date when the age is not stated explicitly.\n"
-    "Respond ONLY with valid JSON, no other text:\n"
-    '{"found": true, "order_id": "...", "customer": "...", "amount_usd": 0, '
+    'Respond ONLY with valid JSON, no other text:\n'
+    '{"found": true, "order_id": "...", "customer": "...", "customer_email": "...", '
+    '"amount_usd": 0, '
     '"order_age_days": 0, "policy_limit_usd": 0, "policy_limit_days": 0, '
     '"auto_approve": true, "reasoning": "one sentence citing the policy"}\n'
+    'Copy the customer\'s email address from the order record into customer_email '
+    'when present, else use null. '
     'If the order cannot be found in the context documents, respond with '
     '{"found": false, "reasoning": "..."}.'
 )

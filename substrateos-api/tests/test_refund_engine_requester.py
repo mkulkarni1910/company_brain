@@ -90,3 +90,28 @@ async def test_no_requester_is_unchanged():
     user_msg = llm.messages[-1]["content"]
     assert "Requester:" not in user_msg
     assert "Marcus Lee" in user_msg  # staff/anonymous: nothing scoped out
+
+
+@pytest.mark.asyncio
+async def test_decision_carries_customer_email():
+    retriever, llm = _Retriever(), _LLM()
+    # the fake decision JSON gains the email, as the prompt now requests
+    global _DECISION_JSON
+    payload = json.loads(_DECISION_JSON)
+    payload["customer_email"] = "priya@x"
+
+    class _EmailLLM(_LLM):
+        async def complete(self, *, messages, temperature, max_tokens):
+            self.messages = messages
+            return json.dumps(payload)
+
+    engine = RefundEngine(retriever=retriever, llm=_EmailLLM())
+    decision = await engine.evaluate("refund my order", user=_user(), requester=_PRIYA)
+    assert decision.customer_email == "priya@x"
+
+
+def test_decision_prompt_requests_customer_email():
+    from app.workflows.engine import DECISION_PROMPT
+
+    assert '"customer_email"' in DECISION_PROMPT
+    assert "email" in DECISION_PROMPT.lower()
