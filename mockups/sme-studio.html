@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SubstrateOS — Skill Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fefdfb; --paper-2:#f6f3ec; --surface:#fffefb; --surface-2:#ffffff; --panel:#f5f1e8;
+    --line:#d6cdb9; --line-soft:#e2dac9; --ink:#1a1611; --ink-dim:#4f4839; --ink-faint:#827a67;
+    --amber:#b06e0d; --amber-bg:#f6e7c8; --teal:#0f897e; --teal-bg:#d8efea;
+    --violet:#6a5acd; --rose:#c8546a; --rose-bg:#f7e1e5; --green:#3f8f5e; --green-bg:#e0efe5;
+    --radius:16px; --shadow:0 1px 2px rgba(60,50,30,.04), 0 18px 40px -26px rgba(80,60,25,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:
+      radial-gradient(900px 460px at 88% -16%, rgba(196,122,22,.05), transparent 60%),
+      radial-gradient(800px 600px at -8% 116%, rgba(15,137,126,.04), transparent 55%),
+      var(--paper);
+    color:var(--ink);font-family:"Archivo",-apple-system,sans-serif;
+    font-size:15px;line-height:1.6;letter-spacing:.05px;-webkit-font-smoothing:antialiased;min-height:100vh}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;z-index:1;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* top bar */
+  .topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:14px;padding:15px 36px;
+    border-bottom:1px solid var(--line-soft);backdrop-filter:blur(14px);background:rgba(254,253,251,.82)}
+  .brand{display:flex;align-items:center;gap:11px}
+  .glyph{width:34px;height:34px;border-radius:10px;flex:none;position:relative;
+    background:radial-gradient(circle at 30% 25%,#ffcf7e,var(--amber) 60%,#9a5e0e);
+    box-shadow:0 0 0 1px rgba(196,122,22,.3),0 8px 18px -8px rgba(196,122,22,.6)}
+  .glyph::before{content:"";position:absolute;inset:7px;border-radius:50%;
+    background:conic-gradient(from 210deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0))}
+  .brand h1{font-family:"Fraunces",serif;font-weight:600;font-size:19px;margin:0;letter-spacing:.2px}
+  .brand h1 span{color:var(--amber)}
+  .brand .sub{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;
+    letter-spacing:2.2px;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);border-radius:7px;padding:2px 9px}
+  .me{margin-left:auto;display:flex;align-items:center;gap:11px}
+  .me .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#e7dcc3,#cdbf9e);
+    display:grid;place-items:center;font-size:12.5px;font-weight:700;color:#4a4334;flex:none}
+  .me .who{text-align:right;font-size:13px;font-weight:600;line-height:1.3}
+  .me .who span{display:block;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-faint);font-weight:400}
+
+  /* page */
+  .wrap{position:relative;z-index:2;max-width:860px;margin:0 auto;padding:40px 36px 90px}
+  .pg-head{margin-bottom:30px}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:11px}
+  .pg-head h2{font-family:"Fraunces",serif;font-size:34px;font-weight:600;margin:0 0 8px;letter-spacing:-.01em}
+  .pg-head p{color:var(--ink-dim);font-size:15.5px;margin:0;max-width:560px}
+
+  /* step rail */
+  .steps-rail{display:flex;align-items:center;gap:0;margin:0 0 28px;flex-wrap:wrap}
+  .steps-rail .s{display:flex;align-items:center;gap:9px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.3px;color:var(--ink-faint)}
+  .steps-rail .s .n{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:10px;color:var(--ink-faint)}
+  .steps-rail .s.on{color:var(--ink)}
+  .steps-rail .s.on .n{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+  .steps-rail .ar{width:34px;height:1px;background:linear-gradient(90deg,var(--line),transparent);margin:0 13px}
+
+  /* card */
+  .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin-bottom:22px}
+  .card-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:18px}
+  .card-num{width:28px;height:28px;border-radius:9px;flex:none;display:grid;place-items:center;
+    font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;color:#3a2606;
+    background:linear-gradient(180deg,#ffcf7e,var(--amber));box-shadow:0 0 0 1px rgba(196,122,22,.25)}
+  .card-head .ct h3{font-family:"Fraunces",serif;font-size:20px;font-weight:600;margin:0;line-height:1.25}
+  .card-head .ct p{font-size:13.5px;color:var(--ink-dim);margin:3px 0 0}
+
+  /* describe textarea */
+  .describe{width:100%;min-height:140px;resize:vertical;padding:16px 18px;border:1px solid var(--line);
+    border-radius:13px;background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:15px;line-height:1.65;outline:none;transition:.18s}
+  .describe::placeholder{color:var(--ink-faint)}
+  .describe:focus{border-color:#cabd9f;box-shadow:0 0 0 3px rgba(196,122,22,.1)}
+  .describe-foot{display:flex;align-items:center;gap:12px;margin-top:16px}
+  .describe-foot .hint{font-size:12.5px;color:var(--ink-faint)}
+
+  /* buttons */
+  .btn-primary{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:11px;padding:11px 19px;
+    font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;color:#3a2606;
+    background:linear-gradient(180deg,#ffcf7e,var(--amber));box-shadow:0 6px 14px -6px rgba(196,122,22,.6);transition:.15s}
+  .btn-primary:hover{transform:translateY(-1px)}
+  .btn-primary svg{width:15px;height:15px}
+  .btn-ghost{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:11px;padding:11px 17px;
+    font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;color:var(--ink-dim);background:var(--surface-2);transition:.15s}
+  .btn-ghost:hover{color:var(--ink);border-color:#cabd9f}
+
+  /* review form */
+  .field{margin-bottom:17px}
+  .field > label{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px;display:block}
+  .field input,.field select,.field textarea{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:10px;
+    font-family:inherit;font-size:14px;background:var(--surface-2);color:var(--ink);outline:none;transition:.15s}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(176,110,13,.08)}
+  .field textarea{resize:vertical;line-height:1.6}
+  .field .mono{font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .field .sysprompt{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.65}
+  .grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+
+  /* steps editor (When→Check→Stop→Do→Record) */
+  .step-row{display:flex;gap:10px;margin-bottom:9px;align-items:center}
+  .step-tag{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+    font-weight:600;width:62px;flex:none;text-align:center;padding:5px 0;border-radius:7px;border:1px solid transparent}
+  .tag-when{color:var(--violet);background:#ece9f8;border-color:#d6cef0}
+  .tag-check{color:var(--teal);background:var(--teal-bg);border-color:#bfe4dd}
+  .tag-stop{color:var(--rose);background:var(--rose-bg);border-color:#eecdd4}
+  .tag-do{color:var(--amber);background:var(--amber-bg);border-color:#ecd6a6}
+  .tag-record{color:#2a5a72;background:#dce8ee;border-color:#c4d8e2}
+  .step-row input{flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;background:var(--surface-2);color:var(--ink);outline:none}
+  .step-row input:focus{border-color:var(--amber)}
+  .step-drag{color:var(--line);cursor:grab;flex:none;font-size:14px;user-select:none}
+  .list-add{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;
+    letter-spacing:.07em;text-transform:uppercase;color:var(--teal);background:var(--teal-bg);border:1px dashed var(--teal);
+    border-radius:9px;cursor:pointer;padding:8px 13px;margin-top:8px;transition:.15s}
+  .list-add:hover{background:#cbe9e3}
+  .list-add .plus{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--teal);color:#fff;font-size:13px;line-height:1}
+
+  /* data feeds chips */
+  .feeds{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .feed-chip{display:inline-flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px;
+    color:var(--ink-dim);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:6px 12px}
+  .feed-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(63,143,94,.6)}
+  .feed-chip .x{color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1}
+  .feed-add{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--teal);background:var(--teal-bg);
+    border:1px dashed var(--teal);border-radius:99px;padding:6px 12px;cursor:pointer}
+
+  .review-foot{display:flex;align-items:center;gap:11px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+  .review-foot .gate{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-faint)}
+  .review-foot .gate svg{width:13px;height:13px;color:var(--ink-faint);flex:none}
+
+  /* submissions table */
+  .sub-table-wrap{border:1px solid var(--line-soft);border-radius:13px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:500;text-align:left;padding:11px 18px;border-bottom:1px solid var(--line-soft);background:rgba(246,243,236,.5)}
+  tbody td{padding:14px 18px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  .sub-name{font-weight:600;color:var(--ink);display:block;line-height:1.3}
+  .sub-slug{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint)}
+  .sub-when{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-dim);white-space:nowrap}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:9.5px;
+    letter-spacing:.6px;text-transform:uppercase;font-weight:600;border-radius:99px;padding:4px 11px;white-space:nowrap}
+  .badge .d{width:7px;height:7px;border-radius:50%;flex:none}
+  .b-pending{color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6}
+  .b-pending .d{background:var(--amber);animation:pulse 1.6s infinite}
+  .b-live{color:var(--green);background:var(--green-bg);border:1px solid rgba(63,143,94,.3)}
+  .b-live .d{background:var(--green);box-shadow:0 0 6px rgba(63,143,94,.6)}
+  .b-rejected{color:var(--rose);background:var(--rose-bg);border:1px solid rgba(200,84,106,.3)}
+  .b-rejected .d{background:var(--rose)}
+  .reject-note{margin-top:9px;display:flex;gap:8px;align-items:flex-start;background:var(--rose-bg);
+    border:1px solid rgba(200,84,106,.25);border-radius:9px;padding:8px 11px;font-size:12.5px;color:#8c3a4a;line-height:1.5;max-width:380px}
+  .reject-note .lbl{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--rose);font-weight:600;flex:none;margin-top:1px}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}.wrap{padding:28px 18px 70px}.topbar{padding:14px 18px}}
+</style>
+</head>
+<body>
+
+<!-- top bar -->
+<header class="topbar">
+  <div class="brand">
+    <div class="glyph"></div>
+    <div><h1>Substrate<span>OS</span></h1></div>
+    <span class="sub" style="margin-left:6px">Skill Studio</span>
+  </div>
+  <div class="me">
+    <div class="who">Deepa Rao <span>Finance SME</span></div>
+    <div class="avatar">DR</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="pg-head">
+    <div class="eyebrow">Finance · author a skill</div>
+    <h2>Skill Studio</h2>
+    <p>Turn what you know into a governed skill — no code.</p>
+  </div>
+
+  <!-- progress rail -->
+  <div class="steps-rail">
+    <div class="s on"><span class="n">1</span>Describe</div>
+    <span class="ar"></span>
+    <div class="s on"><span class="n">2</span>Review draft</div>
+    <span class="ar"></span>
+    <div class="s"><span class="n">3</span>Admin approves</div>
+  </div>
+
+  <!-- ── Card 1 — Describe it ── -->
+  <section class="card">
+    <div class="card-head">
+      <div class="card-num">1</div>
+      <div class="ct">
+        <h3>Describe it</h3>
+        <p>Write the rule the way you'd explain it to a new teammate. The AI turns it into a structured skill.</p>
+      </div>
+    </div>
+    <textarea class="describe" placeholder="e.g. Refunds under $500 and 30 days are auto-approved. Anything bigger needs my sign-off…">Refunds under $500 and within 30 days of purchase are auto-approved. Anything bigger than that — or older than 30 days — needs my sign-off before we issue it. Always pull the order details and check it against our refund policy first.</textarea>
+    <div class="describe-foot">
+      <button class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
+        Draft with AI
+      </button>
+      <span class="hint">Drafted in plain English — you review everything before it's submitted.</span>
+    </div>
+  </section>
+
+  <!-- ── Card 2 — Review the draft ── -->
+  <section class="card">
+    <div class="card-head">
+      <div class="card-num">2</div>
+      <div class="ct">
+        <h3>Review the draft</h3>
+        <p>The AI filled this in from your description. Edit anything that's not quite right.</p>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Name</label>
+        <input value="Refund approvals" />
+      </div>
+      <div class="field">
+        <label>Slug</label>
+        <input class="mono" value="refund-approvals" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Description</label>
+      <textarea rows="2">Decides refunds: anything under $500 and within 30 days is auto-approved; larger or older refunds are stopped for the Finance SME to sign off before they're issued.</textarea>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Team</label>
+        <input value="Finance" />
+      </div>
+      <div class="field">
+        <label>Owner approval</label>
+        <input value="Deepa Rao (Finance SME)" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Steps — When → Check → Stop → Do → Record</label>
+      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-when">When</span><input value="A refund is requested for an order." /></div>
+      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-check">Check</span><input value="Pull the order amount and age; compare against the refund policy ($500 / 30 days)." /></div>
+      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-stop">Stop</span><input value="If over $500 or older than 30 days, stop and route to the Finance SME for sign-off." /></div>
+      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-do">Do</span><input value="If within limits, auto-approve and issue the refund." /></div>
+      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-record">Record</span><input value="Log the decision, amount, and approver to the refund ledger." /></div>
+      <button class="list-add"><span class="plus">+</span>Add step</button>
+    </div>
+
+    <div class="field">
+      <label>Data feeds</label>
+      <div class="feeds">
+        <span class="feed-chip"><span class="dot"></span>Orders<span class="x">×</span></span>
+        <button class="feed-add">+ Add feed</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>System prompt</label>
+      <textarea class="sysprompt" rows="6">You handle refund requests for the Finance team. For each request, retrieve the order's amount and the days since purchase. A refund is auto-approvable only if the amount is under $500 AND the order is within 30 days. If either threshold is exceeded, do NOT issue the refund — stop and route the request to the Finance SME (Deepa Rao) for explicit sign-off, summarizing the order and why it's over the limit. Never issue a refund above the limit without recorded human approval. Record every decision to the refund ledger.</textarea>
+    </div>
+
+    <div class="review-foot">
+      <button class="btn-ghost">Start over</button>
+      <button class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>
+        Submit for approval
+      </button>
+      <span class="gate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        An admin reviews before this goes live.
+      </span>
+    </div>
+  </section>
+
+  <!-- ── Card 3 — My submissions ── -->
+  <section class="card">
+    <div class="card-head">
+      <div class="card-num">3</div>
+      <div class="ct">
+        <h3>My submissions</h3>
+        <p>Skills you've sent for approval, and where each one stands.</p>
+      </div>
+    </div>
+
+    <div class="sub-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:260px">Skill</th>
+            <th style="width:170px">Status</th>
+            <th style="width:120px">Submitted</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="sub-name">Refund approvals</span><span class="sub-slug">refund-approvals</span></td>
+            <td><span class="badge b-pending"><span class="d"></span>Pending approval</span></td>
+            <td><span class="sub-when">2 min ago</span></td>
+            <td style="color:var(--ink-faint);font-size:12.5px">Waiting on an admin in the approval queue.</td>
+          </tr>
+          <tr>
+            <td><span class="sub-name">Vendor invoice triage</span><span class="sub-slug">vendor-invoice-triage</span></td>
+            <td><span class="badge b-live"><span class="d"></span>Live</span></td>
+            <td><span class="sub-when">Jun 3</span></td>
+            <td style="color:var(--ink-faint);font-size:12.5px">Approved by Marcus Hale · running org-wide.</td>
+          </tr>
+          <tr>
+            <td><span class="sub-name">Expense report sign-off</span><span class="sub-slug">expense-report-signoff</span></td>
+            <td><span class="badge b-rejected"><span class="d"></span>Rejected</span></td>
+            <td><span class="sub-when">May 28</span></td>
+            <td>
+              <div class="reject-note"><span class="lbl">Admin</span><div>Limit should be $250, not $500. Resubmit with the corrected threshold.</div></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>
