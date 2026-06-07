@@ -71,3 +71,28 @@ def outcome_blocks(*, request_text: str, approved: bool, approver_name: str) -> 
         {"type": "section", "text": {"type": "mrkdwn", "text": f"{head}\n{body}\n_{request_text[:300]}_"}},
         {"type": "context", "elements": [{"type": "mrkdwn", "text": ":lock: recorded with the decision"}]},
     ])]}
+
+
+def skill_publish_dm_blocks(*, skill_name: str, slug: str, description: str,
+                            steps: list[str], submitter_name: str, run_id: str) -> dict:
+    """The Approve/Reject card DM'd to the submitter's manager for a new skill."""
+    steps_text = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(steps[:6])) or "—"
+    return {
+        "blocks": [
+            {"type": "header", "text": {"type": "plain_text", "text": "New skill awaiting approval"}},
+            {"type": "section", "text": {"type": "mrkdwn",
+                "text": f"*{skill_name}*  `/{slug}`\n{description[:400]}"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"*Steps*\n{steps_text[:600]}"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"*Authored by*\n{submitter_name}"}},
+        ],
+        "attachments": [_bar(_AMBER, [
+            {"type": "context", "elements": [{"type": "mrkdwn",
+                "text": f":lock: not in the catalog until you decide · run {run_id}"}]},
+            {"type": "actions", "elements": [
+                {"type": "button", "style": "primary", "action_id": "skillpub_approve",
+                 "value": run_id, "text": {"type": "plain_text", "text": "Approve"}},
+                {"type": "button", "style": "danger", "action_id": "skillpub_reject",
+                 "value": run_id, "text": {"type": "plain_text", "text": "Reject"}},
+            ]},
+        ])],
+    }
