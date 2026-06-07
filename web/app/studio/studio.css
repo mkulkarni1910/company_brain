@@ -39,12 +39,14 @@
   letter-spacing:2.2px;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);border-radius:7px;padding:2px 9px;margin-top:0}
 .st-rail h2{font-family:var(--st-font-mono);font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin:0 0 11px 2px;font-weight:500}
 .st-nav{display:flex;flex-direction:column;gap:3px}
-.st-nav a{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--ink-dim);text-decoration:none;font-size:13.5px;font-weight:500;transition:.18s;cursor:pointer}
-.st-nav a .ic{width:16px;height:16px;opacity:.85;flex:none}
-.st-nav a:hover{background:var(--surface);color:var(--ink)}
-.st-nav a.active{background:linear-gradient(90deg,var(--amber-bg),transparent);color:var(--ink);box-shadow:inset 2px 0 0 var(--amber)}
-.st-nav a.active .ic{opacity:1;color:var(--amber)}
-.st-nav a .st-ncount{margin-left:auto;font-family:var(--st-font-mono);font-size:10.5px;font-weight:600;color:var(--amber);
+.st-nav button{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--ink-dim);
+  font-family:var(--st-font-body);font-size:13.5px;font-weight:500;transition:.18s;cursor:pointer;
+  background:none;border:0;width:100%;text-align:left;}
+.st-nav button .ic{width:16px;height:16px;opacity:.85;flex:none}
+.st-nav button:hover{background:var(--surface);color:var(--ink)}
+.st-nav button.active{background:linear-gradient(90deg,var(--amber-bg),transparent);color:var(--ink);box-shadow:inset 2px 0 0 var(--amber)}
+.st-nav button.active .ic{opacity:1;color:var(--amber)}
+.st-nav button .st-ncount{margin-left:auto;font-family:var(--st-font-mono);font-size:10.5px;font-weight:600;color:var(--amber);
   background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:99px;padding:1px 8px;line-height:1.5}
 .st-rail .st-foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid var(--line-soft)}
 .st-foot .st-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#e7dcc3,#cdbf9e);display:grid;place-items:center;font-size:12px;font-weight:700;color:#4a4334;flex:none}
@@ -154,15 +156,15 @@
 
 /* data feeds chips */
 .st-feeds{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.st-feed-chip{display:inline-flex;align-items:center;gap:8px;font-family:var(--st-font-mono);font-size:12px;
-  color:var(--ink-dim);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:6px 12px}
-.st-feed-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(63,143,94,.6)}
+.st-feed-chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--st-font-mono);font-size:12px;
+  color:var(--ink-dim);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:5px 10px 5px 12px}
+.st-feed-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(63,143,94,.6);flex:none}
 .st-feed-chip .x{color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1;background:none;border:0;padding:0;font-family:inherit}
 .st-feed-chip .x:hover{color:var(--rose)}
 .st-feed-add{font-family:var(--st-font-mono);font-size:12px;color:var(--teal);background:var(--teal-bg);
   border:1px dashed var(--teal);border-radius:99px;padding:6px 12px;cursor:pointer}
-.st-feed-input{font-family:var(--st-font-mono);font-size:12px;color:var(--ink);background:var(--surface-2);
-  border:1px solid var(--teal);border-radius:99px;padding:6px 12px;outline:none;width:140px}
+.st-feed-input{font-family:var(--st-font-mono);font-size:12px;color:var(--ink);background:transparent;
+  border:none;outline:none;width:120px;padding:0;line-height:1}
 
 .st-review-foot{display:flex;align-items:center;gap:11px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line-soft);flex-wrap:wrap}
 .st-review-foot .st-gate{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-faint)}
@@ -214,6 +216,7 @@
 .st-sub-footnote b{font-weight:600;color:var(--ink-dim)}
 
 .st-empty{padding:40px 0;text-align:center;color:var(--ink-faint);font-size:14px}
+.st-subs-err{color:var(--rose);font-size:13.5px}
 
 @keyframes st-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes st-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
@@ -247,6 +250,18 @@
   text-decoration:none;border:1px solid var(--line);border-radius:11px;padding:9px 16px;transition:.15s}
 .st-denied-back:hover{color:var(--ink);border-color:#cabd9f}
 .st-denied-back svg{width:15px;height:15px}
+
+/* ── withdraw / remove confirm modal ── */
+.st-modal-backdrop{position:fixed;inset:0;z-index:200;background:rgba(26,22,17,.45);display:grid;place-items:center;padding:20px}
+.st-modal-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:28px 30px;max-width:420px;width:100%}
+.st-modal-card h3{font-family:var(--st-font-display);font-size:20px;font-weight:600;margin:0 0 10px}
+.st-modal-card p{font-size:14px;color:var(--ink-dim);margin:0 0 22px;line-height:1.55}
+.st-modal-foot{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.st-btn-danger{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:11px;padding:10px 18px;
+  font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;color:#fff;
+  background:var(--rose);box-shadow:0 4px 12px -4px rgba(200,84,106,.6);transition:.15s}
+.st-btn-danger:hover{transform:translateY(-1px)}
 
 /* stack the two-pane workspace on narrower screens */
 @media(max-width:1080px){

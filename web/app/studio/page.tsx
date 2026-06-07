@@ -136,8 +136,15 @@ export default function StudioPage() {
 
   // submissions
   const [subs, setSubs] = useState<Submission[]>([]);
+  const [subsErr, setSubsErr] = useState(false);
 
-  const loadSubs = () => getMySubmissions().then(setSubs).catch(() => {/* leave as-is */});
+  // withdraw/remove confirm modal
+  const [confirmWithdraw, setConfirmWithdraw] = useState<{ runId: string; name: string; verb: "Withdraw" | "Remove" } | null>(null);
+
+  const loadSubs = () =>
+    getMySubmissions()
+      .then((data) => { setSubs(data); setSubsErr(false); })
+      .catch(() => { setSubsErr(true); });
 
   useEffect(() => {
     getMe().then((m) => { setMe(m); setLoaded(true); });
@@ -205,9 +212,15 @@ export default function StudioPage() {
     setView("author");
   };
 
-  const handleRemove = async (s: Submission, verb: string) => {
-    if (!window.confirm(`${verb} "${s.name}"? It stays in the audit log.`)) return;
-    try { await withdrawSubmission(s.run_id); await loadSubs(); }
+  const handleRemove = (s: Submission, verb: "Withdraw" | "Remove") => {
+    setConfirmWithdraw({ runId: s.run_id, name: s.name, verb });
+  };
+
+  const handleConfirmWithdraw = async () => {
+    if (!confirmWithdraw) return;
+    const { runId } = confirmWithdraw;
+    setConfirmWithdraw(null);
+    try { await withdrawSubmission(runId); await loadSubs(); }
     catch (e) { alert((e as Error).message); }
   };
 
@@ -218,6 +231,9 @@ export default function StudioPage() {
   const removeStep = (i: number) =>
     setDraft((p) => (p ? { ...p, steps: p.steps.filter((_, j) => j !== i) } : p));
 
+  const setFeed = (i: number, v: string) =>
+    setDraft((p) => (p ? { ...p, data_feeds: p.data_feeds.map((f, j) => (j === i ? v : f)) } : p));
+  const addFeed = () => setDraft((p) => (p ? { ...p, data_feeds: [...p.data_feeds, ""] } : p));
   const removeFeed = (i: number) =>
     setDraft((p) => (p ? { ...p, data_feeds: p.data_feeds.filter((_, j) => j !== i) } : p));
 
@@ -233,16 +249,18 @@ export default function StudioPage() {
         </div>
         <div>
           <h2>Skill Studio</h2>
-          <nav className="st-nav" role="tablist">
-            <a className={view === "author" ? "active" : ""} role="tab"
-              aria-selected={view === "author"} onClick={() => setView("author")}>
+          <nav className="st-nav">
+            <button type="button" className={view === "author" ? "active" : ""}
+              aria-current={view === "author" ? "page" : undefined}
+              onClick={() => setView("author")}>
               {SparkIcon}Author
-            </a>
-            <a className={view === "subs" ? "active" : ""} role="tab"
-              aria-selected={view === "subs"} onClick={() => setView("subs")}>
+            </button>
+            <button type="button" className={view === "subs" ? "active" : ""}
+              aria-current={view === "subs" ? "page" : undefined}
+              onClick={() => setView("subs")}>
               {ChecklistIcon}My submissions
               {subs.length > 0 && <span className="st-ncount">{subs.length}</span>}
-            </a>
+            </button>
           </nav>
         </div>
         <div className="st-foot">
@@ -369,13 +387,18 @@ export default function StudioPage() {
                       <div className="st-feeds">
                         {draft.data_feeds.map((feed, i) => (
                           <span className="st-feed-chip" key={i}>
-                            <span className="dot" />{feed}
+                            <span className="dot" />
+                            <input
+                              className="st-feed-input"
+                              value={feed}
+                              onChange={(e) => setFeed(i, e.target.value)}
+                              aria-label={`Data feed ${i + 1}`}
+                            />
                             <button className="x" type="button" onClick={() => removeFeed(i)}
                               aria-label="Remove feed">×</button>
                           </span>
                         ))}
-                        <button className="st-feed-add" type="button"
-                          onClick={() => setField("data_feeds", [...draft.data_feeds, "New feed"])}>
+                        <button className="st-feed-add" type="button" onClick={addFeed}>
                           + Add feed
                         </button>
                       </div>
@@ -414,7 +437,11 @@ export default function StudioPage() {
                 </div>
               </div>
 
-              {subs.length === 0 ? (
+              {subsErr ? (
+                <div className="st-empty st-subs-err">
+                  Couldn&apos;t load your submissions — check the API and refresh.
+                </div>
+              ) : subs.length === 0 ? (
                 <div className="st-empty">
                   No submissions yet — head to <b>Author</b> to draft your first skill.
                 </div>
@@ -448,6 +475,22 @@ export default function StudioPage() {
           </div>
         )}
       </div></main>
+
+      {/* ── Withdraw / Remove confirm modal ── */}
+      {confirmWithdraw && (
+        <div className="st-modal-backdrop" onClick={() => setConfirmWithdraw(null)}>
+          <div className="st-modal-card" onClick={(e) => e.stopPropagation()}>
+            <h3>{confirmWithdraw.verb} submission?</h3>
+            <p>It stays in the audit log, visible to admins in Runs.</p>
+            <div className="st-modal-foot">
+              <button className="st-btn-ghost" onClick={() => setConfirmWithdraw(null)}>Cancel</button>
+              <button className="st-btn-danger" onClick={handleConfirmWithdraw}>
+                {confirmWithdraw.verb}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -462,7 +505,7 @@ function subState(status: string): SubState {
 }
 
 function SubmissionRow({ s, onEdit, onRemove }: {
-  s: Submission; onEdit: () => void; onRemove: (s: Submission, verb: string) => void;
+  s: Submission; onEdit: () => void; onRemove: (s: Submission, verb: "Withdraw" | "Remove") => void;
 }) {
   const when = new Date(s.created_at).toLocaleDateString();
   const state = subState(s.status);
