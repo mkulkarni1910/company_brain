@@ -5,7 +5,9 @@ import asyncio
 import pytest
 from fastapi.testclient import TestClient
 
-from app.deps import get_run_store
+from app.audit.log import AuditLog
+from app.deps import get_audit_log, get_run_store
+from app.domain.audit import Actor
 from app.domain.workflow import RefundDecision
 from app.main import app
 from app.workflows.store import RunStore
@@ -18,6 +20,16 @@ def store():
     s = RunStore(client=None, force_memory=True)
     app.dependency_overrides[get_run_store] = lambda: s
     yield s
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def store_with_audit():
+    s = RunStore(client=None, force_memory=True)
+    al = AuditLog(force_memory=True)
+    app.dependency_overrides[get_run_store] = lambda: s
+    app.dependency_overrides[get_audit_log] = lambda: al
+    yield s, al
     app.dependency_overrides.clear()
 
 
@@ -66,3 +78,33 @@ def test_runs_require_auth(store):
     with TestClient(app) as client:
         resp = client.get("/runs")
     assert resp.status_code in (401, 403)
+
+
+def test_get_run_includes_typed_audit_trail(store_with_audit):
+    s, al = store_with_audit
+
+    def _do():
+        async def _inner():
+            run = await s.create(requester_name="Tom Reyes", requester_slack_id="U_TOM",
+                                 channel="C", thread_ts=None)
+            await al.record(
+                run_id=run.id,
+                step="Rule evaluated",
+                actor=Actor.agent("refund.v1@v1"),
+                rule={"id": "refund.v1", "version": 1, "result": "allow"},
+                decision="allow",
+            )
+            return run.id
+        return asyncio.run(_inner())
+
+    run_id = _do()
+
+    with TestClient(app) as client:
+        resp = client.get(f"/runs/{run_id}", headers=_DEBUG)
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert "audit" in body
+    rule_events = [e for e in body["audit"] if e.get("rule")]
+    assert rule_events and rule_events[0]["rule"]["version"] == 1
+    assert rule_events[0]["actor"]["type"] == "agent"
