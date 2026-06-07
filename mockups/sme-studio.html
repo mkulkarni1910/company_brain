@@ -152,6 +152,23 @@
     border:1px solid rgba(200,84,106,.25);border-radius:9px;padding:8px 11px;font-size:12.5px;color:#8c3a4a;line-height:1.5;max-width:380px}
   .reject-note .lbl{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--rose);font-weight:600;flex:none;margin-top:1px}
 
+  /* row actions (match admin Org Skills sk-btn) */
+  .sub-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+  .sk-btn{font-family:"JetBrains Mono",monospace;font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--ink-dim);cursor:pointer;transition:.15s;white-space:nowrap}
+  .sk-btn:hover{background:var(--paper-2);border-color:var(--ink-dim)}
+  .sk-btn.primary{color:var(--amber);border-color:#ecd6a6;background:var(--amber-bg)}
+  .sk-btn.primary:hover{background:#f0dcb2;border-color:var(--amber)}
+  .sk-btn.del{color:var(--rose);border-color:rgba(200,84,106,.4)}
+  .sk-btn.del:hover{background:rgba(200,84,106,.06)}
+  /* tiny captions under actions */
+  .act-caption{display:block;margin-top:7px;font-size:11px;color:var(--ink-faint);line-height:1.45;max-width:230px}
+  .managed-hint{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-faint)}
+  .managed-hint svg{width:13px;height:13px;color:var(--ink-faint);flex:none}
+  /* edit reopens-flow callout */
+  .edit-callout{display:flex;gap:9px;align-items:flex-start;margin-top:9px;background:var(--amber-bg);
+    border:1px solid #ecd6a6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:#7a5310;line-height:1.5;max-width:300px}
+  .edit-callout .lbl{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);font-weight:600;flex:none;margin-top:1px}
+
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
   @media(max-width:640px){.grid2{grid-template-columns:1fr}.wrap{padding:28px 18px 70px}.topbar{padding:14px 18px}}
 </style>
@@ -293,10 +310,11 @@
       <table>
         <thead>
           <tr>
-            <th style="width:260px">Skill</th>
-            <th style="width:170px">Status</th>
-            <th style="width:120px">Submitted</th>
+            <th style="width:230px">Skill</th>
+            <th style="width:160px">Status</th>
+            <th style="width:100px">Submitted</th>
             <th>Notes</th>
+            <th style="width:172px">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -305,12 +323,26 @@
             <td><span class="badge b-pending"><span class="d"></span>Pending approval</span></td>
             <td><span class="sub-when">2 min ago</span></td>
             <td style="color:var(--ink-faint);font-size:12.5px">Waiting on an admin in the approval queue.</td>
+            <td>
+              <div class="sub-actions">
+                <button class="sk-btn">Edit</button>
+                <button class="sk-btn del">Withdraw</button>
+              </div>
+              <div class="edit-callout"><span class="lbl">Edit</span><div>Reopens Cards 1–2: your plain-English text returns to <b>Describe</b> and the draft is pre-filled to tweak and resubmit.</div></div>
+              <span class="act-caption">Withdraw cancels the request — kept in the audit log, visible to admins in Runs.</span>
+            </td>
           </tr>
           <tr>
             <td><span class="sub-name">Vendor invoice triage</span><span class="sub-slug">vendor-invoice-triage</span></td>
             <td><span class="badge b-live"><span class="d"></span>Live</span></td>
             <td><span class="sub-when">Jun 3</span></td>
             <td style="color:var(--ink-faint);font-size:12.5px">Approved by Marcus Hale · running org-wide.</td>
+            <td>
+              <span class="managed-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                Managed in Org Skills
+              </span>
+            </td>
           </tr>
           <tr>
             <td><span class="sub-name">Expense report sign-off</span><span class="sub-slug">expense-report-signoff</span></td>
@@ -318,6 +350,14 @@
             <td><span class="sub-when">May 28</span></td>
             <td>
               <div class="reject-note"><span class="lbl">Admin</span><div>Limit should be $250, not $500. Resubmit with the corrected threshold.</div></div>
+            </td>
+            <td>
+              <div class="sub-actions">
+                <button class="sk-btn primary">Edit &amp; resubmit</button>
+                <button class="sk-btn del">Remove</button>
+              </div>
+              <div class="edit-callout"><span class="lbl">Edit</span><div>Reopens Cards 1–2 pre-filled; the submit button reads <b>Resubmit for approval</b>.</div></div>
+              <span class="act-caption">Remove dismisses it — kept in the audit log, visible to admins in Runs.</span>
             </td>
           </tr>
         </tbody>
