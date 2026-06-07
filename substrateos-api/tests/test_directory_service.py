@@ -85,6 +85,8 @@ async def test_slack_unknown_email_returns_none(monkeypatch):
                            get_fn=_graph_fake(found=False, group_names=[]))
     with patch("app.directory.service.slack_call", new=_slack_fake({})):
         assert (await svc.resolve("ghost@x")) is None
+    # contract: a Slack-unknown email must NOT be written through to the store
+    assert (await store.get_by_email("ghost@x")) is None
     assert (await svc.resolve(None)) is None
 
 

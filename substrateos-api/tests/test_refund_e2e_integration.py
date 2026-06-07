@@ -9,10 +9,28 @@ import pytest
 import pytest_asyncio
 
 from app.config import get_settings
+from app.domain.directory import DirectoryUser
 from app.domain.identity import User
 from app.workflows.engine import RefundEngine
 from app.workflows.flow import RefundFlow
 from app.workflows.store import RunStore
+
+
+class _Directory:
+    """In-memory DirectoryService stand-in: Tom (agent) reports to Diana (manager)."""
+
+    _RECORDS = [
+        DirectoryUser(email="tom@x", slack_id="U_TOM", display_name="Tom Reyes",
+                      manager_email="diana@x", groups=["Support Agent"], role="agent"),
+        DirectoryUser(email="diana@x", slack_id="U_DIANA", display_name="Diana Foster",
+                      groups=["Managers"], role="manager"),
+    ]
+
+    async def resolve(self, email):  # noqa: ANN001
+        return next((r for r in self._RECORDS if r.email == (email or "").lower()), None)
+
+    async def get_by_slack_id(self, slack_id):  # noqa: ANN001
+        return next((r for r in self._RECORDS if r.slack_id == slack_id), None)
 
 pytestmark = pytest.mark.integration
 
@@ -68,7 +86,10 @@ async def test_full_flow_with_fake_slack(engine, monkeypatch):
     async def fake_slack(token, method, payload):
         calls.append((method, payload))
         if method == "users.info":
-            return {"ok": True, "user": {"real_name": "Tom Reyes", "profile": {}}}
+            uid = payload.get("user")
+            email = {"U_TOM": "tom@x", "U_DIANA": "diana@x"}.get(uid, "")
+            name = {"U_TOM": "Tom Reyes", "U_DIANA": "Diana Foster"}.get(uid, "Someone")
+            return {"ok": True, "user": {"real_name": name, "profile": {"email": email}}}
         if method == "conversations.open":
             return {"ok": True, "channel": {"id": "D_DIANA"}}
         if method == "chat.postMessage":
@@ -76,11 +97,10 @@ async def test_full_flow_with_fake_slack(engine, monkeypatch):
         return {"ok": True}
 
     monkeypatch.setattr("app.workflows.flow.slack_call", fake_slack)
-    monkeypatch.setenv("SLACK_REFUND_APPROVER_ID", "U_DIANA")
     get_settings.cache_clear()
 
     store = RunStore(client=None, force_memory=True)
-    flow = RefundFlow(engine=engine, store=store)
+    flow = RefundFlow(engine=engine, store=store, directory=_Directory())
     await flow.handle_request(
         text="refund of $1,200 on order #48213, about 45 days old",
         channel="C_REFUNDS", thread_ts=None, requester_slack_id="U_TOM", user=_bot_user(),
@@ -96,6 +116,6 @@ async def test_full_flow_with_fake_slack(engine, monkeypatch):
     final = await store.get(run.id)
     assert final.status == "completed"
     steps = [e.step for e in await store.list_events(run.id)]
-    assert steps == ["Request received", "Facts gathered", "Rule evaluated",
-                     "Routed for approval", "Approved", "Refund issued"]
+    assert steps == ["Request received", "Identity checked", "Facts gathered",
+                     "Rule evaluated", "Routed for approval", "Approved", "Refund issued"]
     get_settings.cache_clear()
