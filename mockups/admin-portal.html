@@ -250,6 +250,16 @@
   .chip-entra{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:#e6edfb;color:#3a5bd0;border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
   .chip-over{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;background:var(--amber-bg);color:#7a5410;border-radius:5px;padding:2px 8px;margin-left:6px}
   .chip-appr{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;background:#e2f0e8;color:var(--green);border-radius:5px;padding:2px 8px;margin-left:6px}
+  /* actor-type chips — same sizing/typography as chip-entra */
+  .chip-human{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:var(--amber-bg);color:#7a5410;border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
+  .chip-system{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:#eeebe3;color:var(--ink-faint);border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
+  .chip-agent{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:#e6edfb;color:#3a5bd0;border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
+  /* rule badge — monospace, quiet, bordered */
+  .rule-badge{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.03em;font-weight:500;background:var(--surface-2);color:var(--ink-dim);border:1px solid var(--line);border-radius:5px;padding:2px 8px;margin-left:7px;vertical-align:1px;white-space:nowrap}
+  /* approver identity line */
+  .approver-id{display:block;font-size:12px;color:var(--ink-faint);margin-top:4px;line-height:1.5}
+  .approver-id .ap-name{font-weight:600;color:var(--ink-dim)}
+  .approver-id .ap-sep{margin:0 4px;color:var(--line)}
 
   /* ── overview ── */
   .ov-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
@@ -1195,10 +1205,10 @@
             <div class="sub">conversation · Maya Iyer · web</div>
             <div class="row-foot"><span class="rst auto">Answered</span><span class="time">10:41 AM</span></div>
           </div>
-          <div class="run-row active" data-status="stopped" data-text="refund 1200 order 48213 tom reyes slack refunds refund playbook rb-4483" onclick="selectRun(this)">
+          <div class="run-row active" data-status="approved" data-text="refund 1200 order 48213 tom reyes slack refunds refund playbook rb-4483 diane patel approved" onclick="selectRun(this)">
             <div class="pb">Refund $1,200 · order #48213</div>
             <div class="sub">refund playbook · Tom Reyes</div>
-            <div class="row-foot"><span class="rst stopped">Stopped for approval</span><span class="time">10:32 AM</span></div>
+            <div class="row-foot"><span class="rst approved">Approved</span><span class="time">10:34 AM</span></div>
           </div>
           <div class="run-row" data-status="answered" data-text="payments service alert how to respond raj patel microsoft teams conversation" onclick="selectRun(this)">
             <div class="pb">Payments service alert — how to respond?</div>
@@ -1236,42 +1246,126 @@
 
         <!-- detail column: updates in place, never scrolls off as the list grows -->
         <section class="run-detail-col">
-          <div class="run-eyebrow">Live run</div>
+          <div class="run-eyebrow">Completed run</div>
           <h2 class="run-title">Refund playbook</h2>
           <p class="run-meta">Slack #refunds · refund · run #RB-4483 · 10:32 AM</p>
 
           <div class="flow-card">
-            <div class="flow-head"><span><b>refund_v1</b> · owner: Diana Foster</span><span class="flow-badge">Stopped for approval</span></div>
+            <div class="flow-head"><span><b>refund_v1</b> · owner: Diane Patel</span><span class="flow-badge ok">Approved &amp; Issued</span></div>
             <div class="flow-step">
               <div class="flow-ic ok">✓</div>
-              <div><h4>Who's asking</h4><p>Tom Reyes · verified via <b>Microsoft Entra ID</b></p></div>
+              <div>
+                <h4>Request received</h4>
+                <p>"Refund order #48213 for Acme Corp" · Tom Reyes · Slack #refunds<br />
+                <span class="chip-human">human</span> role: agent</p>
+              </div>
             </div>
             <div class="flow-step">
               <div class="flow-ic ok">✓</div>
-              <div><h4>Gather the facts</h4><p>Order <b>#48213</b> · amount <b>$1,200</b> · age <b>9 days</b> · customer Acme Corp · policy <b>refund-policy</b></p></div>
+              <div>
+                <h4>Identity checked</h4>
+                <p>tom.reyes@acme.test · verified via <b>Microsoft Entra ID</b><br />
+                <span class="chip-human">human</span><span class="chip-entra">Entra</span></p>
+              </div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-ic ok">✓</div>
+              <div>
+                <h4>Facts gathered</h4>
+                <p>Order <b>#48213</b> · amount <b>$1,200</b> · age <b>9 days</b> · customer Acme Corp · policy <b>refund-policy</b><br />
+                <span class="chip-agent">agent</span> refund-engine</p>
+              </div>
             </div>
             <div class="flow-step">
               <div class="flow-ic warn">!</div>
-              <div><h4>Check the rules</h4><p>Auto-approve allowed only when amount ≤ <b>$500</b> and age ≤ <b>30 days</b>.<br /><span class="rule-hit">Rule hit</span>$1,200 &gt; $500 → not eligible for auto-approval.</p></div>
+              <div>
+                <h4>Rule evaluated</h4>
+                <p>Auto-approve allowed only when amount ≤ <b>$500</b> and age ≤ <b>30 days</b>.<br />
+                <span class="chip-agent">agent</span> refund-engine
+                <span class="rule-badge">refund.v1 @ v1 → require_approval</span><br />
+                <span class="rule-hit">Rule hit</span>$1,200 &gt; $500 → requires manager sign-off.</p>
+              </div>
             </div>
             <div class="flow-step">
-              <div class="flow-ic act">→</div>
-              <div><h4>Decision</h4><p>Hold the action. Route to <b>Diana Foster</b> for approval before anything is issued.</p></div>
+              <div class="flow-ic ok">✓</div>
+              <div>
+                <h4>Routed for approval</h4>
+                <p>Approve/Reject card DM'd to Diane Patel in Slack<span class="chip-appr">owner</span><br />
+                <span class="chip-system">system</span></p>
+              </div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-ic ok">✓</div>
+              <div>
+                <h4>Approved</h4>
+                <p>Refund authorised by manager.<span class="chip-human">human</span></p>
+                <span class="approver-id">
+                  <span class="ap-name">Diane Patel</span><span class="ap-sep">·</span>diane@acme.test<span class="ap-sep">·</span><span class="chip-entra" style="margin-left:0">Entra</span><span class="ap-sep">·</span>manager
+                </span>
+              </div>
+            </div>
+            <div class="flow-step">
+              <div class="flow-ic ok">✓</div>
+              <div>
+                <h4>Refund issued</h4>
+                <p>Stripe refund <b>re_90001</b> · $1,200 · Acme Corp · processed successfully<br />
+                <span class="chip-system">system</span> stripe mock</p>
+              </div>
             </div>
           </div>
 
           <div class="audit-wrap">
-            <div class="audit-eyebrow">Audit log</div>
+            <div class="audit-eyebrow">Audit trail — governance receipt</div>
             <h3>Refund playbook · run #RB-4483</h3>
-            <p class="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
+            <p class="sub">A complete, tamper-evident record of every actor and decision — nothing is a black box.</p>
             <table class="audit-table">
               <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>
               <tbody>
-                <tr><td class="a-time">10:32:01</td><td class="a-step">Request received</td><td class="a-detail">"Refund order #48213 for Acme Corp" · from Slack #refunds</td><td class="a-who">Tom Reyes<span class="chip-entra">Entra</span></td></tr>
-                <tr><td class="a-time">10:32:02</td><td class="a-step">Facts gathered</td><td class="a-detail">Order #48213 · $1,200 · 9 days old · customer Acme Corp</td><td class="a-who">SubstrateOS</td></tr>
-                <tr><td class="a-time">10:32:02</td><td class="a-step">Policy checked</td><td class="a-detail">$1,200 &gt; $500 desk limit<span class="chip-over">over limit</span></td><td class="a-who">SubstrateOS</td></tr>
-                <tr><td class="a-time">10:32:03</td><td class="a-step">Routed for approval</td><td class="a-detail">Approve/Reject card DM'd to Diana Foster in Slack<span class="chip-appr">owner</span></td><td class="a-who">SubstrateOS</td></tr>
-                <tr><td class="a-time">—</td><td class="a-step">Awaiting decision</td><td class="a-detail">Pending Diana Foster's sign-off · nothing acts until approved</td><td class="a-who">—</td></tr>
+                <tr>
+                  <td class="a-time">10:32:01</td>
+                  <td class="a-step">Request received</td>
+                  <td class="a-detail">"Refund order #48213 for Acme Corp" · from Slack #refunds</td>
+                  <td class="a-who">Tom Reyes<span class="chip-human">human</span></td>
+                </tr>
+                <tr>
+                  <td class="a-time">10:32:01</td>
+                  <td class="a-step">Identity checked</td>
+                  <td class="a-detail">tom.reyes@acme.test · directory-matched</td>
+                  <td class="a-who">Tom Reyes<span class="chip-human">human</span><span class="chip-entra">Entra</span></td>
+                </tr>
+                <tr>
+                  <td class="a-time">10:32:02</td>
+                  <td class="a-step">Facts gathered</td>
+                  <td class="a-detail">Order #48213 · $1,200 · 9 days old · customer Acme Corp</td>
+                  <td class="a-who">refund-engine<span class="chip-agent">agent</span></td>
+                </tr>
+                <tr>
+                  <td class="a-time">10:32:02</td>
+                  <td class="a-step">Rule evaluated</td>
+                  <td class="a-detail">$1,200 &gt; $500 desk limit<span class="chip-over">over limit</span><span class="rule-badge">refund.v1 @ v1 → require_approval</span></td>
+                  <td class="a-who">refund-engine<span class="chip-agent">agent</span></td>
+                </tr>
+                <tr>
+                  <td class="a-time">10:32:03</td>
+                  <td class="a-step">Routed for approval</td>
+                  <td class="a-detail">Approve/Reject card DM'd to Diane Patel in Slack<span class="chip-appr">owner</span></td>
+                  <td class="a-who">SubstrateOS<span class="chip-system">system</span></td>
+                </tr>
+                <tr>
+                  <td class="a-time">10:34:17</td>
+                  <td class="a-step">Approved</td>
+                  <td class="a-detail">
+                    Diane Patel approved via Slack interactive button
+                    <span class="approver-id"><span class="ap-name">Diane Patel</span><span class="ap-sep">·</span>diane@acme.test<span class="ap-sep">·</span><span class="chip-entra" style="margin-left:0">Entra</span><span class="ap-sep">·</span>manager</span>
+                  </td>
+                  <td class="a-who">Diane Patel<span class="chip-human">human</span><span class="chip-entra">Entra</span></td>
+                </tr>
+                <tr>
+                  <td class="a-time">10:34:18</td>
+                  <td class="a-step">Refund issued</td>
+                  <td class="a-detail">Stripe refund <b>re_90001</b> · $1,200 · Acme Corp</td>
+                  <td class="a-who">stripe mock<span class="chip-system">system</span></td>
+                </tr>
               </tbody>
             </table>
           </div>
