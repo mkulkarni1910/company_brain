@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from app.domain.skill import SkillCreate
+
 RunStatus = Literal[
     "running", "pending_approval", "pending_confirm",
     "approved", "rejected", "completed", "cancelled", "error",
@@ -35,7 +37,7 @@ class RunEvent(BaseModel):
     actor: str
 
 
-RunKind = Literal["refund", "approval", "github_pr"]
+RunKind = Literal["refund", "approval", "github_pr", "skill_publish"]
 
 
 class PrDraft(BaseModel):
@@ -74,5 +76,9 @@ class RefundRun(BaseModel):
     requester_email: str | None = None  # identity key for the per-user GitHub token
     pr_draft: PrDraft | None = None
     pr_url: str | None = None
+    # skill_publish playbook (SME Skill Studio): the AI-drafted skill awaiting
+    # an admin's decision — the live SkillStore is only written on approval.
+    skill_draft: SkillCreate | None = None
+    rejection_note: str | None = None
     created_at: datetime
     updated_at: datetime
