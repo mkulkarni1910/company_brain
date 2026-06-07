@@ -10,7 +10,7 @@
 
 **Branch:** all work on `worktree-platform-approach-investigation` in this worktree. Never push to `main` or `feat/governed-act-layer`.
 
-**Invariant (from the spec):** the refund use case works end-to-end after every task. `cd substrateos-api && uv run pytest tests/ -q` must pass at the end of every task.
+**Invariant (from the spec):** the refund use case works end-to-end after every task. `cd substrateos-api && uv run pytest tests/ -q -m "not integration"` must pass at the end of every task. (The 4 `integration`-marked tests hit live Azure and depend on live index content — they fail for environment reasons in this worktree and are excluded from the gate; verified at baseline 2026-06-07. Every plain `pytest tests/ -q` below means with `-m "not integration"`.)
 
 ---
 
