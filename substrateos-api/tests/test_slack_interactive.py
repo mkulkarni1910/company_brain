@@ -102,3 +102,18 @@ def test_interactive_unconfigured_returns_503(monkeypatch):
     with TestClient(app) as client:
         resp = _post(client, _payload())
     assert resp.status_code == 503
+
+
+def test_interactive_dispatches_skillpub_action(monkeypatch):
+    _env(monkeypatch)
+    from app.deps import get_skill_publish_flow
+    flow = _FakeFlow()
+    app.dependency_overrides[get_skill_publish_flow] = lambda: flow
+    try:
+        with TestClient(app) as client:
+            r = _post(client, _payload(action_id="skillpub_approve", run_id="RB-7001"))
+        assert r.status_code == 200
+        assert len(flow.payloads) == 1
+        assert flow.payloads[0]["actions"][0]["value"] == "RB-7001"
+    finally:
+        app.dependency_overrides.clear()

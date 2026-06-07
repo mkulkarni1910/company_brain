@@ -44,7 +44,8 @@ when you genuinely introduce one** (with a one-line why/where).
 Static HTML, no build step. Design system: **Fraunces** (serif headings),
 **Archivo** (body), **JetBrains Mono** (labels); warm-paper palette via CSS
 variables defined at the top of each file. Reuse those tokens — don't invent new
-ones. Files: `user-web-chat.html`, `admin-portal.html`, `architecture.html`.
+ones. Files: `user-web-chat.html`, `admin-portal.html`, `sme-studio.html`,
+`architecture.html`.
 
 ## Infra & deploy
 

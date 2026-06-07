@@ -34,8 +34,9 @@ export async function postRunAction(runId: string, action: "create" | "cancel"):
 
 // Signed-in identity: name from the Entra login, title from the user's Slack
 // profile (null when they have none — the UI then shows the name alone).
-// is_admin = member of the Entra admins group; gates /admin (backend re-checks).
-export type Me = { display_name: string; email: string; title: string | null; is_admin: boolean };
+// is_admin = member of the Entra "Admin" group, gates /admin; is_sme = member of
+// the Entra "Finance SME" group, gates /studio. The backend re-checks both.
+export type Me = { display_name: string; email: string; title: string | null; is_admin: boolean; is_sme: boolean };
 
 // Avatar initials for a display name, e.g. "Lokesh Bhoyar" -> "LB".
 export function initials(name: string) {

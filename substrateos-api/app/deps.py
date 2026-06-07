@@ -144,3 +144,11 @@ def get_approval_service(request: Request):
 
 def get_policy_engine(request: Request):
     return getattr(request.app.state, "policy_engine", None)
+
+
+def get_skill_drafter(request: Request):
+    return getattr(request.app.state, "skill_drafter", None)
+
+
+def get_skill_publish_flow(request: Request):
+    return getattr(request.app.state, "skill_publish_flow", None)

@@ -17,6 +17,12 @@ def _bar(color: str, blocks: list[dict]) -> dict:
     return {"color": color, "blocks": blocks}
 
 
+def _mrkdwn_escape(s: str) -> str:
+    """Slack mrkdwn control chars for user-typed text: kills <@mention>/<url|label>
+    injection. Cosmetic *bold*/_italic_ glitches are accepted for this internal tool."""
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 def needs_approval_blocks(*, request_text: str, approver_label: str, run_id: str) -> dict:
     """Posted in the requester's channel — routed, awaiting sign-off."""
     return {
@@ -71,3 +77,29 @@ def outcome_blocks(*, request_text: str, approved: bool, approver_name: str) -> 
         {"type": "section", "text": {"type": "mrkdwn", "text": f"{head}\n{body}\n_{request_text[:300]}_"}},
         {"type": "context", "elements": [{"type": "mrkdwn", "text": ":lock: recorded with the decision"}]},
     ])]}
+
+
+def skill_publish_dm_blocks(*, skill_name: str, slug: str, description: str,
+                            steps: list[str], submitter_name: str, run_id: str) -> dict:
+    """The Approve/Reject card DM'd to the submitter's manager for a new skill."""
+    steps_text = "\n".join(
+        f"{i + 1}. {_mrkdwn_escape(s[:120])}" for i, s in enumerate(steps[:6])) or "—"
+    return {
+        "blocks": [
+            {"type": "header", "text": {"type": "plain_text", "text": "New skill awaiting approval"}},
+            {"type": "section", "text": {"type": "mrkdwn",
+                "text": f"*{_mrkdwn_escape(skill_name)}*  `/{_mrkdwn_escape(slug)}`\n{_mrkdwn_escape(description)[:400]}"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"*Steps*\n{steps_text}"}},
+            {"type": "section", "text": {"type": "mrkdwn", "text": f"*Authored by*\n{_mrkdwn_escape(submitter_name)}"}},
+        ],
+        "attachments": [_bar(_AMBER, [
+            {"type": "context", "elements": [{"type": "mrkdwn",
+                "text": f":lock: not in the catalog until you decide · run {run_id}"}]},
+            {"type": "actions", "elements": [
+                {"type": "button", "style": "primary", "action_id": "skillpub_approve",
+                 "value": run_id, "text": {"type": "plain_text", "text": "Approve"}},
+                {"type": "button", "style": "danger", "action_id": "skillpub_reject",
+                 "value": run_id, "text": {"type": "plain_text", "text": "Reject"}},
+            ]},
+        ])],
+    }

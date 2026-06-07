@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SubstrateOS — Skill Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#fefdfb; --paper-2:#f6f3ec; --surface:#fffefb; --surface-2:#ffffff; --panel:#f5f1e8;
+    --line:#d6cdb9; --line-soft:#e2dac9; --ink:#1a1611; --ink-dim:#4f4839; --ink-faint:#827a67;
+    --amber:#b06e0d; --amber-bg:#f6e7c8; --teal:#0f897e; --teal-bg:#d8efea;
+    --violet:#6a5acd; --rose:#c8546a; --rose-bg:#f7e1e5; --green:#3f8f5e; --green-bg:#e0efe5;
+    --radius:16px; --shadow:0 1px 2px rgba(60,50,30,.04), 0 18px 40px -26px rgba(80,60,25,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:
+      radial-gradient(900px 460px at 88% -16%, rgba(196,122,22,.05), transparent 60%),
+      radial-gradient(800px 600px at -8% 116%, rgba(15,137,126,.04), transparent 55%),
+      var(--paper);
+    color:var(--ink);font-family:"Archivo",-apple-system,sans-serif;
+    font-size:15px;line-height:1.6;letter-spacing:.05px;-webkit-font-smoothing:antialiased}
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;z-index:1;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .app{display:grid;grid-template-columns:268px 1fr;height:100vh;overflow:hidden}
+
+  /* left rail (admin-consistent) */
+  .rail{background:linear-gradient(180deg,#fbf9f4,#f4f1ea);border-right:1px solid var(--line-soft);
+    padding:22px 20px;display:flex;flex-direction:column;gap:26px;height:100vh}
+  .brand{display:flex;align-items:center;gap:11px}
+  .glyph{width:34px;height:34px;border-radius:10px;flex:none;position:relative;
+    background:radial-gradient(circle at 30% 25%,#ffcf7e,var(--amber) 60%,#9a5e0e);
+    box-shadow:0 0 0 1px rgba(196,122,22,.3),0 8px 18px -8px rgba(196,122,22,.6)}
+  .glyph::before{content:"";position:absolute;inset:7px;border-radius:50%;
+    background:conic-gradient(from 210deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0))}
+  .brand h1{font-family:"Fraunces",serif;font-weight:600;font-size:19px;margin:0}
+  .brand h1 span{color:var(--amber)}
+  .brand .sub{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:600;
+    letter-spacing:2.2px;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);border-radius:7px;padding:2px 9px;margin-top:0}
+  .rail h2{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin:0 0 11px 2px;font-weight:500}
+  .nav{display:flex;flex-direction:column;gap:3px}
+  .nav a{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--ink-dim);text-decoration:none;font-size:13.5px;font-weight:500;transition:.18s;cursor:pointer}
+  .nav a .ic{width:16px;height:16px;opacity:.85;flex:none}
+  .nav a:hover{background:var(--surface);color:var(--ink)}
+  .nav a.active{background:linear-gradient(90deg,var(--amber-bg),transparent);color:var(--ink);box-shadow:inset 2px 0 0 var(--amber)}
+  .nav a.active .ic{opacity:1;color:var(--amber)}
+  .nav a .ncount{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;color:var(--amber);
+    background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:99px;padding:1px 8px;line-height:1.5}
+  .rail .foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid var(--line-soft)}
+  .foot .avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#e7dcc3,#cdbf9e);display:grid;place-items:center;font-size:12px;font-weight:700;color:#4a4334;flex:none}
+  .foot .who{font-size:12.5px;font-weight:600;line-height:1.25}
+  .foot .who span{display:block;font-size:10.5px;color:var(--ink-faint);font-weight:400;font-family:"JetBrains Mono",monospace}
+
+  /* main column */
+  .main{height:100vh;overflow:auto}
+  .wrap{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:40px 36px 90px}
+  .pg-head{margin-bottom:26px}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:11px}
+  .pg-head h2{font-family:"Fraunces",serif;font-size:34px;font-weight:600;margin:0 0 8px;letter-spacing:-.01em}
+  .pg-head p{color:var(--ink-dim);font-size:15.5px;margin:0;max-width:560px}
+
+  /* tab panels */
+  .panel{display:none}
+  .panel.on{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* step rail */
+  .steps-rail{display:flex;align-items:center;gap:0;margin:0 0 26px;flex-wrap:wrap}
+  .steps-rail .s{display:flex;align-items:center;gap:9px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.3px;color:var(--ink-faint)}
+  .steps-rail .s .n{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:10px;color:var(--ink-faint)}
+  .steps-rail .s.on{color:var(--ink)}
+  .steps-rail .s.on .n{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+  .steps-rail .ar{width:34px;height:1px;background:linear-gradient(90deg,var(--line),transparent);margin:0 13px}
+
+  /* ── two-pane author workspace ── */
+  .author-grid{display:grid;grid-template-columns:1fr 56px 1.2fr;align-items:stretch;gap:0}
+  .author-grid .card{margin-bottom:0}
+  /* pane 1 (describe) sits in a sticky column so it reads as the source */
+  .pane-describe{align-self:start}
+  /* connector column */
+  .connector{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 4px;position:relative}
+  .connector .line-top,.connector .line-bot{flex:1;width:2px;background:linear-gradient(180deg,transparent,var(--line))}
+  .connector .line-bot{background:linear-gradient(180deg,var(--line),transparent)}
+  .connector .arrow{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+    background:linear-gradient(180deg,#ffcf7e,var(--amber));color:#3a2606;box-shadow:0 0 0 5px rgba(246,231,200,.7),0 8px 18px -6px rgba(196,122,22,.55)}
+  .connector .arrow svg{width:22px;height:22px}
+  /* "AI drafts this form" affordance sitting on the describe footer */
+  .drafts-affordance{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:10.5px;
+    font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--amber);background:var(--amber-bg);
+    border:1px solid #ecd6a6;border-radius:99px;padding:6px 12px;margin-top:14px}
+  .drafts-affordance svg{width:13px;height:13px}
+  /* ai-badge pill — used in the draft-ribbon ("Just drafted") */
+  .ai-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:11px;
+    font-weight:600;letter-spacing:.02em;color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6;
+    border-radius:99px;padding:5px 12px}
+  .ai-badge svg{width:13px;height:13px}
+  /* just-drafted highlight on the review pane */
+  .pane-review{position:relative}
+  .pane-review.drafted{box-shadow:var(--shadow),0 0 0 1px rgba(196,122,22,.28),0 0 0 5px rgba(246,231,200,.45);
+    border-color:#ecd6a6}
+  .draft-ribbon{display:flex;align-items:center;gap:10px;margin:-4px 0 18px;padding:9px 13px;border-radius:11px;
+    background:linear-gradient(90deg,rgba(246,231,200,.6),rgba(246,231,200,.15));border:1px solid #ecd6a6}
+  .draft-ribbon .txt{font-size:12.5px;color:#7a5310;line-height:1.4}
+  .draft-ribbon .txt b{color:#5e3f0c}
+
+  /* card */
+  .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;margin-bottom:22px}
+  .card-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:18px}
+  .card-num{width:28px;height:28px;border-radius:9px;flex:none;display:grid;place-items:center;
+    font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;color:#3a2606;
+    background:linear-gradient(180deg,#ffcf7e,var(--amber));box-shadow:0 0 0 1px rgba(196,122,22,.25)}
+  .card-head .ct h3{font-family:"Fraunces",serif;font-size:20px;font-weight:600;margin:0;line-height:1.25}
+  .card-head .ct p{font-size:13.5px;color:var(--ink-dim);margin:3px 0 0}
+
+  /* describe textarea */
+  .describe{width:100%;min-height:140px;resize:vertical;padding:16px 18px;border:1px solid var(--line);
+    border-radius:13px;background:var(--surface-2);color:var(--ink);font-family:inherit;font-size:15px;line-height:1.65;outline:none;transition:.18s}
+  .describe::placeholder{color:var(--ink-faint)}
+  .describe:focus{border-color:#cabd9f;box-shadow:0 0 0 3px rgba(196,122,22,.1)}
+  .describe-foot{display:flex;align-items:center;gap:12px;margin-top:16px}
+  .describe-foot .hint{font-size:12.5px;color:var(--ink-faint)}
+
+  /* buttons */
+  .btn-primary{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:11px;padding:11px 19px;
+    font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;color:#3a2606;
+    background:linear-gradient(180deg,#ffcf7e,var(--amber));box-shadow:0 6px 14px -6px rgba(196,122,22,.6);transition:.15s}
+  .btn-primary:hover{transform:translateY(-1px)}
+  .btn-primary svg{width:15px;height:15px}
+  .btn-ghost{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:11px;padding:11px 17px;
+    font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;color:var(--ink-dim);background:var(--surface-2);transition:.15s}
+  .btn-ghost:hover{color:var(--ink);border-color:#cabd9f}
+
+  /* review form */
+  .field{margin-bottom:17px}
+  .field > label{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px;display:block}
+  .field input,.field select,.field textarea{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:10px;
+    font-family:inherit;font-size:14px;background:var(--surface-2);color:var(--ink);outline:none;transition:.15s}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(176,110,13,.08)}
+  .field textarea{resize:vertical;line-height:1.6}
+  .field .mono{font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .field .sysprompt{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.65}
+  .grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+
+  /* steps editor — a plain editable add/remove list (steps are plain strings;
+     the "When → Check → Stop → Do → Record" guidance lives in the field label) */
+  .step-row{display:flex;gap:10px;margin-bottom:9px;align-items:center}
+  .step-row input{flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;background:var(--surface-2);color:var(--ink);outline:none}
+  .step-row input:focus{border-color:var(--amber)}
+  .step-drag{color:var(--line);cursor:grab;flex:none;font-size:14px;user-select:none}
+  .step-remove{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);
+    color:var(--ink-faint);font-size:12px;line-height:1;cursor:pointer;transition:.15s}
+  .step-remove:hover{color:var(--rose);border-color:rgba(200,84,106,.4);background:var(--rose-bg)}
+  .list-add{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;
+    letter-spacing:.07em;text-transform:uppercase;color:var(--teal);background:var(--teal-bg);border:1px dashed var(--teal);
+    border-radius:9px;cursor:pointer;padding:8px 13px;margin-top:8px;transition:.15s}
+  .list-add:hover{background:#cbe9e3}
+  .list-add .plus{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:var(--teal);color:#fff;font-size:13px;line-height:1}
+
+  /* data feeds chips */
+  .feeds{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .feed-chip{display:inline-flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px;
+    color:var(--ink-dim);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:6px 12px}
+  .feed-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(63,143,94,.6)}
+  /* feeds are editable input chips, not static labels */
+  .feed-chip .feed-input{border:0;background:transparent;outline:none;font-family:inherit;font-size:12px;color:var(--ink-dim);width:auto;min-width:54px;padding:0}
+  .feed-chip .x{color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1;border:0;background:transparent;padding:0}
+  .feed-add{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--teal);background:var(--teal-bg);
+    border:1px dashed var(--teal);border-radius:99px;padding:6px 12px;cursor:pointer}
+
+  .review-foot{display:flex;align-items:center;gap:11px;margin-top:24px;padding-top:20px;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+  .review-foot .gate{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-faint)}
+  .review-foot .gate svg{width:13px;height:13px;color:var(--ink-faint);flex:none}
+
+  /* submissions table */
+  .sub-table-wrap{border:1px solid var(--line-soft);border-radius:13px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  thead th{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;
+    color:var(--ink-faint);font-weight:500;text-align:left;padding:11px 18px;border-bottom:1px solid var(--line-soft);background:rgba(246,243,236,.5)}
+  tbody td{padding:14px 18px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  .sub-name{font-weight:600;color:var(--ink);display:block;line-height:1.3}
+  .sub-slug{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-faint)}
+  .sub-when{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-dim);white-space:nowrap}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:9.5px;
+    letter-spacing:.6px;text-transform:uppercase;font-weight:600;border-radius:99px;padding:4px 11px;white-space:nowrap}
+  .badge .d{width:7px;height:7px;border-radius:50%;flex:none}
+  .b-pending{color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6}
+  .b-pending .d{background:var(--amber);animation:pulse 1.6s infinite}
+  .b-live{color:var(--green);background:var(--green-bg);border:1px solid rgba(63,143,94,.3)}
+  .b-live .d{background:var(--green);box-shadow:0 0 6px rgba(63,143,94,.6)}
+  .b-rejected{color:var(--rose);background:var(--rose-bg);border:1px solid rgba(200,84,106,.3)}
+  .b-rejected .d{background:var(--rose)}
+  .reject-note{margin-top:9px;display:flex;gap:8px;align-items:flex-start;background:var(--rose-bg);
+    border:1px solid rgba(200,84,106,.25);border-radius:9px;padding:8px 11px;font-size:12.5px;color:#8c3a4a;line-height:1.5;max-width:380px}
+  .reject-note .lbl{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--rose);font-weight:600;flex:none;margin-top:1px}
+
+  /* row actions (match admin Org Skills sk-btn) */
+  .sub-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+  .sk-btn{font-family:"JetBrains Mono",monospace;font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--ink-dim);cursor:pointer;transition:.15s;white-space:nowrap}
+  .sk-btn:hover{background:var(--paper-2);border-color:var(--ink-dim)}
+  .sk-btn.primary{color:var(--amber);border-color:#ecd6a6;background:var(--amber-bg)}
+  .sk-btn.primary:hover{background:#f0dcb2;border-color:var(--amber)}
+  .sk-btn.del{color:var(--rose);border-color:rgba(200,84,106,.4)}
+  .sk-btn.del:hover{background:rgba(200,84,106,.06)}
+  /* tiny captions under actions */
+  .act-caption{display:block;margin-top:7px;font-size:11px;color:var(--ink-faint);line-height:1.45;max-width:230px}
+  .managed-hint{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-faint)}
+  .managed-hint svg{width:13px;height:13px;color:var(--ink-faint);flex:none}
+  /* shared edit-flow footnote under the table — plain muted helper text, not a control */
+  .sub-footnote{margin:13px 2px 0;font-size:11.5px;color:var(--ink-faint);line-height:1.5;display:flex;gap:7px;align-items:flex-start}
+  .sub-footnote .gl{font-family:"JetBrains Mono",monospace;color:var(--ink-faint);flex:none;line-height:inherit}
+  .sub-footnote b{font-weight:600;color:var(--ink-dim)}
+
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* withdraw / remove confirm modal (styled — replaces a native confirm) */
+  .modal-backdrop{position:fixed;inset:0;z-index:30;background:rgba(26,22,17,.32);
+    display:grid;place-items:center;padding:24px;animation:fade .15s ease}
+  .modal-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:15px;box-shadow:var(--shadow);
+    padding:24px 26px;max-width:420px;width:100%}
+  .modal-card h3{font-family:"Fraunces",serif;font-size:19px;font-weight:600;margin:0 0 8px}
+  .modal-card p{font-size:13.5px;color:var(--ink-dim);margin:0 0 20px;line-height:1.55}
+  .modal-foot{display:flex;justify-content:flex-end;gap:11px}
+  .btn-danger{display:inline-flex;align-items:center;border:0;border-radius:11px;padding:11px 19px;font:inherit;
+    font-size:13.5px;font-weight:600;cursor:pointer;color:#fff;background:var(--rose)}
+  .btn-danger:hover{background:#b8485d}
+
+  /* stack the two-pane workspace on narrower screens */
+  @media(max-width:1080px){
+    .author-grid{grid-template-columns:1fr;gap:0}
+    .author-grid .card{margin-bottom:0}
+    .connector{flex-direction:row;width:100%;padding:14px 0;gap:14px}
+    .connector .line-top,.connector .line-bot{width:auto;height:2px;flex:1;
+      background:linear-gradient(90deg,transparent,var(--line))}
+    .connector .line-bot{background:linear-gradient(90deg,var(--line),transparent)}
+    .connector .arrow{transform:rotate(90deg)}
+  }
+  @media(max-width:980px){
+    .app{grid-template-columns:1fr;height:auto;overflow:visible}
+    .rail{flex-direction:row;flex-wrap:wrap;align-items:center;gap:14px;height:auto;border-right:none;border-bottom:1px solid var(--line-soft);padding:14px 20px}
+    .rail h2{display:none}
+    .nav{flex-direction:row;gap:6px}
+    .rail .foot{margin-top:0;margin-left:auto;padding-top:0;border-top:none}
+    .main{height:auto;overflow:visible}
+  }
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}.wrap{padding:28px 18px 70px}}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- left rail -->
+<aside class="rail">
+  <div class="brand">
+    <div class="glyph"></div>
+    <div><h1>Substrate<span>OS</span></h1><div class="sub">Skill Studio</div></div>
+  </div>
+  <div><h2>Skill Studio</h2><nav class="nav" role="tablist">
+    <a class="active" role="tab" aria-selected="true" data-tab="author" onclick="showTab('author')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>Author</a>
+    <a role="tab" aria-selected="false" data-tab="subs" onclick="showTab('subs')"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>My submissions<span class="ncount">3</span></a>
+  </nav></div>
+  <!-- Identity comes from GET /me, same as the User Web Chat: name = Entra signed-in
+       user, subtitle = Slack profile title. While /me loads: empty avatar, no text. -->
+  <div class="foot"><div class="avatar">DR</div><div class="who">Deepa Rao<span>Finance SME</span></div></div>
+</aside>
+
+<main class="main"><div class="wrap">
+  <div class="pg-head">
+    <div class="eyebrow">Finance · author a skill</div>
+    <h2>Skill Studio</h2>
+    <p>Turn what you know into a governed skill — no code.</p>
+  </div>
+
+  <!-- ════════ TAB: Author ════════ -->
+  <div class="panel on" id="panel-author" role="tabpanel">
+
+  <!-- progress rail -->
+  <div class="steps-rail">
+    <div class="s on"><span class="n">1</span>Describe</div>
+    <span class="ar"></span>
+    <div class="s on"><span class="n">2</span>Review draft</div>
+    <span class="ar"></span>
+    <div class="s"><span class="n">3</span>Admin approves</div>
+  </div>
+
+  <!-- ── two-pane: 1·Describe  →  2·Review ── -->
+  <div class="author-grid">
+
+  <!-- ── pane 1 — Describe it ── -->
+  <section class="card pane-describe">
+    <div class="card-head">
+      <div class="card-num">1</div>
+      <div class="ct">
+        <h3>Describe it</h3>
+        <p>Write the rule the way you'd explain it to a new teammate.</p>
+      </div>
+    </div>
+    <textarea class="describe" placeholder="e.g. Refunds under $500 and 30 days are auto-approved. Anything bigger needs my sign-off…">Refunds under $500 and within 30 days of purchase are auto-approved. Anything bigger than that — or older than 30 days — needs my sign-off before we issue it. Always pull the order details and check it against our refund policy first.</textarea>
+    <div class="describe-foot">
+      <button class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
+        Draft with AI
+      </button>
+    </div>
+    <span class="drafts-affordance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
+      AI drafts the form on the right
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+    </span>
+    <p class="hint" style="margin-top:12px">Drafted in plain English — you review everything before it's submitted.</p>
+  </section>
+
+  <!-- ── connector ── -->
+  <div class="connector" aria-hidden="true">
+    <div class="line-top"></div>
+    <div class="arrow">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+    </div>
+    <div class="line-bot"></div>
+  </div>
+
+  <!-- ── pane 2 — Review the draft (the OUTPUT) ── -->
+  <section class="card pane-review drafted">
+    <div class="card-head">
+      <div class="card-num">2</div>
+      <div class="ct">
+        <h3>Review the draft</h3>
+        <p>The AI filled this in from your description. Edit anything that's not quite right.</p>
+      </div>
+    </div>
+
+    <div class="draft-ribbon">
+      <span class="ai-badge" style="flex:none;padding:4px 10px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5L13 3z"/></svg>
+        Just drafted
+      </span>
+      <span class="txt">Generated from your description on the left. <b>Nothing is live yet</b> — review, edit, then submit.</span>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Name</label>
+        <input value="Refund approvals" />
+      </div>
+      <div class="field">
+        <label>Slug</label>
+        <input class="mono" value="refund-approvals" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Description</label>
+      <textarea rows="2">Decides refunds: anything under $500 and within 30 days is auto-approved; larger or older refunds are stopped for the Finance SME to sign off before they're issued.</textarea>
+    </div>
+
+    <div class="field">
+      <label>Team</label>
+      <input value="Finance" />
+    </div>
+
+    <div class="field">
+      <label>Steps — When → Check → Stop → Do → Record</label>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="When a refund is requested for an order." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="Check the order amount and age; compare against the refund policy ($500 / 30 days)." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="Stop if over $500 or older than 30 days, and route to the Finance SME for sign-off." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="Do auto-approve and issue the refund if within limits." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="Record the decision, amount, and approver to the refund ledger." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <button class="list-add"><span class="plus">+</span>Add step</button>
+    </div>
+
+    <div class="field">
+      <label>Data feeds</label>
+      <div class="feeds">
+        <span class="feed-chip"><span class="dot"></span><input class="feed-input" value="Orders" aria-label="Data feed 1" /><button class="x" aria-label="Remove feed">×</button></span>
+        <button class="feed-add">+ Add feed</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>System prompt</label>
+      <textarea class="sysprompt" rows="6">You handle refund requests for the Finance team. For each request, retrieve the order's amount and the days since purchase. A refund is auto-approvable only if the amount is under $500 AND the order is within 30 days. If either threshold is exceeded, do NOT issue the refund — stop and route the request to the Finance SME (Deepa Rao) for explicit sign-off, summarizing the order and why it's over the limit. Never issue a refund above the limit without recorded human approval. Record every decision to the refund ledger.</textarea>
+    </div>
+
+    <div class="review-foot">
+      <button class="btn-ghost">Start over</button>
+      <button class="btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg>
+        Submit for approval
+      </button>
+      <span class="gate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        An admin reviews before this goes live.
+      </span>
+    </div>
+  </section>
+
+  </div><!-- /author-grid -->
+  </div><!-- /panel-author -->
+
+  <!-- ════════ TAB: My submissions ════════ -->
+  <div class="panel" id="panel-subs" role="tabpanel">
+  <section class="card">
+    <div class="card-head">
+      <div class="card-num">3</div>
+      <div class="ct">
+        <h3>My submissions</h3>
+        <p>Skills you've sent for approval, and where each one stands.</p>
+      </div>
+    </div>
+
+    <div class="sub-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:230px">Skill</th>
+            <th style="width:160px">Status</th>
+            <th style="width:100px">Submitted</th>
+            <th>Notes</th>
+            <th style="width:172px">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="sub-name">Refund approvals</span><span class="sub-slug">refund-approvals</span></td>
+            <td><span class="badge b-pending"><span class="d"></span>Pending approval</span></td>
+            <td><span class="sub-when">2 min ago</span></td>
+            <td style="color:var(--ink-faint);font-size:12.5px">Waiting on an admin in the approval queue.</td>
+            <td>
+              <div class="sub-actions">
+                <button class="sk-btn" title="Reopens Cards 1–2 pre-filled — the submit button becomes Resubmit for approval.">Edit</button>
+                <button class="sk-btn del" onclick="openWithdraw('Withdraw')">Withdraw</button>
+              </div>
+              <span class="act-caption">Withdraw cancels the request — kept in the audit log, visible to admins in Runs.</span>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="sub-name">Vendor invoice triage</span><span class="sub-slug">vendor-invoice-triage</span></td>
+            <td><span class="badge b-live"><span class="d"></span>Live</span></td>
+            <td><span class="sub-when">Jun 3</span></td>
+            <td style="color:var(--ink-faint);font-size:12.5px">Approved by Marcus Hale · running org-wide.</td>
+            <td>
+              <span class="managed-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                Managed in Org Skills
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="sub-name">Expense report sign-off</span><span class="sub-slug">expense-report-signoff</span></td>
+            <td><span class="badge b-rejected"><span class="d"></span>Rejected</span></td>
+            <td><span class="sub-when">May 28</span></td>
+            <td>
+              <div class="reject-note"><span class="lbl">Admin</span><div>Limit should be $250, not $500. Resubmit with the corrected threshold.</div></div>
+            </td>
+            <td>
+              <div class="sub-actions">
+                <button class="sk-btn primary" title="Reopens Cards 1–2 pre-filled — the submit button becomes Resubmit for approval.">Edit &amp; resubmit</button>
+                <button class="sk-btn del" onclick="openWithdraw('Remove')">Remove</button>
+              </div>
+              <span class="act-caption">Remove dismisses it — kept in the audit log, visible to admins in Runs.</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sub-footnote"><span class="gl">↩</span> Editing reopens the authoring panes (Cards 1–2) pre-filled — the submit button becomes <b>Resubmit for approval</b>.</p>
+  </section>
+  </div><!-- /panel-subs -->
+</div><!-- /wrap -->
+</main>
+
+<!-- ── Withdraw / Remove confirm modal (styled; shown here for design reference) ── -->
+<div class="modal-backdrop" id="withdraw-modal" style="display:none">
+  <div class="modal-card">
+    <h3>Withdraw submission?</h3>
+    <p>It stays in the audit log, visible to admins in Runs.</p>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeWithdraw()">Cancel</button>
+      <button class="btn-danger" onclick="closeWithdraw()">Withdraw</button>
+    </div>
+  </div>
+</div>
+</div><!-- /app -->
+
+<script>
+  function showTab(name){
+    document.querySelectorAll('.nav a[data-tab]').forEach(t=>{
+      var on = t.dataset.tab === name;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.getElementById('panel-author').classList.toggle('on', name === 'author');
+    document.getElementById('panel-subs').classList.toggle('on', name === 'subs');
+    var main = document.querySelector('.main');
+    if (main) main.scrollTop = 0;
+  }
+  // Withdraw/Remove use a styled confirm modal (not a native confirm); the verb
+  // and the danger button label flip between "Withdraw" (pending) and "Remove" (rejected).
+  function openWithdraw(verb){
+    var m = document.getElementById('withdraw-modal');
+    m.querySelector('h3').textContent = verb + ' submission?';
+    m.querySelector('.btn-danger').textContent = verb;
+    m.style.display = 'grid';
+  }
+  function closeWithdraw(){ document.getElementById('withdraw-modal').style.display = 'none'; }
+</script>
+
+</body>
+</html>

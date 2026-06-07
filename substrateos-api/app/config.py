@@ -111,6 +111,7 @@ class Settings(BaseSettings):
     entra_managers_group: str = "Managers"        # Entra group → role "manager"
     entra_agents_group: str = "Support Agent"     # Entra group → role "agent"
     entra_admins_group: str = "Admin"             # Entra group → admin panel access
+    entra_sme_group: str = "Finance SME"          # Entra group → /studio skill authoring
     slack_refund_channel_id: str | None = None    # SLACK_REFUND_CHANNEL_ID — customer requests land here
     directory_sync_interval_hours: float = 24.0   # daily Slack+Entra directory sync
 

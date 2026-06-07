@@ -1,9 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   adminListSkills, adminCreateSkill, adminUpdateSkill, adminDeleteSkill,
   SkillFull, SkillCreate,
 } from "@/lib/skillsApi";
+import {
+  getSkillSubmissions, decideSkillSubmission, SkillSubmission,
+} from "@/lib/adminApi";
 
 type FormState = {
   slug: string; name: string; description: string; team: string;
@@ -113,15 +116,194 @@ const TEAM_COLORS: Record<string, string> = {
 };
 function teamClass(team: string) { return TEAM_COLORS[team] ?? "t-default"; }
 
+// Derive initials from a name like "Deepa Rao" → "DR"
+function initials(name: string): string {
+  return name.split(" ").map((w) => w[0] ?? "").slice(0, 2).join("").toUpperCase() || "?";
+}
+
+// Detect step type from the first word
+function stepTagClass(step: string): string {
+  const word = step.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+  if (word === "when") return "pt-when";
+  if (word === "check") return "pt-check";
+  if (word === "stop") return "pt-stop";
+  if (word === "do") return "pt-do";
+  if (word === "record") return "pt-record";
+  return "pt-do";
+}
+
+function PendingCard({ sub, onDecide, deciding }: { sub: SkillSubmission; onDecide: (runId: string, approve: boolean, note?: string) => void; deciding: boolean }) {
+  const [rejecting, setRejecting] = useState(false);
+  const [note, setNote] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const skill = sub.skill;
+
+  const startReject = () => {
+    setRejecting(true);
+    // autoFocus via useEffect since the element renders on next tick
+  };
+
+  useEffect(() => {
+    if (rejecting && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [rejecting]);
+
+  return (
+    <div className="pending-card">
+      <div className="pending-card-body">
+        {/* header: name + slug + byline */}
+        <div className="pending-head">
+          <div className="pending-ttl">
+            <h4 className="pending-name">{sub.name}</h4>
+            <span className="pending-slug">/{sub.slug}</span>
+            <span className="pending-status-badge">
+              <span className="pending-status-dot" />
+              Pending approval
+            </span>
+          </div>
+          <div className="pending-by">
+            <div className="pending-by-text">
+              <span className="pending-by-name">{sub.submitted_by}</span>
+              <span className="pending-by-meta">
+                {skill?.team ? `${skill.team} SME` : "SME"}
+              </span>
+            </div>
+            <div className="avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
+              {initials(sub.submitted_by)}
+            </div>
+          </div>
+        </div>
+
+        {/* source text quote */}
+        {sub.source_text && (
+          <div className="pending-sec">
+            <label className="pending-sec-label">What they wrote</label>
+            <blockquote className="pending-quote">{sub.source_text}</blockquote>
+          </div>
+        )}
+
+        {/* description */}
+        {skill?.description && (
+          <div className="pending-sec">
+            <label className="pending-sec-label">Description</label>
+            <p className="pending-desc">{skill.description}</p>
+          </div>
+        )}
+
+        {/* drafted steps */}
+        {skill?.steps && skill.steps.length > 0 && (
+          <div className="pending-sec">
+            <label className="pending-sec-label">Drafted steps · When → Check → Stop → Do → Record</label>
+            <ol className="pending-steps">
+              {skill.steps.map((step, i) => {
+                const firstWord = step.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+                const isKeyword = ["when", "check", "stop", "do", "record"].includes(firstWord);
+                const tagClass = stepTagClass(step);
+                const rest = step.trim().slice(firstWord.length).trim();
+                return (
+                  <li key={i} className="pending-step">
+                    {isKeyword && (
+                      <span className={`pending-step-tag ${tagClass}`}>{firstWord}</span>
+                    )}
+                    <span>{isKeyword ? rest : step}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
+
+        {/* data feeds */}
+        {skill?.data_feeds && skill.data_feeds.length > 0 && (
+          <div className="pending-sec">
+            <label className="pending-sec-label">Data feeds</label>
+            <div className="pending-feeds">
+              {skill.data_feeds.map((feed, i) => (
+                <span key={i} className="pending-feed">
+                  <span className="pending-feed-dot" />{feed}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* collapsible system prompt */}
+        {skill?.system_prompt && (
+          <details className="pending-collapse">
+            <summary>
+              System prompt
+              <span className="pending-chev">▸</span>
+            </summary>
+            <pre className="pending-prompt">{skill.system_prompt}</pre>
+          </details>
+        )}
+
+        {/* approve / reject footer */}
+        <div className="pending-foot">
+          <button
+            className="pending-approve"
+            disabled={deciding}
+            onClick={() => onDecide(sub.run_id, true)}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12l5 5L20 6" />
+            </svg>
+            {deciding ? "Approving…" : "Approve"}
+          </button>
+          {!rejecting && (
+            <button className="pending-reject" disabled={deciding} onClick={startReject}>
+              Reject…
+            </button>
+          )}
+        </div>
+
+        {/* inline reject note box */}
+        {rejecting && (
+          <div className="pending-reject-box">
+            <label className="pending-reject-label">
+              Reason — sent back to {sub.submitted_by.split(" ")[0]}
+            </label>
+            <textarea
+              ref={textareaRef}
+              className="pending-reject-textarea"
+              rows={2}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Why? The SME sees this note."
+            />
+            <div className="pending-reject-foot">
+              <button className="pending-reject-cancel" onClick={() => { setRejecting(false); setNote(""); }}>
+                Cancel
+              </button>
+              <button className="pending-reject-send" disabled={deciding} onClick={() => onDecide(sub.run_id, false, note)}>
+                Reject &amp; notify
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSkillsPage() {
   const [skills, setSkills] = useState<SkillFull[]>([]);
+  const [pending, setPending] = useState<SkillSubmission[]>([]);
+  const [deciding, setDeciding] = useState(false);
   const [err, setErr] = useState(false);
+  const [pendingErr, setPendingErr] = useState(false);
   const [form, setForm] = useState<{ open: boolean; editing: SkillFull | null }>({ open: false, editing: null });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const load = () => adminListSkills().then(setSkills).catch(() => setErr(true));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    getSkillSubmissions()
+      .then((all) => { setPendingErr(false); setPending(all.filter((s) => s.status === "pending_approval")); })
+      .catch(() => setPendingErr(true));
+  }, []);
 
   const handleToggle = async (skill: SkillFull) => {
     setSkills((p) => p.map((s) => s.id === skill.id ? { ...s, enabled: !s.enabled } : s));
@@ -142,6 +324,17 @@ export default function AdminSkillsPage() {
       setForm({ open: false, editing: null });
     } catch (e) { alert((e as Error).message); }
     finally { setSaving(false); }
+  };
+
+  const handleDecide = async (runId: string, approve: boolean, note = "") => {
+    if (deciding) return;
+    setDeciding(true);
+    try {
+      await decideSkillSubmission(runId, approve, note);
+      setPending((p) => p.filter((s) => s.run_id !== runId));
+      if (approve) load();
+    } catch (e) { alert((e as Error).message); }
+    finally { setDeciding(false); }
   };
 
   const handleDelete = async (id: string) => {
@@ -167,6 +360,28 @@ export default function AdminSkillsPage() {
           <button className="skill-btn-primary" onClick={() => setForm({ open: true, editing: null })} style={{ flexShrink: 0, marginTop: 4 }}>+ Add skill</button>
         </header>
         {err && <div className="admin-note">Couldn&apos;t load skills. Check the admin key / API.</div>}
+
+        {/* Pending approval queue */}
+        {(pending.length > 0 || pendingErr) && (
+          <div className="pending-block">
+            <div className="pending-label">
+              <span className="pending-label-text">Pending approval</span>
+              {pending.length > 0 && <span className="pending-count">{pending.length} waiting</span>}
+            </div>
+            {pendingErr && (
+              <div className="admin-note">Couldn&apos;t load pending skill submissions — refresh to retry.</div>
+            )}
+            {pending.map((sub) => (
+              <PendingCard key={sub.run_id} sub={sub} onDecide={handleDecide} deciding={deciding} />
+            ))}
+          </div>
+        )}
+
+        {/* Live skills label (only shown alongside the table) */}
+        {skills.length > 0 && (
+          <div className="pending-live-label">Live skills</div>
+        )}
+
         {skills.length === 0 && !err ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: "var(--ink-faint)", fontSize: 14 }}>No skills yet — click &quot;Add skill&quot; to create the first one.</div>
         ) : (

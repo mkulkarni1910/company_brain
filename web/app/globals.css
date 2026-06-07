@@ -772,3 +772,70 @@
   .pr-link:hover{background:var(--teal);color:#fff}
   .pr-foot{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-soft);font-size:11.5px;color:var(--ink-faint);display:flex;align-items:center;gap:7px}
   .pr-err{margin-top:10px;font-size:12.5px;color:var(--rose);background:rgba(200,84,106,.07);border:1px solid rgba(200,84,106,.25);border-radius:8px;padding:8px 12px}
+
+  /* ── Pending-approval queue (SME skill submissions) ── */
+  .pending-block{margin-bottom:8px}
+  .pending-label{display:flex;align-items:center;gap:10px;margin:0 0 13px 2px}
+  .pending-label-text{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);font-weight:500}
+  .pending-count{font-family:var(--font-mono),monospace;font-size:9.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:99px;padding:3px 10px}
+  .pending-live-label{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);font-weight:500;margin:0 0 11px 2px}
+  /* card */
+  .pending-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px}
+  .pending-card::before{content:"";display:block;height:3px;background:linear-gradient(90deg,#ffcf7e,var(--amber))}
+  .pending-card-body{padding:22px 24px}
+  /* header row */
+  .pending-head{display:flex;align-items:flex-start;gap:13px}
+  .pending-ttl{flex:1;min-width:0}
+  .pending-name{font-family:var(--font-fraunces),serif;font-size:19px;font-weight:600;margin:0;line-height:1.25}
+  .pending-slug{font-family:var(--font-mono),monospace;font-size:11.5px;color:var(--ink-faint);display:block;margin-top:3px}
+  .pending-status-badge{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono),monospace;font-size:9.5px;letter-spacing:.6px;text-transform:uppercase;font-weight:600;color:var(--amber);background:var(--amber-bg);border:1px solid #ecd6a6;border-radius:99px;padding:4px 11px;margin-top:12px}
+  .pending-status-dot{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 1.6s infinite;flex:none}
+  /* byline */
+  .pending-by{display:flex;align-items:center;gap:9px;flex:none}
+  .pending-by-text{text-align:right}
+  .pending-by-name{font-size:12.5px;font-weight:600;display:block;line-height:1.25}
+  .pending-by-meta{font-family:var(--font-mono),monospace;font-size:10px;color:var(--ink-faint);display:block}
+  /* sections */
+  .pending-sec{margin-top:18px}
+  .pending-sec-label{font-family:var(--font-mono),monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);display:block;margin-bottom:9px}
+  /* quote */
+  .pending-quote{border-left:3px solid var(--line);background:var(--paper-2);border-radius:0 10px 10px 0;padding:12px 16px;font-size:14px;color:var(--ink-dim);line-height:1.65;font-style:italic;margin:0}
+  /* description */
+  .pending-desc{font-size:13.5px;color:var(--ink-dim);line-height:1.55;margin:0}
+  /* steps */
+  .pending-steps{display:flex;flex-direction:column;gap:8px;list-style:none;padding:0;margin:0}
+  .pending-step{display:flex;align-items:flex-start;gap:11px;font-size:13.5px;color:var(--ink);line-height:1.55}
+  .pending-step-tag{font-family:var(--font-mono),monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;width:60px;flex:none;text-align:center;padding:4px 0;border-radius:7px;border:1px solid transparent;margin-top:1px}
+  .pt-when{color:var(--violet);background:#ece9f8;border-color:#d6cef0}
+  .pt-check{color:var(--teal);background:var(--teal-bg);border-color:#bfe4dd}
+  .pt-stop{color:var(--rose);background:var(--rose-bg,#f7e1e5);border-color:#eecdd4}
+  .pt-do{color:var(--amber);background:var(--amber-bg);border-color:#ecd6a6}
+  .pt-record{color:#2a5a72;background:#dce8ee;border-color:#c4d8e2}
+  /* data feeds */
+  .pending-feeds{display:flex;gap:8px;flex-wrap:wrap}
+  .pending-feed{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono),monospace;font-size:11.5px;color:var(--ink-dim);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:5px 11px}
+  .pending-feed-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(63,143,94,.6);flex:none}
+  /* collapsible system prompt */
+  .pending-collapse{margin-top:18px;border:1px solid var(--line-soft);border-radius:11px;overflow:hidden;background:var(--surface-2)}
+  .pending-collapse summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;padding:12px 15px;font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-dim);font-weight:500}
+  .pending-collapse summary::-webkit-details-marker{display:none}
+  .pending-collapse summary:hover{color:var(--ink)}
+  .pending-chev{margin-left:auto;color:var(--ink-faint);transition:.18s;font-size:11px}
+  .pending-collapse[open] .pending-chev{transform:rotate(90deg)}
+  .pending-prompt{padding:0 16px 15px;font-family:var(--font-mono),monospace;font-size:12px;line-height:1.7;color:var(--ink-dim);white-space:pre-wrap;margin:0}
+  /* footer buttons */
+  .pending-foot{display:flex;align-items:center;gap:11px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft)}
+  .pending-approve{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:11px;padding:10px 18px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;color:#3a2606;background:linear-gradient(180deg,#ffcf7e,var(--amber));box-shadow:0 6px 14px -6px rgba(196,122,22,.6);transition:.15s}
+  .pending-approve:hover{transform:translateY(-1px)}
+  .pending-approve:disabled,.pending-reject-send:disabled{opacity:.55;cursor:not-allowed}
+  .pending-reject:disabled{opacity:.55;cursor:not-allowed}
+  .pending-reject{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(200,84,106,.45);border-radius:11px;padding:10px 16px;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;color:var(--rose);background:var(--surface-2);transition:.15s}
+  .pending-reject:hover{background:rgba(200,84,106,.06)}
+  /* reject note box */
+  .pending-reject-box{margin-top:16px;background:var(--rose-bg,#f7e1e5);border:1px solid rgba(200,84,106,.3);border-radius:12px;padding:15px 16px}
+  .pending-reject-label{font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--rose);font-weight:600;display:block;margin-bottom:8px}
+  .pending-reject-textarea{width:100%;padding:10px 12px;border:1px solid rgba(200,84,106,.35);border-radius:9px;font-family:inherit;font-size:13.5px;background:#fff;color:var(--ink);outline:none;resize:vertical;line-height:1.55;box-sizing:border-box}
+  .pending-reject-textarea:focus{border-color:var(--rose)}
+  .pending-reject-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+  .pending-reject-cancel{font-family:var(--font-mono),monospace;font-size:12px;padding:9px 15px;border-radius:9px;background:transparent;color:var(--ink-dim);border:1px solid var(--line);cursor:pointer}
+  .pending-reject-send{font-family:var(--font-mono),monospace;font-size:12px;padding:9px 16px;border-radius:9px;background:var(--rose);color:#fff;border:none;cursor:pointer}
