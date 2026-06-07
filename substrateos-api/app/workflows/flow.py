@@ -144,6 +144,8 @@ class RefundFlow:
                 })
                 if posted:
                     notified_where = "their thread"
+                    # Post→save is not atomic: if the save fails after a successful
+                    # post, a later decision could re-notify (demo-grade, accepted).
                     linked.status = "completed" if approved else "rejected"
                     await self._store.save(linked)
                     await self._store.add_event(

@@ -315,6 +315,7 @@
             <div class="substep"><b>agent</b><small>→ engine evaluates; over-limit → route to requester's Entra manager</small></div>
             <div class="substep acl"><b>no eligible manager</b><small>→ run stops (needs_attention); no fallback approver</small></div>
             <div class="substep"><b>approve/reject</b><small>only routed manager (role=manager) may act — enforced + audited</small></div>
+            <div class="substep"><b>outcome</b><small>decision fans out: agent @-mentioned, customer answered in their thread (DM fallback), hand-off card resolved — both runs audited</small></div>
           </div>
         </div>
       </div>
