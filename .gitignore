@@ -41,5 +41,6 @@ eval/reports/
 docs/decks/*
 
 # Claude Code local state
+.worktrees/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
