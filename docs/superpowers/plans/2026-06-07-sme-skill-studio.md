@@ -1686,6 +1686,126 @@ kill %1
 
 ---
 
+## Addendum (2026-06-07, after mockup review): submission edit / withdraw
+
+User-requested during the Task 1 gate; spec updated ("Submission management" section). Deltas:
+
+**Task 7 (flow)** — add to `SkillPublishFlow`:
+
+```python
+class NotEditableError(RuntimeError):
+    """The run isn't in an SME-editable state (only pending/rejected are)."""
+
+
+    async def _get_own(self, run_id: str, user: User) -> RefundRun:
+        run = await self._store.get(run_id)
+        if run is None or run.kind != "skill_publish" or run.skill_draft is None:
+            raise KeyError(run_id)
+        if run.requester_email != user.email:
+            raise PermissionError(run_id)
+        return run
+
+    async def resubmit(self, *, run_id: str, draft: SkillCreate, source_text: str,
+                       user: User) -> RefundRun:
+        run = await self._get_own(run_id, user)
+        if run.status not in ("pending_approval", "rejected"):
+            raise NotEditableError(run.status)
+        if draft.slug != run.skill_draft.slug:
+            await self._check_slug_free(draft.slug)  # unchanged slug would match itself
+        old_card = (run.dm_channel, run.dm_ts)
+        run.skill_draft = draft
+        run.request_text = source_text or run.request_text
+        run.status = "pending_approval"
+        run.rejection_note = None
+        run.dm_channel = None
+        run.dm_ts = None
+        await self._store.save(run)
+        await self._store.add_event(
+            run.id, step="Resubmitted",
+            detail=f"'{draft.name}' (/{draft.slug}) edited and resubmitted",
+            actor=user.display_name)
+        await self._invalidate_card(old_card, reason="replaced by a resubmission")
+        await self._route_to_manager(run, user)
+        return run
+
+    async def withdraw(self, *, run_id: str, user: User) -> RefundRun:
+        run = await self._get_own(run_id, user)
+        if run.status not in ("pending_approval", "rejected"):
+            raise NotEditableError(run.status)
+        run.status = "cancelled"
+        await self._store.save(run)
+        await self._store.add_event(
+            run.id, step="Withdrawn",
+            detail=f"'{run.skill_draft.name}' withdrawn by the submitter — kept in the audit log",
+            actor=user.display_name)
+        await self._invalidate_card((run.dm_channel, run.dm_ts),
+                                    reason="withdrawn by the submitter")
+        return run
+
+    async def _invalidate_card(self, card: tuple[str | None, str | None], *, reason: str) -> None:
+        token = get_settings().slack_bot_token or ""
+        channel, ts = card
+        if not (token and channel and ts):
+            return
+        await slack_call(token, "chat.update", {
+            "channel": channel, "ts": ts,
+            "text": f"No decision needed — {reason}.",
+            "blocks": [{"type": "section", "text": {"type": "mrkdwn",
+                "text": f":leftwards_arrow_with_hook: *No decision needed* — {reason}."}}],
+            "attachments": [],
+        })
+```
+
+Tests to add (same patterns as the existing flow tests): resubmit replaces draft + resets status/note and records "Resubmitted"; resubmit by another SME → PermissionError; resubmit of an approved run → NotEditableError; withdraw sets cancelled + records "Withdrawn"; decide() on a cancelled run → AlreadyDecidedError (already covered by the status guard).
+
+**Task 8 (API)** — `my_submissions` now returns `include_draft=True` (the SME needs the draft + source text to edit) and filters out `cancelled` runs; add:
+
+```python
+class ResubmitRequest(BaseModel):
+    skill: SkillCreate
+    source_text: str = ""
+
+
+@router.patch("/submissions/{run_id}")
+async def resubmit_submission(run_id: str, body: ResubmitRequest,
+                              user: User = Depends(require_sme),
+                              flow=Depends(get_skill_publish_flow)) -> SubmissionSummary:
+    if flow is None:
+        raise HTTPException(status_code=503, detail="studio unavailable")
+    try:
+        run = await flow.resubmit(run_id=run_id, draft=body.skill,
+                                  source_text=body.source_text, user=user)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="submission not found") from None
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="not your submission") from None
+    except NotEditableError as e:
+        raise HTTPException(status_code=409, detail=f"submission is {e}") from e
+    except SlugConflictError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    return _summary(run, include_draft=True)
+
+
+@router.delete("/submissions/{run_id}", status_code=204)
+async def withdraw_submission(run_id: str, user: User = Depends(require_sme),
+                              flow=Depends(get_skill_publish_flow)) -> Response:
+    if flow is None:
+        raise HTTPException(status_code=503, detail="studio unavailable")
+    try:
+        await flow.withdraw(run_id=run_id, user=user)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="submission not found") from None
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="not your submission") from None
+    except NotEditableError as e:
+        raise HTTPException(status_code=409, detail=f"submission is {e}") from e
+    return Response(status_code=204)
+```
+
+(`Response` imported from fastapi.) API tests to add: resubmit happy path (status back to pending, note cleared), 403 for another SME, 409 for approved, withdraw → 204 then gone from `my_submissions`, withdrawn run not decidable (409).
+
+**Task 10 (frontend)** — `studioApi.ts` gains `resubmitSkill(runId, skill, source_text)` (PATCH) and `withdrawSubmission(runId)` (DELETE); the My submissions table gains per-status actions (pending: Edit/Withdraw; rejected: Edit & resubmit/Remove; live: "Managed in Org Skills" hint) per mockup commit `371ab51`; Edit loads `source_text` into Card 1 and the draft into Card 2, and submit becomes "Resubmit for approval" (PATCH instead of POST).
+
 ## Definition of done
 
 Mockups approved before any React; all tasks committed on `feat/sme-skill-studio`; full backend suite + web typecheck/lint/build green; architecture/mockups synced. Merge to `main`, worktree cleanup, and deploy (via `substrateos-deploy`) happen only with the user's explicit approval, per the substrateos-feature workflow Phase 5.

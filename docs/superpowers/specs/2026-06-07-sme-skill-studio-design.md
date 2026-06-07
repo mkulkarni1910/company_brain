@@ -82,7 +82,9 @@ POST /studio/submit ─► Run(kind="skill_publish",      │
 |---|---|---|
 | `POST /studio/draft` | require_sme | `{text}` → one LLM `complete()` call with a JSON-output prompt → `SkillCreate`-shaped draft (`name, slug, description, team, run_scope, steps[], data_feeds[], system_prompt`) |
 | `POST /studio/submit` | require_sme | `{skill: SkillCreate, source_text}` → slug check (live + pending) → create run → record events → fire Slack card to manager → return run id |
-| `GET /studio/submissions` | require_sme | Only the **caller's own** `skill_publish` runs (id, name, status, rejection note, timestamps) |
+| `GET /studio/submissions` | require_sme | Only the **caller's own** `skill_publish` runs (id, name, status, rejection note, source text, draft, timestamps) |
+| `PATCH /studio/submissions/{run_id}` | require_sme | **Resubmit** (own runs only, status pending/rejected): replaces the draft + source text on the same run, status back to `pending_approval`, re-routes the Slack card. Slug re-checked. |
+| `DELETE /studio/submissions/{run_id}` | require_sme | **Withdraw/remove** (own runs only, status pending/rejected): marks the run `cancelled` — audit trail preserved, Slack card invalidated. Live (approved) submissions cannot be touched. |
 | `POST /admin/skill-submissions/{run_id}/approve` | require_admin | Re-check slug → `SkillStore.create()` → run status approved → events |
 | `POST /admin/skill-submissions/{run_id}/reject` | require_admin | `{note}` → run status rejected, note on payload → events |
 
@@ -150,9 +152,21 @@ clients, stubbed LLM, `pytest-asyncio`):
 
 Frontend: `pnpm typecheck && pnpm lint && pnpm build`.
 
+## Submission management (added 2026-06-07 after mockup review)
+
+From **My submissions** the SME can manage their own runs:
+
+- **Pending** → Edit (reopens Cards 1–2: original plain-English text returns so "Draft
+  with AI" can run again, or the form is edited directly; resubmit replaces the same
+  run) · Withdraw
+- **Rejected** → Edit & resubmit · Remove
+- **Live (approved)** → no actions; live skills are managed by admins in Org Skills
+- Withdraw/Remove set status `cancelled` (never a hard delete) — the run stays in
+  `/admin/runs`, preserving the audit story. A pending run's Slack card is updated to
+  show it was withdrawn/replaced; a resubmit sends a fresh card.
+
 ## Out of scope (deliberate, for later)
 
 - Chips-confirmation + one clarifying question (diagram Act 1 step 2)
 - Verify-by-example against real refund cases (step 3)
 - Skill versioning ("Refunds v2" / Registry + Versions)
-- SME edit-and-resubmit of a rejected draft (a rejected SME submits afresh)
