@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getRuns, getRun, RunSummary, RunDetail } from "@/lib/runsApi";
+import { getRuns, getRun, RunSummary, RunDetail, AuditEvent } from "@/lib/runsApi";
 import {
   getConversationRuns, getConversationRun, ConvRunSummary, ConvRunDetail,
 } from "@/lib/adminApi";
@@ -219,6 +219,16 @@ export default function AdminRunsPage() {
 
   return (
     <div className="admin-page">
+      {/* Governance receipt styles — actor chips, rule badge, approver identity */}
+      <style>{`
+        .chip-human{display:inline-block;font-family:var(--font-mono),monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:var(--amber-bg);color:#7a5410;border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
+        .chip-system{display:inline-block;font-family:var(--font-mono),monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:#eeebe3;color:var(--ink-faint);border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
+        .chip-agent{display:inline-block;font-family:var(--font-mono),monospace;font-size:9.5px;letter-spacing:.05em;font-weight:600;text-transform:uppercase;background:#e6edfb;color:#3a5bd0;border-radius:5px;padding:2px 7px;margin-left:7px;vertical-align:1px}
+        .rule-badge{display:inline-block;font-family:var(--font-mono),monospace;font-size:10px;letter-spacing:.03em;font-weight:500;background:var(--surface-2);color:var(--ink-dim);border:1px solid var(--line);border-radius:5px;padding:2px 8px;margin-left:7px;vertical-align:1px;white-space:nowrap}
+        .approver-id{display:block;font-size:12px;color:var(--ink-faint);margin-top:4px;line-height:1.5}
+        .approver-id .ap-name{font-weight:600;color:var(--ink-dim)}
+        .approver-id .ap-sep{margin:0 4px;color:var(--line)}
+      `}</style>
       <div className="admin-wrap">
         <header className="admin-head">
           <h1>Runs</h1>
@@ -317,9 +327,63 @@ export default function AdminRunsPage() {
                   <table className="audit-table">
                     <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>
                     <tbody>
-                      {wf.events.map((e, i) => (
-                        <tr key={i}><td className="a-time">{fmtTime(e.ts)}</td><td className="a-step">{e.step}</td><td className="a-detail">{e.detail}</td><td className="a-who">{e.actor}{e.actor === wf.run.requester_name || e.actor === wf.run.approver_name ? <span className="chip-entra">Entra</span> : null}</td></tr>
-                      ))}
+                      {(() => {
+                        // Build a mutable copy of audit events to consume in order
+                        const remaining: (AuditEvent | null)[] = (wf.audit ?? []).slice();
+                        return wf.events.map((e, i) => {
+                          // Find and consume the first unconsumed audit event matching this step
+                          let auditIdx = -1;
+                          for (let j = 0; j < remaining.length; j++) {
+                            if (remaining[j] !== null && remaining[j]!.step === e.step) {
+                              auditIdx = j;
+                              break;
+                            }
+                          }
+                          const ae: AuditEvent | null = auditIdx >= 0 ? remaining[auditIdx]! : null;
+                          if (auditIdx >= 0) remaining[auditIdx] = null;
+
+                          // Actor cell: name + type chip + entra chip
+                          const actorTypeChip = ae
+                            ? <span className={`chip-${ae.actor.type}`}>{ae.actor.type}</span>
+                            : null;
+                          const showEntraChip = ae
+                            ? ae.actor.idp === "entra"
+                            : (e.actor === wf.run.requester_name || e.actor === wf.run.approver_name);
+
+                          // Detail cell: original detail + optional rule badge
+                          const ruleBadge = ae?.rule
+                            ? <span className="rule-badge">{`${ae.rule.id} @ v${ae.rule.version} → ${ae.rule.result}`}</span>
+                            : null;
+
+                          // Approver identity line: Approved/Rejected step with a human actor
+                          const isDecisionStep = (e.step === "Approved" || e.step === "Rejected");
+                          const approverLine = (ae && isDecisionStep && ae.actor.type === "human")
+                            ? (
+                              <span className="approver-id">
+                                <span className="ap-name">{ae.actor.id}</span>
+                                {ae.actor.idp === "entra" ? <><span className="ap-sep">·</span><span className="chip-entra">Entra</span></> : null}
+                              </span>
+                            )
+                            : null;
+
+                          return (
+                            <tr key={i}>
+                              <td className="a-time">{fmtTime(e.ts)}</td>
+                              <td className="a-step">{e.step}</td>
+                              <td className="a-detail">
+                                {e.detail}
+                                {ruleBadge}
+                                {approverLine}
+                              </td>
+                              <td className="a-who">
+                                {e.actor}
+                                {actorTypeChip}
+                                {showEntraChip ? <span className="chip-entra">Entra</span> : null}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>

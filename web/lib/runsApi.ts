@@ -38,7 +38,25 @@ export type RunSummary = {
 };
 
 export type RunEvent = { ts: string; step: string; detail: string; actor: string };
-export type RunDetail = { run: RunSummary; events: RunEvent[] };
+
+export interface AuditActor {
+  type: "human" | "system" | "agent";
+  id: string;
+  idp?: string | null;
+}
+
+export interface AuditEvent {
+  ts: string;
+  step: string;
+  actor: AuditActor;
+  action?: string | null;
+  rule?: { id: string; version: number; result: string } | null;
+  decision?: string | null;
+  target?: Record<string, string> | null;
+  detail?: string | null;
+}
+
+export type RunDetail = { run: RunSummary; events: RunEvent[]; audit?: AuditEvent[] };
 
 async function easyAuthToken(): Promise<string | null> {
   return fetch("/.auth/me", { credentials: "include" })
