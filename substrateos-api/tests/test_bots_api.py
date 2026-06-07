@@ -88,9 +88,9 @@ def test_bot_status_configured(monkeypatch):
         get_settings.cache_clear()
 
 
-def test_bot_status_requires_admin_key():
+def test_bot_status_requires_auth():
     with TestClient(app) as client:
-        assert client.get("/admin/bot/status").status_code == 403
+        assert client.get("/admin/bot/status").status_code == 401
 
 
 # ── GET /admin/bot/teams/manifest ─────────────────────────────────────────────

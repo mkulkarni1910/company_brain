@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 
+from app.api._admin_guard import require_admin
 from app.api._auth_resolve import resolve_user
-from app.api.admin import require_admin_key
 from app.deps import get_skill_store, get_token_store
 from app.domain.skill import Skill, SkillCreate, SkillSummary, SkillUpdate
 from app.skills.store import SkillStorePersistenceError
 
 router = APIRouter(tags=["skills"])
-admin_router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_key)])
+admin_router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +87,7 @@ async def rate_skill(
 
 
 # ---------------------------------------------------------------------------
-# Admin endpoints (require_admin_key, prefix=/admin)
+# Admin endpoints (require_admin, prefix=/admin)
 # ---------------------------------------------------------------------------
 
 @admin_router.get("/skills")

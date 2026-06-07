@@ -18,11 +18,6 @@ export type SkillCreate = {
 
 export type SkillUpdate = Partial<Omit<SkillCreate, "slug">>;
 
-function getAdminKey(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("adminKey");
-}
-
 async function easyAuthToken(): Promise<string | null> {
   return fetch("/.auth/me", { credentials: "include" })
     .then((r) => (r.ok ? r.json() : null))
@@ -36,10 +31,10 @@ async function userHeaders(): Promise<Record<string, string>> {
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
+// Admin endpoints are gated by the Entra "Admin" group server-side; requests
+// just carry the signed-in identity (debug principal locally, Easy Auth in prod).
 async function adminHeaders(): Promise<Record<string, string>> {
   const h: Record<string, string> = { "Content-Type": "application/json" };
-  const key = getAdminKey();
-  if (key) h["x-admin-key"] = key;
   if (DEBUG_AUTH) h["x-debug-bypass-auth"] = DEBUG_AUTH;
   else { const t = await easyAuthToken(); if (t) h["Authorization"] = `Bearer ${t}`; }
   return h;

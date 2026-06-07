@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 from fastapi.responses import Response
 
-from app.api.admin import require_admin_key
+from app.api._admin_guard import require_admin
 from app.bots.github_cards import (
     cancelled_blocks,
     pr_created_blocks,
@@ -452,7 +452,7 @@ async def slack_interactive(
     return {}
 
 
-@router.get("/admin/bot/status", dependencies=[Depends(require_admin_key)])
+@router.get("/admin/bot/status", dependencies=[Depends(require_admin)])
 async def bot_status() -> dict:
     s = get_settings()
     return {
@@ -465,7 +465,7 @@ async def bot_status() -> dict:
     }
 
 
-@router.get("/admin/bot/teams/manifest", dependencies=[Depends(require_admin_key)])
+@router.get("/admin/bot/teams/manifest", dependencies=[Depends(require_admin)])
 async def teams_manifest() -> Response:
     s = get_settings()
     if not s.teams_bot_app_id:

@@ -8,11 +8,11 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.api.admin import require_admin_key
+from app.api._admin_guard import require_admin
 from app.config import get_settings
 from app.deps import get_conversation_store
 
-router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_key)])
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 logger = logging.getLogger(__name__)
 
 

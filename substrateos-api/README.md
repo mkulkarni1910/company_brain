@@ -28,6 +28,10 @@ uv run python eval/run_eval.py --mode retrieval --report eval/reports/today.json
 
 - `GET /healthz`
 - `POST /admin/ingest` — body: `SourceDoc` JSON
+
+All `/admin/*` routes require either membership of the Entra group named by
+`ENTRA_ADMINS_GROUP` ("Admin" by default — browser/interactive access) or the
+shared `x-admin-key` header (headless automation: seed scripts, eval loader).
 - `POST /query` — body: `{ "query": "...", "k": 5 }`, requires Entra Bearer (or `x-debug-bypass-auth: <tenant>,<user_id>,<group1>,<group2>` for tests)
 - `POST /admin/seed-people?users_limit=&groups_limit=` — seed People pillar from MS Graph (requires `x-admin-key`)
 - `POST /admin/retrieve` — ranked candidate doc_ids without generation (eval/debug; requires `x-debug-bypass-auth` + `ENABLE_DEBUG_AUTH=true`)

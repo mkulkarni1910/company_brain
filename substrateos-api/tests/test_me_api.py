@@ -106,6 +106,32 @@ def test_me_slack_failure_is_fail_soft(monkeypatch) -> None:
         get_settings.cache_clear()
 
 
+def test_me_reports_admin_for_admins_group_member(monkeypatch) -> None:
+    monkeypatch.delenv("SLACK_BOT_TOKEN", raising=False)
+    get_settings.cache_clear()
+    try:
+        with _client_with(FakeCache()) as client:
+            r = client.get("/me", headers={"x-debug-bypass-auth": "t-test,u-a,Admin"})
+        assert r.status_code == 200
+        assert r.json()["is_admin"] is True
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+def test_me_reports_non_admin_for_regular_user(monkeypatch) -> None:
+    monkeypatch.delenv("SLACK_BOT_TOKEN", raising=False)
+    get_settings.cache_clear()
+    try:
+        with _client_with(FakeCache()) as client:
+            r = client.get("/me", headers=_HDR)
+        assert r.status_code == 200
+        assert r.json()["is_admin"] is False
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
 def test_me_empty_slack_title_is_null(monkeypatch) -> None:
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
     get_settings.cache_clear()

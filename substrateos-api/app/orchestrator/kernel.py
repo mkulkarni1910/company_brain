@@ -11,19 +11,23 @@ from app.activity.signal import ActivitySignal
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings
 from app.domain.conversation import ConversationTurn
+from app.domain.directory import DirectoryUser
 from app.domain.identity import User
 from app.domain.query import Answer, Candidate, QueryRequest, RankedResult
 from app.domain.skill import ResolvedSkill
 from app.generation.azure_openai import AzureOpenAIClient
-from app.domain.directory import DirectoryUser
-from app.generation.prompts import build_grounded_messages, parse_citations_from_answer, requester_note_for
-from app.retrieval.order_scope import scope_order_chunks
+from app.generation.prompts import (
+    build_grounded_messages,
+    parse_citations_from_answer,
+    requester_note_for,
+)
 from app.live_fetch.base import LiveFetcher
 from app.orchestrator.planner import QueryPlanner
 from app.orchestrator.timing import StageTimer
 from app.people.proximity import PeopleProximity
 from app.ranking.personalized_ranker import PersonalizedRanker
 from app.retrieval.hybrid_retriever import HybridRetriever
+from app.retrieval.order_scope import scope_order_chunks
 
 logger = logging.getLogger(__name__)
 

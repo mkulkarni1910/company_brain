@@ -78,12 +78,12 @@ def test_webhook_notification_returns_202(monkeypatch):
     assert r.status_code == 202
 
 
-def test_maintain_requires_admin_key(monkeypatch):
+def test_maintain_requires_auth(monkeypatch):
     app = _build_app(monkeypatch)
     app.dependency_overrides[get_connection_store] = lambda: ConnectionStore(client=StateRedis())
     app.dependency_overrides[get_subscription_store] = lambda: None
     client = TestClient(app)
-    assert client.post("/admin/connections/maintain").status_code == 403
+    assert client.post("/admin/connections/maintain").status_code == 401
 
 
 def test_maintain_runs_with_no_connections(monkeypatch):

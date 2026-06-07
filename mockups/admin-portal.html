@@ -382,6 +382,44 @@
   .sk-del-modal p{font-size:14px;color:var(--ink-dim);line-height:1.55;margin:0 0 20px}
   .sk-del-btn{background:var(--rose);color:#fff;border:none;border-radius:9px;padding:9px 18px;font-family:"JetBrains Mono",monospace;font-size:12px;cursor:pointer}
   .sk-empty{padding:52px 20px;text-align:center;color:var(--ink-faint);font-size:14px}
+
+  /* ── access restricted (signed-in, but not in the Entra "Admin" group) ──
+     Replaces the old admin-key gate: there is no key prompt anymore. The whole
+     admin shell is withheld; the user sees who they're signed in as and why
+     they can't proceed. Admins never see this — the panel renders directly. */
+  .denied{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;padding:24px;
+    background:
+      radial-gradient(900px 460px at 88% -16%, rgba(196,122,22,.05), transparent 60%),
+      radial-gradient(800px 600px at -8% 116%, rgba(15,137,126,.04), transparent 55%),
+      var(--paper)}
+  .denied.show{display:flex}
+  .denied-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);
+    box-shadow:var(--shadow);max-width:430px;width:100%;padding:36px 36px 30px;text-align:center}
+  .denied-card .glyph{margin:0 auto 18px;width:42px;height:42px;border-radius:12px}
+  .denied-card h2{font-family:"Fraunces",serif;font-size:22px;font-weight:600;margin:0 0 6px}
+  .denied-card .why{font-size:13.5px;color:var(--ink-dim);line-height:1.6;margin:0 0 18px}
+  .denied-card .why b{color:var(--ink)}
+  .denied-group{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:10.5px;
+    letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:#3a5bd0;background:#e6edfb;
+    border:1px solid #c9d7f5;border-radius:99px;padding:4px 12px}
+  .denied-group svg{width:12px;height:12px;flex:none}
+  .denied-id{display:flex;align-items:center;gap:11px;text-align:left;background:var(--paper-2);
+    border:1px solid var(--line-soft);border-radius:11px;padding:11px 14px;margin:20px 0 18px}
+  .denied-id .avatar{width:32px;height:32px;font-size:12.5px}
+  .denied-id .nm{font-size:13px;font-weight:600;line-height:1.3}
+  .denied-id .nm span{display:block;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-faint);font-weight:400}
+  .denied-hint{font-size:12.5px;color:var(--ink-faint);line-height:1.55;margin:0 0 22px}
+  .denied-back{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-dim);background:var(--surface-2);
+    border:1px solid var(--line);border-radius:10px;padding:9px 18px;text-decoration:none;transition:.15s}
+  .denied-back svg{width:15px;height:15px;flex:none;transition:.15s}
+  .denied-back:hover{border-color:#cabd9f;color:var(--ink)}
+  .denied-back:hover svg{transform:translateX(-2px)}
+
+  /* mockup-only: toggle to preview the non-admin state (not shipped) */
+  .mock-toggle{position:fixed;right:16px;bottom:16px;z-index:99;font-family:"JetBrains Mono",monospace;font-size:10px;
+    letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);
+    border:1px dashed var(--line);border-radius:99px;padding:7px 13px;cursor:pointer}
+  .mock-toggle:hover{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -466,7 +504,7 @@
         <div class="feed">
           <div class="feed-row"><span class="feed-dot"></span><div><div class="feed-text">SharePoint sync completed — 12,480 items indexed.</div><div class="feed-meta">System · 2m ago</div></div></div>
           <div class="feed-row"><span class="feed-dot"></span><div><div class="feed-text">Outlook Calendar connector enabled — initial sync started.</div><div class="feed-meta">Admin · 1h ago</div></div></div>
-          <div class="feed-row"><span class="feed-dot"></span><div><div class="feed-text">Admin key used from a new IP address — 103.22.×.×.</div><div class="feed-meta">System · 3h ago</div></div></div>
+          <div class="feed-row"><span class="feed-dot"></span><div><div class="feed-text">Admin sign-in from a new IP address — Lokesh Bhoyar (Entra · Admin group) · 103.22.×.×.</div><div class="feed-meta">System · 3h ago</div></div></div>
           <div class="feed-row"><span class="feed-dot"></span><div><div class="feed-text">New connection: Outlook Mail — initial sync started.</div><div class="feed-meta">Admin · yesterday</div></div></div>
         </div>
       </div>
@@ -1028,7 +1066,7 @@
           <line x1="12" y1="8" x2="12" y2="12"/>
           <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
-        <p><strong>Fine-grained access control is coming.</strong> For now, the admin key gates all admin actions and Easy Auth controls who can reach the app. Source-level ACLs from SharePoint and Microsoft 365 are already being respected at query time — user-facing permission management will build on top of that.</p>
+        <p><strong>Fine-grained access control is coming.</strong> For now, the Entra ID <strong>Admin</strong> group gates all admin actions and Easy Auth controls who can reach the app. Source-level ACLs from SharePoint and Microsoft 365 are already being respected at query time — user-facing permission management will build on top of that.</p>
       </div>
 
     </div>
@@ -1244,6 +1282,36 @@
 
   </main>
 </div>
+
+<!-- ── Access restricted ──
+     Shown instead of the admin shell when the signed-in Entra user is NOT a
+     member of the "Admin" group (config: ENTRA_ADMINS_GROUP). Replaces the old
+     admin-key gate — there is no key prompt anywhere anymore. Identity comes
+     from /me (Entra via Easy Auth); is_admin:false → this screen. -->
+<div class="denied" id="gate-denied">
+  <div class="denied-card">
+    <div class="glyph"></div>
+    <h2>Access restricted</h2>
+    <p class="why">The admin panel is limited to members of the
+      <b>Admin</b> group in Microsoft&nbsp;Entra&nbsp;ID.</p>
+    <span class="denied-group">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4 3 6.7 7 8 4-1.3 7-4 7-8V6l-7-3Z"/></svg>
+      Entra ID · Admin group
+    </span>
+    <div class="denied-id">
+      <div class="avatar">DP</div>
+      <div class="nm">Diana Prince<span>diana@redfortaipilot.onmicrosoft.com</span></div>
+    </div>
+    <p class="denied-hint">You're signed in, but your account isn't in the group.
+      Ask your administrator to add you, then reload this page.</p>
+    <a class="denied-back" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      Back to chat
+    </a>
+  </div>
+</div>
+<!-- mockup-only control to flip between admin / non-admin states -->
+<button class="mock-toggle" onclick="document.getElementById('gate-denied').classList.toggle('show')">preview: non-admin view</button>
 
 <!-- Add/Edit Skill modal -->
 <div class="sk-modal-bg" id="sk-modal-bg">

@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import re
-from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,6 @@ class SkillRouter:
 
     async def resolve_skill(self, query: str):
         """Returns ResolvedSkill | None."""
-        from app.domain.skill import ResolvedSkill
         m = _SLUG_RE.match(query.lstrip())
         if m:
             return await self._resolve_explicit(query, slug=m.group(1))
