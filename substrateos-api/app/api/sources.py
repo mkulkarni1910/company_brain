@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Header
 
 from app.api._auth_resolve import resolve_user
 from app.config import get_settings
-from app.deps import get_connection_store, get_token_store
 from app.connectors.store import ConnectionStore
+from app.deps import get_connection_store, get_token_store
 
 router = APIRouter(tags=["sources"])
 

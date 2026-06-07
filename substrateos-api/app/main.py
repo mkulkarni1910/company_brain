@@ -14,24 +14,24 @@ from app.activity.store import ActivityStore
 from app.api.admin import callback_router as admin_callback_router
 from app.api.admin import router as admin_router
 from app.api.admin_directory import router as admin_directory_router
+from app.api.admin_runs import router as admin_runs_router
+from app.api.bots import router as bots_router
 from app.api.context import router as context_router
 from app.api.conversations import router as conversations_router
 from app.api.discover import router as discover_router
 from app.api.feedback import router as feedback_router
+from app.api.github import router as github_router
 from app.api.history import router as history_router
 from app.api.me import router as me_router
 from app.api.query import router as query_router
 from app.api.retrieve import router as retrieve_router
-from app.api.bots import router as bots_router
+from app.api.runs import router as runs_router
 from app.api.search import router as search_router
+from app.api.skills import admin_router as skills_admin_router
+from app.api.skills import router as skills_router
 from app.api.sources import router as sources_router
 from app.api.surfaces import router as surfaces_router
 from app.api.tokens import router as tokens_router
-from app.api.admin_runs import router as admin_runs_router
-from app.api.github import router as github_router
-from app.api.runs import router as runs_router
-from app.api.skills import admin_router as skills_admin_router
-from app.api.skills import router as skills_router
 from app.cache.redis_cache import RedisCache
 from app.config import get_settings, load_secrets_from_keyvault
 from app.connectors.cosmos_store import CosmosConnectionStore
@@ -40,6 +40,9 @@ from app.connectors.sharepoint import SharePointConnector
 from app.connectors.store import ConnectionStore
 from app.connectors.subscriptions import CosmosSubscriptionStore, SubscriptionStore
 from app.conversations.store import ConversationStore
+from app.directory.service import DirectoryService
+from app.directory.store import DirectoryStore
+from app.directory.sync import DirectorySync
 from app.discover.service import DiscoverService
 from app.generation.acknowledger import Acknowledger
 from app.generation.azure_openai import AzureOpenAIClient
@@ -48,8 +51,6 @@ from app.history.store import HistoryStore
 from app.live_fetch.graph_search import MSGraphSearchFetcher
 from app.mcp.server import build_mcp_asgi, mcp_bind, run_session_manager
 from app.metrics.store import MetricsStore
-from app.skills.store import SkillStore
-from app.skills.service import SkillRouter as SkillRouterSvc
 from app.orchestrator.kernel import SemanticKernelOrchestrator
 from app.orchestrator.planner import QueryPlanner
 from app.people.graph_client import PeopleGraphClient
@@ -57,12 +58,11 @@ from app.people.proximity import PeopleProximity
 from app.ranking.personalized_ranker import PersonalizedRanker
 from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
-from app.search.service import SearchService
-from app.tokens.store import CosmosTokenStore, NullTokenStore
-from app.directory.service import DirectoryService
-from app.directory.store import DirectoryStore
-from app.directory.sync import DirectorySync
 from app.scheduler import start_periodic
+from app.search.service import SearchService
+from app.skills.service import SkillRouter as SkillRouterSvc
+from app.skills.store import SkillStore
+from app.tokens.store import CosmosTokenStore, NullTokenStore
 from app.workflows.approval import ApprovalFlow
 from app.workflows.engine import RefundEngine
 from app.workflows.flow import RefundFlow

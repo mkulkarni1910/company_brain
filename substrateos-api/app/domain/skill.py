@@ -44,7 +44,7 @@ class SkillSummary(BaseModel):
     run_count: int
 
     @classmethod
-    def from_skill(cls, s: Skill) -> "SkillSummary":
+    def from_skill(cls, s: Skill) -> SkillSummary:
         return cls(
             id=s.id, slug=s.slug, name=s.name, description=s.description,
             team=s.team, run_scope=s.run_scope, enabled=s.enabled,
