@@ -61,7 +61,8 @@ async def test_routes_to_resolved_manager(monkeypatch):
     get_settings.cache_clear()
     flow, store = _flow()
     calls, fake = _slack_recorder()
-    with patch("app.workflows.approval.slack_call", new=fake):
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
         await flow.handle_request(text="send this discount exception to my manager",
                                   channel="C_DEALS", thread_ts="9.9",
                                   requester_slack_id="U_TOM", user=_user())
@@ -90,7 +91,8 @@ async def test_no_manager_means_no_fallback(monkeypatch):
     store = RunStore(client=None, force_memory=True)
     flow = ApprovalFlow(store=store, people=_People(None))  # no manager
     calls, fake = _slack_recorder()
-    with patch("app.workflows.approval.slack_call", new=fake):
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
         await flow.handle_request(text="get this signed off", channel="C", thread_ts=None,
                                   requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
@@ -107,7 +109,8 @@ async def test_no_approver_asks_requester(monkeypatch):
     store = RunStore(client=None, force_memory=True)
     flow = ApprovalFlow(store=store, people=_People(None))
     calls, fake = _slack_recorder()
-    with patch("app.workflows.approval.slack_call", new=fake):
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
         await flow.handle_request(text="please approve", channel="C", thread_ts=None,
                                   requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
@@ -136,7 +139,8 @@ async def test_approve_updates_run_and_notifies(monkeypatch):
     payload = {"type": "block_actions", "user": {"id": "U_DIANA", "name": "diana"},
                "actions": [{"action_id": "approval_approve", "value": run.id}],
                "container": {"channel_id": "D_DIANA", "message_ts": "111.222"}}
-    with patch("app.workflows.approval.slack_call", new=fake):
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
         await flow.handle_action(payload)
     updated = await store.get(run.id)
     assert updated.status == "approved"

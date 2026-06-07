@@ -5,6 +5,10 @@ GET; a miss does users.lookupByEmail + two Graph calls and writes the result
 through, so the next request is warm. Unknown to Entra ⇒ role 'customer'
 (the spec's "rest are customers" rule); unknown to Slack ⇒ None (the flow
 stops — we can't route to someone we can't reach).
+
+Accepted trade-off: concurrent cold misses for the same email each do the live
+lookup before the first write-through lands (idempotent upserts, no corruption);
+the daily sync keeps the store warm, so the herd window is the first ~10s.
 """
 
 from __future__ import annotations
@@ -13,7 +17,7 @@ import logging
 from datetime import UTC, datetime
 from urllib.parse import quote
 
-from app.bots.slack import slack_call
+from app.bots.slack import slack_get
 from app.config import get_settings
 from app.connectors.graph import GRAPH, graph_get_json, graph_token
 from app.directory.store import DirectoryStore
@@ -39,8 +43,8 @@ class DirectoryService:
         if hit:
             return hit
         s = get_settings()
-        body = await slack_call(s.slack_bot_token or "",
-                                "users.lookupByEmail", {"email": email})
+        body = await slack_get(s.slack_bot_token or "",
+                               "users.lookupByEmail", {"email": email})
         slack_user = (body or {}).get("user") or {}
         if not slack_user.get("id"):
             return None

@@ -64,7 +64,7 @@ class RefundRun(BaseModel):
     approver_slack_id: str | None = None  # the routed approver — click enforcement key
     # generic approval playbook
     request_text: str | None = None
-    approver_source: str | None = None  # "manager" | "fallback" | "mention"
+    approver_source: str | None = None  # "manager" | "mention"
     # github_pr playbook
     surface: str | None = None          # "web" | "slack" | "teams"
     requester_email: str | None = None  # identity key for the per-user GitHub token

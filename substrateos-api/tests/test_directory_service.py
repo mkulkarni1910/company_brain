@@ -49,7 +49,7 @@ async def test_store_hit_skips_live_lookup(monkeypatch):
     await store.upsert(DirectoryUser(email="tom@x", slack_id="U_TOM", role="agent"))
     svc = DirectoryService(store=store, token_fn=_token,
                            get_fn=_graph_fake(found=False, group_names=[]))
-    with patch("app.directory.service.slack_call") as nope:
+    with patch("app.directory.service.slack_get") as nope:
         got = await svc.resolve("TOM@X")
     assert got.role == "agent"
     nope.assert_not_called()
@@ -64,12 +64,12 @@ async def test_miss_resolves_live_and_writes_through(monkeypatch):
     svc = DirectoryService(store=store, token_fn=_token,
                            get_fn=_graph_fake(found=True, group_names=["Managers"],
                                               manager_mail="Boss@X"))
-    with patch("app.directory.service.slack_call", new=_slack_fake({"live@x": "U_LIVE"})):
+    with patch("app.directory.service.slack_get", new=_slack_fake({"live@x": "U_LIVE"})):
         got = await svc.resolve("live@x")
     assert got.slack_id == "U_LIVE" and got.role == "manager"
     assert got.manager_email == "boss@x"
     # write-through: second call hits the store
-    with patch("app.directory.service.slack_call") as nope:
+    with patch("app.directory.service.slack_get") as nope:
         again = await svc.resolve("live@x")
     assert again.role == "manager"
     nope.assert_not_called()
@@ -83,7 +83,7 @@ async def test_slack_unknown_email_returns_none(monkeypatch):
     store = DirectoryStore(client=None, force_memory=True)
     svc = DirectoryService(store=store, token_fn=_token,
                            get_fn=_graph_fake(found=False, group_names=[]))
-    with patch("app.directory.service.slack_call", new=_slack_fake({})):
+    with patch("app.directory.service.slack_get", new=_slack_fake({})):
         assert (await svc.resolve("ghost@x")) is None
     # contract: a Slack-unknown email must NOT be written through to the store
     assert (await store.get_by_email("ghost@x")) is None
@@ -98,7 +98,7 @@ async def test_entra_unknown_is_customer(monkeypatch):
     store = DirectoryStore(client=None, force_memory=True)
     svc = DirectoryService(store=store, token_fn=_token,
                            get_fn=_graph_fake(found=False, group_names=[]))
-    with patch("app.directory.service.slack_call", new=_slack_fake({"ext@x": "U_EXT"})):
+    with patch("app.directory.service.slack_get", new=_slack_fake({"ext@x": "U_EXT"})):
         got = await svc.resolve("ext@x")
     assert got.role == "customer" and got.entra_id is None
 
@@ -114,7 +114,7 @@ async def test_graph_error_degrades_to_customer(monkeypatch):
         raise RuntimeError("graph down")
 
     svc = DirectoryService(store=store, token_fn=_token, get_fn=boom)
-    with patch("app.directory.service.slack_call", new=_slack_fake({"x@x": "U_X"})):
+    with patch("app.directory.service.slack_get", new=_slack_fake({"x@x": "U_X"})):
         got = await svc.resolve("x@x")
     assert got is not None and got.role == "customer"
 

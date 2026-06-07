@@ -17,7 +17,7 @@ from app.bots.approval_cards import (
     needs_approval_blocks,
     outcome_blocks,
 )
-from app.bots.slack import slack_call
+from app.bots.slack import slack_call, slack_get
 from app.config import get_settings
 from app.domain.identity import User
 from app.people.graph_client import PeopleGraphClient
@@ -54,7 +54,8 @@ class ApprovalFlow:
     async def _slack_id_for_email(self, token: str, email: str | None) -> str | None:
         if not email:
             return None
-        body = await slack_call(token, "users.lookupByEmail", {"email": email})
+        # GET — Slack rejects JSON POST bodies for users.lookupByEmail.
+        body = await slack_get(token, "users.lookupByEmail", {"email": email})
         return ((body or {}).get("user") or {}).get("id")
 
     async def _post(self, token: str, channel: str, thread_ts: str | None,

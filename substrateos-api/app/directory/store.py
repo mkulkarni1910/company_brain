@@ -52,6 +52,9 @@ class DirectoryStore:
                 await self._r.aclose()
 
     async def upsert(self, user: DirectoryUser) -> None:
+        # A changed slack_id leaves the old reverse-index key behind (no TTL) —
+        # tolerated: it still maps to the right email, and get_by_email is the
+        # source of truth refreshed by the daily sync.
         email = user.email.lower()
         blob = user.model_dump_json()
         self._mem_users[email] = blob

@@ -286,6 +286,8 @@ class RefundFlow:
         # Only the routed approver — who must be a manager in the directory —
         # may act. Anyone else is refused and the attempt is audited. A run with
         # no recorded approver (pre-directory legacy) is hard-denied, not open.
+        # Accepted trade-off: every denied click appends an audit event (no cap) —
+        # the trail of attempts is the governance story, noise is tolerable.
         actor_record = await self._directory.get_by_slack_id(approver_id)
         is_routed = (run.approver_slack_id is not None
                      and approver_id == run.approver_slack_id)
