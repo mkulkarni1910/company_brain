@@ -132,3 +132,15 @@ def get_directory_service(request: Request):
 
 def get_directory_sync(request: Request):
     return getattr(request.app.state, "directory_sync", None)
+
+
+def get_audit_log(request: Request):
+    return getattr(request.app.state, "audit_log", None)
+
+
+def get_approval_service(request: Request):
+    return getattr(request.app.state, "approval_service", None)
+
+
+def get_policy_engine(request: Request):
+    return getattr(request.app.state, "policy_engine", None)
