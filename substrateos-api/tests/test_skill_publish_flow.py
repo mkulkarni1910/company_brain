@@ -220,3 +220,92 @@ async def test_withdraw_cancels_and_keeps_audit() -> None:
     assert any(e.step == "Withdrawn" for e in await store.list_events(run.id))
     with pytest.raises(AlreadyDecidedError):  # cancelled runs can't be decided
         await flow.decide(run_id=run.id, approve=True, actor_name="Diana")
+
+
+@pytest.mark.asyncio
+async def test_losing_click_repaints_card_with_actual_outcome(monkeypatch) -> None:
+    """The AlreadyDecided repaint must reflect the REAL status, not the stale local."""
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    updates: list[dict] = []
+
+    async def fake_slack_call(token, method, payload):
+        if method == "chat.update":
+            updates.append(payload)
+        return {"ok": True}
+
+    monkeypatch.setattr("app.workflows.skill_publish.slack_call", fake_slack_call)
+    flow, store, _ = _flow()
+    run = await flow.submit(draft=_draft(), source_text="x", user=_user())
+    run.dm_channel, run.dm_ts = "D1", "1.0"  # pretend a card was posted
+    run.approver_slack_id = "U_DIANA"
+    await store.save(run)
+    await flow.decide(run_id=run.id, approve=True, actor_name="Diana")
+    # losing click arrives after the decision
+    await flow.handle_action({"user": {"id": "U_DIANA", "name": "diana"},
+                              "actions": [{"action_id": "skillpub_reject", "value": run.id}]})
+    assert updates, "card should have been repainted"
+    assert "Skill approved" in str(updates[-1]) or "approved" in updates[-1].get("text", "")
+
+
+@pytest.mark.asyncio
+async def test_resubmit_invalidates_old_card_and_reroutes(monkeypatch) -> None:
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    calls: list[tuple[str, dict]] = []
+
+    async def fake_slack_get(token, method, params):
+        calls.append((method, params))
+        return {"ok": True, "user": {"id": "U_DIANA"}}
+
+    async def fake_slack_call(token, method, payload):
+        calls.append((method, payload))
+        if method == "conversations.open":
+            return {"ok": True, "channel": {"id": "D_DIANA"}}
+        if method == "chat.postMessage":
+            return {"ok": True, "ts": "171.002"}
+        return {"ok": True}
+
+    monkeypatch.setattr("app.workflows.skill_publish.slack_get", fake_slack_get)
+    monkeypatch.setattr("app.workflows.skill_publish.slack_call", fake_slack_call)
+
+    class _People:
+        async def manager_of(self, *, email, tenant_id):
+            return {"user_id": "u-diana", "email": "diana@example.com",
+                    "display_name": "Diana Prince"}
+
+    store = RunStore(force_memory=True)
+    flow = SkillPublishFlow(store=store, skill_store=_FakeSkillStore(), people=_People())
+    run = await flow.submit(draft=_draft(), source_text="x", user=_user())
+    old_ts = run.dm_ts
+    calls.clear()
+    out = await flow.resubmit(run_id=run.id, draft=_draft(name="v2"),
+                              source_text="y", user=_user())
+    # old card invalidated…
+    invalidations = [p for m, p in calls if m == "chat.update"]
+    assert invalidations and invalidations[0]["ts"] == old_ts
+    assert "No decision needed" in str(invalidations[0])
+    # …and a fresh card posted
+    assert any(m == "chat.postMessage" for m, _ in calls)
+    assert out.dm_ts == "171.002"
+
+
+@pytest.mark.asyncio
+async def test_withdraw_of_cancelled_run_not_editable() -> None:
+    flow, _, _ = _flow()
+    run = await flow.submit(draft=_draft(), source_text="x", user=_user())
+    await flow.withdraw(run_id=run.id, user=_user())
+    with pytest.raises(NotEditableError):
+        await flow.withdraw(run_id=run.id, user=_user())
+
+
+@pytest.mark.asyncio
+async def test_approve_after_slug_landed_in_catalog_raises_valueerror() -> None:
+    flow, _, skills = _flow()
+    run = await flow.submit(draft=_draft(), source_text="x", user=_user())
+    # the slug lands in the catalog while the submission is pending
+    await skills.create(_draft())
+    with pytest.raises(ValueError):
+        await flow.decide(run_id=run.id, approve=True, actor_name="Diana")

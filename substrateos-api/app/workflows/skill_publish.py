@@ -47,6 +47,8 @@ class SkillPublishFlow:
     async def _check_slug_free(self, slug: str) -> None:
         if self._skills is not None and await self._skills.get_by_slug(slug) is not None:
             raise SlugConflictError(f"slug '{slug}' already exists in the catalog")
+        # Window: only the latest 100 runs are scanned — a pending draft older
+        # than that escapes the duplicate check (catalog check above still holds).
         for r in await self._store.list_runs(limit=100):
             if (r.kind == "skill_publish" and r.status == "pending_approval"
                     and r.skill_draft is not None and r.skill_draft.slug == slug):
@@ -127,6 +129,9 @@ class SkillPublishFlow:
     async def resubmit(self, *, run_id: str, draft: SkillCreate, source_text: str,
                        user: User) -> RefundRun:
         run = await self._get_own(run_id, user)
+        # Resubmitting a *pending* run swaps the draft under the same run_id; a
+        # manager racing the swap from the old card approves the new content.
+        # Demo-grade window — the old card is invalidated below to shrink it.
         if run.status not in ("pending_approval", "rejected"):
             raise NotEditableError(run.status)
         if draft.slug != run.skill_draft.slug:
@@ -184,6 +189,9 @@ class SkillPublishFlow:
         if run.status != "pending_approval":
             raise AlreadyDecidedError(run.status)
         if approve:
+            # Deliberate ordering: skill goes live, then the run is saved. A crash
+            # between the two leaves a live skill with a pending run; the retry
+            # surfaces as ValueError below rather than silent duplication.
             # ValueError (slug landed while pending) propagates → API maps to 409.
             await self._skills.create(run.skill_draft)
             run.status = "approved"
@@ -229,6 +237,8 @@ class SkillPublishFlow:
             logger.warning("skillpub action for unknown/mismatched run %r", run_id)
             return
         clicker = (payload.get("user") or {}).get("id")
+        # approver_slack_id None ⇒ no card was ever posted (approver unresolved),
+        # so there is no button for an arbitrary clicker to reach.
         if run.approver_slack_id and clicker != run.approver_slack_id:
             logger.warning("skillpub click by %r ignored — routed approver is %r",
                            clicker, run.approver_slack_id)
@@ -242,7 +252,10 @@ class SkillPublishFlow:
             await self.decide(run_id=run_id, approve=(action_id == "skillpub_approve"),
                               actor_name=actor)
         except AlreadyDecidedError:
-            await self._update_dm_card(run, approved=(run.status in ("approved", "completed")))
+            fresh = await self._store.get(run_id)
+            if fresh is not None:
+                await self._update_dm_card(
+                    fresh, approved=fresh.status in ("approved", "completed"))
         except ValueError as e:  # slug conflict at approval time
             if run.dm_channel:
                 await slack_call(token, "chat.postMessage", {
