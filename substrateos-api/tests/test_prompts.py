@@ -112,3 +112,36 @@ def test_multi_turn_history_ordering() -> None:
     assert [m["role"] for m in msgs] == ["system", "user", "assistant", "user", "assistant", "user"]
     assert msgs[1]["content"] == "a"
     assert msgs[3]["content"] == "b"
+
+
+def test_requester_note_for_customer_and_staff() -> None:
+    from app.domain.directory import DirectoryUser
+    from app.generation.prompts import requester_note_for
+
+    priya = DirectoryUser(email="priya@x", display_name="Priya Sharma", role="customer")
+    note = requester_note_for(priya)
+    assert "Priya Sharma" in note and "priya@x" in note and "customer" in note
+    assert "only discuss their own orders" in note
+
+    tom = DirectoryUser(email="tom@x", display_name="Tom Reyes", role="agent")
+    note = requester_note_for(tom)
+    assert "Tom Reyes" in note and "agent" in note
+    assert "any customer" in note
+    assert "only discuss" not in note
+
+
+def test_requester_note_injected_into_system_message() -> None:
+    msgs = build_grounded_messages(
+        query="q", candidates=[], skill_prompt="SKILL RULES",
+        requester_note="Requester: Priya (priya@x), role: customer.",
+    )
+    system = msgs[0]["content"]
+    assert "SKILL RULES" in system
+    assert "Requester: Priya (priya@x)" in system
+    # note comes after the skill prompt
+    assert system.index("SKILL RULES") < system.index("Requester: Priya")
+
+
+def test_no_requester_note_leaves_system_unchanged() -> None:
+    msgs = build_grounded_messages(query="q", candidates=[])
+    assert "Requester:" not in msgs[0]["content"]

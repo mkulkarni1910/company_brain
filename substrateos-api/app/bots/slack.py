@@ -66,11 +66,42 @@ async def post_slack_reply(
         return "request_failed"
 
 
-async def slack_call(token: str, method: str, payload: dict) -> dict | None:
-    """POST a Slack Web API method; return the body when ok=true, else None.
+async def slack_get(token: str, method: str, params: dict) -> dict | None:
+    """GET a Slack Web API method (for methods like users.lookupByEmail that
+    don't accept JSON bodies); return the body when ok=true, else None."""
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://slack.com/api/{method}",
+                headers={"Authorization": f"Bearer {token}"},
+                params=params,
+                timeout=10.0,
+            )
+        body = resp.json()
+        if not body.get("ok"):
+            logger.warning("Slack %s failed: %s", method, body.get("error", "unknown_error"))
+            return None
+        return body
+    except Exception:  # noqa: BLE001
+        logger.exception("Slack %s request failed", method)
+        return None
 
-    Slack returns HTTP 200 even for API errors — `ok` in the body is the truth.
+
+# Read-style methods that reject JSON POST bodies: Slack silently ignores the
+# body and then errors on the "missing" argument (users.info → user_not_found).
+# slack_call delegates these to slack_get so no call site can hit that trap.
+_GET_METHODS = frozenset({"users.info", "users.lookupByEmail", "users.list"})
+
+
+async def slack_call(token: str, method: str, payload: dict) -> dict | None:
+    """Call a Slack Web API method; return the body when ok=true, else None.
+
+    POSTs JSON for write-style methods; read-style methods in _GET_METHODS are
+    routed through slack_get (Slack rejects JSON bodies for those). Slack
+    returns HTTP 200 even for API errors — `ok` in the body is the truth.
     """
+    if method in _GET_METHODS:
+        return await slack_get(token, method, payload)
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
@@ -87,3 +118,23 @@ async def slack_call(token: str, method: str, payload: dict) -> dict | None:
     except Exception:  # noqa: BLE001
         logger.exception("Slack %s request failed", method)
         return None
+
+
+async def slack_users_list(token: str) -> list[dict] | None:
+    """Fetch every workspace member via paginated users.list (through slack_get —
+    users.list rejects JSON POST bodies). Returns None on ANY failure so the
+    directory sync keeps its previous data instead of merging a partial page.
+    """
+    members: list[dict] = []
+    cursor = ""
+    while True:
+        params: dict = {"limit": 200}
+        if cursor:
+            params["cursor"] = cursor
+        body = await slack_get(token, "users.list", params)
+        if body is None:
+            return None
+        members.extend(body.get("members") or [])
+        cursor = ((body.get("response_metadata") or {}).get("next_cursor") or "")
+        if not cursor:
+            return members

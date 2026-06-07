@@ -3,6 +3,7 @@ const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH ?? "t-eval,u-demo,t-eval:e
 
 export type RefundDecision = {
   found: boolean; order_id: string | null; customer: string | null;
+  customer_email?: string | null;
   amount_usd: number | null; order_age_days: number | null;
   policy_limit_usd: number | null; policy_limit_days: number | null;
   auto_approve: boolean; reasoning: string;
@@ -21,10 +22,12 @@ export type PrDraft = {
 export type RunSummary = {
   id: string;
   kind?: "refund" | "approval" | "github_pr";
-  status: "running" | "pending_approval" | "approved" | "rejected" | "completed" | "error" | "pending_confirm" | "cancelled";
+  status: "running" | "pending_approval" | "approved" | "rejected" | "completed" | "error" | "pending_confirm" | "cancelled" | "needs_attention" | "routed_to_support";
   requester_name: string;
   approver_name: string | null;
   decision: RefundDecision | null;
+  handoff_channel?: string | null;
+  handoff_ts?: string | null;
   request_text?: string | null;
   approver_source?: string | null;
   surface?: string | null;

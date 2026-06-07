@@ -6,11 +6,12 @@ import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 from app.activity.store import ActivityStore
+from app.api._admin_guard import require_admin
 from app.config import get_settings
 from app.connectors.factory import connector_for
 from app.connectors.models import Connection, GithubConfig, SurfaceConfig
@@ -49,18 +50,7 @@ _DISPLAY = {
 _OUTLOOK = {"outlook_mail", "outlook_calendar"}
 
 
-def require_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
-    """Phase 1 admin auth: shared API key via x-admin-key header.
-
-    Rejects with 403 when ADMIN_API_KEY is unset (closed by default) or when
-    the supplied header does not match.
-    """
-    expected = get_settings().admin_api_key
-    if not expected or x_admin_key != expected:
-        raise HTTPException(status_code=403, detail="admin key required")
-
-
-router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin_key)])
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 # Callback is a browser redirect from Microsoft (can't carry x-admin-key) — it's
 # authorized by the one-shot CSRF `state` instead, so it lives on a key-free router.
 callback_router = APIRouter(prefix="/admin", tags=["admin"])

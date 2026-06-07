@@ -26,6 +26,8 @@ const WF_STATUS: Record<string, { cls: string; label: string }> = {
   rejected: { cls: "rejected", label: "Rejected" },
   cancelled: { cls: "error", label: "Cancelled" },
   error: { cls: "error", label: "Error" },
+  needs_attention: { cls: "error", label: "Needs attention" },
+  routed_to_support: { cls: "stopped", label: "Routed to support" },
 };
 function wfStatus(r: RunSummary) {
   if (r.status === "approved" && r.decision?.auto_approve) return { cls: "auto", label: "Auto-approved" };

@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getAdminKey, setAdminKey, getConnections } from "@/lib/adminApi";
+import { getMe, initials, Me } from "@/lib/api";
 
 const NAV = [
   {
@@ -78,55 +78,53 @@ const NAV = [
   },
 ];
 
-function Gate({ onUnlock, error }: { onUnlock: () => void; error?: boolean }) {
-  const [val, setVal] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [localErr, setLocalErr] = useState(false);
-
-  // Validate the key against the API BEFORE unlocking, so the content never
-  // flashes for a wrong key. getConnections() throws (and clears the key) on 403.
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!val || busy) return;
-    setBusy(true); setLocalErr(false);
-    setAdminKey(val);
-    try {
-      await getConnections();
-      onUnlock();
-    } catch {
-      setLocalErr(true);
-    } finally {
-      setBusy(false);
-    }
-  };
-
+// Signed in, but not in the Entra "Admin" group: the whole admin shell is
+// withheld. Shows who they're signed in as, so it reads as a membership
+// problem, not a broken login.
+function AccessRestricted({ me }: { me: Me | null }) {
   return (
-    <div className="admin-gate">
-      <form className="admin-gate-card" onSubmit={submit}>
+    <div className="denied">
+      <div className="denied-card">
         <div className="glyph" />
-        <h2>Admin access</h2>
-        <p>Enter the admin key to manage data sources.</p>
-        {(error || localErr) && <p className="gate-err">That key was rejected. Check the admin key and try again.</p>}
-        <input type="password" value={val} onChange={(e) => setVal(e.target.value)} placeholder="Admin key" autoFocus disabled={busy} />
-        <button type="submit" disabled={busy}>{busy ? "Checking…" : "Unlock"}</button>
-      </form>
+        <h2>Access restricted</h2>
+        <p className="why">The admin panel is limited to members of the{" "}
+          <b>Admin</b> group in Microsoft&nbsp;Entra&nbsp;ID.</p>
+        <span className="denied-group">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 5 6v5c0 4 3 6.7 7 8 4-1.3 7-4 7-8V6l-7-3Z"/></svg>
+          Entra ID · Admin group
+        </span>
+        {me && (
+          <div className="denied-id">
+            <div className="avatar">{initials(me.display_name)}</div>
+            <div className="nm">{me.display_name}<span>{me.email}</span></div>
+          </div>
+        )}
+        <p className="denied-hint">You&apos;re signed in, but your account isn&apos;t in the group.
+          Ask your administrator to add you, then reload this page.</p>
+        <Link className="denied-back" href="/">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          Back to chat
+        </Link>
+      </div>
     </div>
   );
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname();
-  const [checked, setChecked] = useState(false); // true once we've read sessionStorage (avoids gate flash)
-  const [unlocked, setUnlocked] = useState(false);
-  const [authErr, setAuthErr] = useState(false);
+  const [loaded, setLoaded] = useState(false); // true once /me resolved (avoids a denied-screen flash)
+  const [denied, setDenied] = useState(false); // a backend 403 overrides whatever /me said
+  // Signed-in identity (Entra name + optional Slack title); null until /me resolves.
+  const [me, setMe] = useState<Me | null>(null);
   useEffect(() => {
-    setUnlocked(!!getAdminKey());
-    setChecked(true);
-    // A 403 from any /admin call clears the key and fires this — bounce back to the gate.
-    const onAuthErr = () => { setUnlocked(false); setAuthErr(true); };
+    getMe().then((m) => { setMe(m); setLoaded(true); });
+    // Any /admin call answered 403 fires this — the backend is authoritative.
+    const onAuthErr = () => setDenied(true);
     window.addEventListener("admin-auth-error", onAuthErr);
     return () => window.removeEventListener("admin-auth-error", onAuthErr);
   }, []);
+  if (!loaded) return null;
+  if (denied || !me?.is_admin) return <AccessRestricted me={me} />;
   return (
     <div className="app app--norail admin">
       <aside className="rail">
@@ -151,10 +149,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </nav>
           </div>
         ))}
-        <div className="foot"><div className="avatar">A</div>
-          <div className="who">Admin<span>t-eval</span></div></div>
+        <div className="foot">
+          <div className="avatar">{me ? initials(me.display_name) : ""}</div>
+          {me && <div className="who">{me.display_name}{me.title && <span>{me.title}</span>}</div>}
+        </div>
       </aside>
-      <main className="main">{!checked ? null : unlocked ? children : <Gate error={authErr} onUnlock={() => { setAuthErr(false); setUnlocked(true); }} />}</main>
+      <main className="main">{children}</main>
     </div>
   );
 }

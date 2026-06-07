@@ -33,11 +33,11 @@ def _clear_settings():
 
 
 @pytest.mark.asyncio
-async def test_admin_requires_key(monkeypatch):
+async def test_admin_requires_auth(monkeypatch):
     app = _build_app(monkeypatch, connection_store=ConnectionStore(client=FakeRedis()))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
         r = await c.get("/admin/connections")
-        assert r.status_code == 403
+        assert r.status_code == 401  # no credentials at all
         r = await c.get("/admin/connections", headers={"x-admin-key": "k"})
         assert r.status_code == 200 and r.json() == []
 
@@ -80,7 +80,7 @@ async def test_sharepoint_connect_returns_consent_url(monkeypatch):
     monkeypatch.setenv("AZURE_CLIENT_ID", "cid")
     app = _build_app(monkeypatch, connection_store=ConnectionStore(client=StateRedis()))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
-        assert (await c.post("/admin/connections/sharepoint/connect")).status_code == 403
+        assert (await c.post("/admin/connections/sharepoint/connect")).status_code == 401
         r = await c.post("/admin/connections/sharepoint/connect", headers={"x-admin-key": "k"})
         assert r.status_code == 200
         assert "adminconsent" in r.json()["auth_url"] and "client_id=cid" in r.json()["auth_url"]

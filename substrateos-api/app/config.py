@@ -33,8 +33,9 @@ class Settings(BaseSettings):
 
     # Gemini (answer generation). API key from Key Vault (secret: gemini-api-key).
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.5-pro"          # answer generation
+    gemini_model: str = "gemini-3.1-pro-preview"  # answer generation
     gemini_plan_model: str = "gemini-2.5-flash"   # fast model for the plan-step classifier
+    gemini_ack_model: str = "gemini-3.1-flash-lite"  # fastest model for the interim ack line
     gemini_thinking_budget: int = 256             # cap "thinking" tokens on the answer model (latency)
     gemini_endpoint: str = "https://generativelanguage.googleapis.com/v1beta"
     gemini_timeout_s: float = 60.0
@@ -71,6 +72,9 @@ class Settings(BaseSettings):
     # onto `substrateos_tenant_id` and grant the `<substrateos_tenant_id>:everyone` group, so
     # the loaded corpus is reachable without per-user provisioning. Off in tests.
     pilot_single_tenant: bool = False
+    # Shared key for HEADLESS admin automation only (seed scripts, eval corpus
+    # loader). Browser admin access is gated by the Entra group instead — see
+    # `entra_admins_group`.
     admin_api_key: str | None = None
     # SharePoint connector: hard cap on files ingested per site sync (no silent truncation).
     connector_max_items: int = 500
@@ -103,7 +107,12 @@ class Settings(BaseSettings):
     teams_bot_tenant_id: str | None = None     # TEAMS_BOT_TENANT_ID
     slack_bot_token: str | None = None         # SLACK_BOT_TOKEN
     slack_signing_secret: str | None = None    # SLACK_SIGNING_SECRET
-    slack_refund_approver_id: str | None = None  # SLACK_REFUND_APPROVER_ID — Diana's Slack member ID
+    # User directory + Entra-driven approval routing
+    entra_managers_group: str = "Managers"        # Entra group → role "manager"
+    entra_agents_group: str = "Support Agent"     # Entra group → role "agent"
+    entra_admins_group: str = "Admin"             # Entra group → admin panel access
+    slack_refund_channel_id: str | None = None    # SLACK_REFUND_CHANNEL_ID — customer requests land here
+    directory_sync_interval_hours: float = 24.0   # daily Slack+Entra directory sync
 
     # GitHub tool (raise-PR action connector). App-level OAuth App credentials —
     # per-user tokens are obtained through the user's own GitHub login and stored

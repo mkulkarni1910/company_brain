@@ -4,17 +4,14 @@ import { useSearchParams } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { postQuery, postQueryAck, postFeedback, getConversations, getConversation, logClick, postSearch,
-  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources,
-  Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource } from "@/lib/api";
+  listTokens, createToken, revokeToken, apiBaseUrl, getSurfaces, getConnectedSources, getMe, initials,
+  Answer, Citation, ConversationSummary, SearchResponse, TokenMeta, ConnectedSource, Me } from "@/lib/api";
 import PrActionCard from "@/components/PrActionCard";
 import { getSkills, SkillSummary } from "@/lib/skillsApi";
 import SkillsPage from "@/app/skills/page";
-import RunsPage from "@/app/runs/page";
 
 type Turn = { id: string; query: string; answer?: Answer; latencyMs?: number; error?: string; loading: boolean; ack?: string };
 
-const USER_NAME = process.env.NEXT_PUBLIC_USER_NAME ?? "Lokesh Bhoyar";
-const USER_ROLE = process.env.NEXT_PUBLIC_USER_ROLE ?? "Central · Sales";
 const SUGGESTIONS: { text: string; live?: boolean }[] = [
   { text: "Who is on call right now?", live: true },
   { text: "What are our planning priorities?" },
@@ -27,10 +24,6 @@ const SIGNAL_META: { key: keyof NonNullable<Answer["debug"]>["signals"]; label: 
   { key: "activity", label: "Engagement", color: "var(--rose)" },
   { key: "recency", label: "Recency", color: "var(--green)" },
 ];
-
-function initials(name: string) {
-  return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-}
 
 function relTime(iso: string): string {
   const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -416,12 +409,14 @@ function ConnectModal({ surface, onClose }: { surface: Surface; onClose: () => v
 export default function Chat() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
-  const [view, setView] = useState<"ask" | "discover" | "history" | "skills" | "runs">("ask");
+  const [view, setView] = useState<"ask" | "discover" | "history" | "skills">("ask");
   const [conversationId, setConversationId] = useState<string>(() => crypto.randomUUID());
   const [connectSurface, setConnectSurface] = useState<Surface | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [surfaceMap, setSurfaceMap] = useState<Record<string, boolean>>({});
   const [connectedSources, setConnectedSources] = useState<ConnectedSource[]>([]);
+  // Signed-in identity (Entra name + optional Slack title); null until /me resolves.
+  const [me, setMe] = useState<Me | null>(null);
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [autocomplete, setAutocomplete] = useState<SkillSummary[]>([]);
   const searchParams = useSearchParams();
@@ -433,6 +428,7 @@ export default function Chat() {
       setSurfaceMap(map);
     });
     getConnectedSources().then(setConnectedSources);
+    getMe().then(setMe);
   }, []);
 
   useEffect(() => { getSkills().then(setSkills); }, []);
@@ -519,12 +515,6 @@ export default function Chat() {
               </svg>
               Skills
             </button>
-            <button className={view === "runs" ? "active" : ""} onClick={() => setView("runs")}>
-              <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><path d="M9 12h6M9 16h6" />
-              </svg>
-              Runs
-            </button>
           </nav>
           <button className="newchat" onClick={newChat}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14" /></svg>New chat
@@ -547,14 +537,13 @@ export default function Chat() {
           )}
         </div>
         <div className="foot">
-          <div className="avatar">{initials(USER_NAME)}</div>
-          <div className="who">{USER_NAME}<span>{USER_ROLE}</span></div>
+          <div className="avatar">{me ? initials(me.display_name) : ""}</div>
+          {me && <div className="who">{me.display_name}{me.title && <span>{me.title}</span>}</div>}
         </div>
       </aside>
 
       {/* HISTORY / DISCOVER / ASK views */}
       {view === "skills" && <SkillsPage />}
-      {view === "runs" && <RunsPage />}
       {view === "history" && <ConversationsView onOpen={async (id) => {
         const conv = await getConversation(id);
         if (!conv) return;
@@ -688,7 +677,9 @@ export default function Chat() {
             <span className="t">Why this ranked</span>
           </div>
           <div style={{ fontSize: 11, color: "var(--ink-faint)", margin: "6px 0 14px" }}>
-            {latest?.answer ? `Personalized for ${USER_NAME} · ${USER_ROLE}` : "Ask a question to see ranking"}
+            {latest?.answer
+              ? `Personalized for ${me?.display_name ?? "you"}${me?.title ? ` · ${me.title}` : ""}`
+              : "Ask a question to see ranking"}
           </div>
           <div className="bars">
             {SIGNAL_META.map((m) => {

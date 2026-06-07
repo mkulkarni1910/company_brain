@@ -93,14 +93,65 @@ def decided_dm_blocks(d: RefundDecision, *, approved: bool, approver_name: str) 
     ])]}
 
 
-def outcome_blocks(d: RefundDecision, *, approved: bool, approver_name: str) -> dict:
+def outcome_blocks(d: RefundDecision, *, approved: bool, approver_name: str,
+                   mention: str | None = None) -> dict:
+    verdict = "approved" if approved else "rejected"
     if approved:
-        head = f":white_check_mark: *Approved by {approver_name}*"
+        head = (f":white_check_mark: *Hello {mention} — refund {verdict} by {approver_name}*"
+                if mention else f":white_check_mark: *Approved by {approver_name}*")
         body = f"Refund of {_usd(d.amount_usd)} issued to {d.customer} on order #{d.order_id}. Confirmation sent."
     else:
-        head = f":x: *Rejected by {approver_name}*"
+        head = (f":x: *Hello {mention} — refund {verdict} by {approver_name}*"
+                if mention else f":x: *Rejected by {approver_name}*")
         body = f"The refund of {_usd(d.amount_usd)} on order #{d.order_id} was declined."
     return {"attachments": [_bar(_GREEN if approved else _RED, [
         {"type": "section", "text": {"type": "mrkdwn", "text": f"{head}\n{body}"}},
         {"type": "context", "elements": [{"type": "mrkdwn", "text": ":lock: recorded with the decision"}]},
     ])]}
+
+
+def customer_outcome_blocks(d: RefundDecision, *, approved: bool) -> dict:
+    """Customer-facing outcome — policy facts only, never internal mechanics
+    (no managers, approvals, or exceptions in the REJECTED copy)."""
+    first = (d.customer or "there").split()[0]
+    if approved:
+        text = (f"Hello {first} — good news! Your refund of {_usd(d.amount_usd)} for "
+                f"order #{d.order_id} has been approved and is being processed.")
+        color = _GREEN
+    else:
+        text = (f"Hello {first} — we couldn't process your refund for order "
+                f"#{d.order_id}: it falls outside our refund policy "
+                f"({_usd(d.policy_limit_usd)} within {d.policy_limit_days} days). "
+                "Please reach out to our support team if you have questions.")
+        color = _RED
+    return {"attachments": [_bar(color, [
+        {"type": "section", "text": {"type": "mrkdwn", "text": text}},
+    ])]}
+
+
+def customer_request_blocks(*, request_text: str, customer_name: str, run_id: str,
+                            decision: RefundDecision | None = None) -> dict:
+    """Channel card for a customer's refund ask — needs a support agent to pick
+    it up and run the playbook themselves (customers can't trigger refunds).
+    When the engine pre-fetched their order, the facts ride along."""
+    inner: list[dict] = []
+    if decision is not None and decision.found:
+        inner.append(_facts_fields(decision))
+        inner.append({"type": "context", "elements": [{"type": "mrkdwn",
+            "text": (f"Order fetched automatically for the requester — "
+                     f"{'within' if decision.auto_approve else 'over'} "
+                     "the auto-approve limit.")}]})
+    inner.extend([
+        {"type": "section", "fields": [
+            {"type": "mrkdwn", "text": f"*From*\n{customer_name}"},
+            {"type": "mrkdwn", "text": f"*Request*\n{request_text[:500]}"},
+        ]},
+        {"type": "context", "elements": [{"type": "mrkdwn",
+            "text": "Customers can't trigger refunds directly — an agent should "
+                    "pick this up and run it."}]},
+    ])
+    return {
+        "blocks": [{"type": "section", "text": {"type": "mrkdwn",
+            "text": f":wave: *Customer refund request* — needs a support agent · run {run_id}"}}],
+        "attachments": [_bar(_AMBER, inner)],
+    }

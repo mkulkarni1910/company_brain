@@ -32,8 +32,8 @@ def _slack_recorder():
         calls.append((method, payload))
         if method == "users.info":
             uid = payload.get("user")
-            prof = {"U_TOM": ("Tom Reyes", "tom@x"), "U_DIANA": ("Diana Foster", "diana@x"),
-                    "U_FB": ("Sam Approver", "sam@x")}.get(uid, ("Someone", ""))
+            prof = {"U_TOM": ("Tom Reyes", "tom@x"),
+                    "U_DIANA": ("Diana Foster", "diana@x")}.get(uid, ("Someone", ""))
             return {"ok": True, "user": {"real_name": prof[0],
                                          "profile": {"display_name": prof[0], "email": prof[1]}}}
         if method == "users.lookupByEmail":
@@ -61,7 +61,8 @@ async def test_routes_to_resolved_manager(monkeypatch):
     get_settings.cache_clear()
     flow, store = _flow()
     calls, fake = _slack_recorder()
-    with patch("app.workflows.approval.slack_call", new=fake):
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
         await flow.handle_request(text="send this discount exception to my manager",
                                   channel="C_DEALS", thread_ts="9.9",
                                   requester_slack_id="U_TOM", user=_user())
@@ -82,33 +83,34 @@ async def test_routes_to_resolved_manager(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_falls_back_to_configured_approver(monkeypatch):
+async def test_no_manager_means_no_fallback(monkeypatch):
+    """No env-var fallback approver exists anymore — manager or stop."""
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
-    monkeypatch.setenv("SLACK_REFUND_APPROVER_ID", "U_FB")
     from app.config import get_settings
     get_settings.cache_clear()
     store = RunStore(client=None, force_memory=True)
     flow = ApprovalFlow(store=store, people=_People(None))  # no manager
     calls, fake = _slack_recorder()
-    with patch("app.workflows.approval.slack_call", new=fake):
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
         await flow.handle_request(text="get this signed off", channel="C", thread_ts=None,
                                   requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
-    assert run.status == "pending_approval"
-    assert run.approver_source == "fallback"
-    assert run.approver_name == "Sam Approver"
+    assert run.status == "error"
+    assert run.approver_source is None
+    assert "conversations.open" not in [m for m, _ in calls]
 
 
 @pytest.mark.asyncio
 async def test_no_approver_asks_requester(monkeypatch):
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
-    monkeypatch.delenv("SLACK_REFUND_APPROVER_ID", raising=False)
     from app.config import get_settings
     get_settings.cache_clear()
     store = RunStore(client=None, force_memory=True)
     flow = ApprovalFlow(store=store, people=_People(None))
     calls, fake = _slack_recorder()
-    with patch("app.workflows.approval.slack_call", new=fake):
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
         await flow.handle_request(text="please approve", channel="C", thread_ts=None,
                                   requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
@@ -137,7 +139,8 @@ async def test_approve_updates_run_and_notifies(monkeypatch):
     payload = {"type": "block_actions", "user": {"id": "U_DIANA", "name": "diana"},
                "actions": [{"action_id": "approval_approve", "value": run.id}],
                "container": {"channel_id": "D_DIANA", "message_ts": "111.222"}}
-    with patch("app.workflows.approval.slack_call", new=fake):
+    with patch("app.workflows.approval.slack_call", new=fake), \
+            patch("app.workflows.approval.slack_get", new=fake):
         await flow.handle_action(payload)
     updated = await store.get(run.id)
     assert updated.status == "approved"

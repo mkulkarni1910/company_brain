@@ -24,7 +24,8 @@ _SLACK_SECRET = "slack-test-secret"
 
 
 class _FakeOrchestrator:
-    async def answer(self, request, *, user, user_token=None, skill_context=None, history=None):
+    async def answer(self, request, *, user, user_token=None, skill_context=None, history=None,
+                     requester=None):
         return Answer(text="Here is the answer.", citations=[], query_id="q1")
 
 
@@ -87,9 +88,9 @@ def test_bot_status_configured(monkeypatch):
         get_settings.cache_clear()
 
 
-def test_bot_status_requires_admin_key():
+def test_bot_status_requires_auth():
     with TestClient(app) as client:
-        assert client.get("/admin/bot/status").status_code == 403
+        assert client.get("/admin/bot/status").status_code == 401
 
 
 # ── GET /admin/bot/teams/manifest ─────────────────────────────────────────────
@@ -156,7 +157,7 @@ def test_slack_invalid_hmac(monkeypatch):
 class _ExplodingOrchestrator:
     """Greetings must never reach the RAG pipeline."""
 
-    async def answer(self, request, *, user, user_token=None, history=None):
+    async def answer(self, request, *, user, user_token=None, history=None, requester=None):
         raise AssertionError("orchestrator must not be called for small talk")
 
 
@@ -650,6 +651,96 @@ def test_teams_memory_load_and_record(monkeypatch):
         assert resp.status_code == 200
         assert memory.loaded == ["teams:19:abc"]
         assert memory.recorded == [("teams:19:abc", "what is PTO?")]
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+# ── POST /bot/slack (requester identity threads into the generic answer) ──────
+
+from app.deps import get_directory_service  # noqa: E402
+from app.domain.directory import DirectoryUser  # noqa: E402
+
+
+class _RecordingOrchestrator:
+    def __init__(self):
+        self.kwargs = None
+
+    async def answer(self, request, *, user, skill_context=None, history=None,
+                     requester=None, user_token=None):
+        self.kwargs = {"requester": requester}
+        return Answer(text="Here is the answer.", citations=[], query_id="q1")
+
+
+class _FakeDirectory:
+    def __init__(self, record):
+        self._record = record
+
+    async def resolve(self, email):
+        return self._record if email else None
+
+
+def test_slack_generic_path_passes_requester(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    priya = DirectoryUser(email="priya@x", slack_id="U_PRIYA",
+                          display_name="Priya Sharma", role="customer")
+    orch = _RecordingOrchestrator()
+    app.dependency_overrides[get_orchestrator] = lambda: orch
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
+    app.dependency_overrides[get_acknowledger] = lambda: _FakeAck()
+    app.dependency_overrides[get_skill_router_svc] = lambda: _FakeRouter(None)
+    app.dependency_overrides[get_directory_service] = lambda: _FakeDirectory(priya)
+
+    async def fake_slack_call(token, method, payload):
+        if method == "users.info":
+            return {"ok": True, "user": {"real_name": "Priya Sharma",
+                                         "profile": {"email": "priya@x"}}}
+        return {"ok": True}
+
+    try:
+        body = _slack_event_body("can you help me with my order", user="U_PRIYA")
+        with patch("app.api.bots.slack_call", new=fake_slack_call), \
+                patch("app.api.bots.post_slack_reply", new=AsyncMock(return_value=None)):
+            with TestClient(app) as client:
+                resp = _post_signed_slack(client, body)
+        assert resp.status_code == 200
+        assert orch.kwargs is not None
+        assert orch.kwargs["requester"] is not None
+        assert orch.kwargs["requester"].email == "priya@x"
+    finally:
+        app.dependency_overrides.clear()
+        get_settings.cache_clear()
+
+
+def test_slack_generic_path_anonymous_when_directory_misses(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", _SLACK_TOKEN)
+    monkeypatch.setenv("SLACK_SIGNING_SECRET", _SLACK_SECRET)
+    from app.config import get_settings
+    get_settings.cache_clear()
+    orch = _RecordingOrchestrator()
+    app.dependency_overrides[get_orchestrator] = lambda: orch
+    app.dependency_overrides[get_connection_store] = lambda: _FakeStore()
+    app.dependency_overrides[get_acknowledger] = lambda: _FakeAck()
+    app.dependency_overrides[get_skill_router_svc] = lambda: _FakeRouter(None)
+    app.dependency_overrides[get_directory_service] = lambda: _FakeDirectory(None)
+
+    async def fake_slack_call(token, method, payload):
+        if method == "users.info":
+            return {"ok": True, "user": {"real_name": "Who",
+                                         "profile": {"email": "ghost@x"}}}
+        return {"ok": True}
+
+    try:
+        body = _slack_event_body("what is the pto policy", user="U_GHOST")
+        with patch("app.api.bots.slack_call", new=fake_slack_call), \
+                patch("app.api.bots.post_slack_reply", new=AsyncMock(return_value=None)):
+            with TestClient(app) as client:
+                resp = _post_signed_slack(client, body)
+        assert resp.status_code == 200
+        assert orch.kwargs == {"requester": None}
     finally:
         app.dependency_overrides.clear()
         get_settings.cache_clear()

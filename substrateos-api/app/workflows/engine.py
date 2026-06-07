@@ -5,9 +5,11 @@ import logging
 import re
 from datetime import UTC, datetime
 
+from app.domain.directory import DirectoryUser
 from app.domain.identity import User
 from app.domain.workflow import RefundDecision
 from app.orchestrator.timing import StageTimer
+from app.retrieval.order_scope import scope_order_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +21,13 @@ DECISION_PROMPT = (
     "evaluate the refund request. Extract the facts and decide whether the refund can be "
     "auto-approved under the policy. Compute the order age in days from the order date "
     "and today's date when the age is not stated explicitly.\n"
-    "Respond ONLY with valid JSON, no other text:\n"
-    '{"found": true, "order_id": "...", "customer": "...", "amount_usd": 0, '
+    'Respond ONLY with valid JSON, no other text:\n'
+    '{"found": true, "order_id": "...", "customer": "...", "customer_email": "...", '
+    '"amount_usd": 0, '
     '"order_age_days": 0, "policy_limit_usd": 0, "policy_limit_days": 0, '
     '"auto_approve": true, "reasoning": "one sentence citing the policy"}\n'
+    'Copy the customer\'s email address from the order record into customer_email '
+    'when present, else use null. '
     'If the order cannot be found in the context documents, respond with '
     '{"found": false, "reasoning": "..."}.'
 )
@@ -39,9 +44,17 @@ class RefundEngine:
         self._retriever = retriever
         self._llm = llm
 
-    async def evaluate(self, text: str, *, user: User) -> RefundDecision:
+    async def evaluate(self, text: str, *, user: User,
+                       requester: DirectoryUser | None = None) -> RefundDecision:
         timer = StageTimer()
-        order_hits = await self._retriever.retrieve(query=text, user=user, k=6, timer=timer)
+        order_query = text
+        if requester is not None:
+            who = f"{requester.display_name or ''} {requester.email or ''}".strip()
+            order_query = f"{text} customer {who}"
+        order_hits = await self._retriever.retrieve(
+            query=order_query, user=user, k=6, timer=timer
+        )
+        order_hits = scope_order_chunks(list(order_hits), requester)
         policy_hits = await self._retriever.retrieve(
             query=_POLICY_QUERY, user=user, k=4, timer=timer
         )
@@ -55,10 +68,18 @@ class RefundEngine:
             parts.append(f"[{ch.title}]\n{ch.content}")
         context = "\n\n".join(parts[:8]) or "(no documents found)"
         today = datetime.now(UTC).strftime("%Y-%m-%d")
+        requester_line = ""
+        if requester is not None:
+            requester_line = (
+                f"Requester: {requester.display_name or requester.email} "
+                f"({requester.email}), role {requester.role} — "
+                "'my order' refers to them.\n"
+            )
         messages = [
             {"role": "system", "content": DECISION_PROMPT},
             {"role": "user", "content": (
-                f"Today's date: {today}\n\nContext documents:\n{context}\n\n"
+                f"Today's date: {today}\n{requester_line}\n"
+                f"Context documents:\n{context}\n\n"
                 f"Refund request: {text}"
             )},
         ]

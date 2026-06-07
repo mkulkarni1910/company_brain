@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 from app.domain.conversation import ConversationTurn
+from app.domain.directory import DirectoryUser
 from app.domain.query import Candidate, Citation
 
 SYSTEM_PROMPT = (
@@ -17,16 +18,36 @@ SYSTEM_PROMPT = (
 _MARKER = re.compile(r"\[(\d+)\]")
 
 
+def requester_note_for(requester: DirectoryUser) -> str:
+    """Identity block injected into the system prompt for known requesters.
+    The own-orders rule here is the BACKSTOP — the enforced gate is
+    retrieval.order_scope.scope_order_chunks."""
+    who = requester.display_name or requester.email
+    base = f"Requester: {who} ({requester.email}), role: {requester.role}."
+    if requester.role == "customer":
+        return base + (
+            " 'My order' or 'my refund' refers to orders belonging to that email. "
+            "Never reveal another customer's order details to them; if asked, say "
+            "you can only discuss their own orders."
+        )
+    return base + (
+        " 'My …' refers to them; they may ask about any customer's order."
+    )
+
+
 def build_grounded_messages(
     *,
     query: str,
     candidates: list[Candidate],
     skill_prompt: str | None = None,
     history: list[ConversationTurn] | None = None,
+    requester_note: str | None = None,
 ) -> list[dict[str, str]]:
     system = SYSTEM_PROMPT
     if skill_prompt:
         system = f"{skill_prompt}\n\n{system}"
+    if requester_note:
+        system = f"{system}\n\n{requester_note}"
     blocks: list[str] = []
     for i, c in enumerate(candidates, start=1):
         blocks.append(

@@ -182,8 +182,8 @@ async def test_purge_isolates_activity_failure(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_purge_requires_admin_key(monkeypatch):
+async def test_purge_requires_auth(monkeypatch):
     app = _build_app(monkeypatch, ai_search=_FakeSearch(), acl_store=_FakeACL())
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
         r = await c.post("/admin/purge")
-    assert r.status_code == 403
+    assert r.status_code == 401  # no credentials at all

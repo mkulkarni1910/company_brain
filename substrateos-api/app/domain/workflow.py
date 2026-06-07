@@ -8,6 +8,8 @@ from pydantic import BaseModel
 RunStatus = Literal[
     "running", "pending_approval", "pending_confirm",
     "approved", "rejected", "completed", "cancelled", "error",
+    "needs_attention",    # stopped: no eligible approver / identity unknown
+    "routed_to_support",  # customer request handed to the support channel
 ]
 
 
@@ -16,6 +18,7 @@ class RefundDecision(BaseModel):
     found: bool = False
     order_id: str | None = None
     customer: str | None = None
+    customer_email: str | None = None  # from the order record — powers the outcome DM fallback
     amount_usd: float | None = None
     order_age_days: int | None = None
     policy_limit_usd: float | None = None
@@ -55,13 +58,17 @@ class RefundRun(BaseModel):
     requester_slack_id: str | None = None
     channel: str | None = None
     thread_ts: str | None = None
+    # support-channel hand-off card (customer routed runs) — resolved on outcome
+    handoff_channel: str | None = None
+    handoff_ts: str | None = None
     dm_channel: str | None = None
     dm_ts: str | None = None
     decision: RefundDecision | None = None
     approver_name: str | None = None
+    approver_slack_id: str | None = None  # the routed approver — click enforcement key
     # generic approval playbook
     request_text: str | None = None
-    approver_source: str | None = None  # "manager" | "fallback" | "mention"
+    approver_source: str | None = None  # "manager" | "mention"
     # github_pr playbook
     surface: str | None = None          # "web" | "slack" | "teams"
     requester_email: str | None = None  # identity key for the per-user GitHub token

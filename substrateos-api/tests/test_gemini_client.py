@@ -20,6 +20,7 @@ def _client(post):
     c._key = "k"
     c._model = "gemini-2.5-pro"
     c._plan_model = "gemini-2.5-flash"
+    c._ack_model = "gemini-3.1-flash-lite"
     c._thinking_budget = 256
     c._base = "https://x/v1beta"
 
@@ -80,6 +81,25 @@ async def test_plan_step_uses_flash_with_no_thinking() -> None:
         deployment="plan", max_tokens=200,
     )
     assert captured["url"].endswith("/models/gemini-2.5-flash:generateContent")
+    assert captured["json"]["generationConfig"]["thinkingConfig"]["thinkingBudget"] == 0
+
+
+@pytest.mark.asyncio
+async def test_ack_deployment_uses_ack_model() -> None:
+    # The ack is pure speed — it gets the lite model; plan/router classifiers
+    # keep the stronger flash model.
+    captured = {}
+
+    def post(url, params, json):
+        captured["url"] = url
+        captured["json"] = json
+        return _Resp({"candidates": [{"content": {"parts": [{"text": "On it…"}]}}]})
+
+    await _client(post).complete(
+        messages=[{"role": "user", "content": "refund please"}],
+        deployment="ack", max_tokens=60,
+    )
+    assert captured["url"].endswith("/models/gemini-3.1-flash-lite:generateContent")
     assert captured["json"]["generationConfig"]["thinkingConfig"]["thinkingBudget"] == 0
 
 

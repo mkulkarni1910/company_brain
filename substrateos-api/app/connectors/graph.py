@@ -10,6 +10,7 @@ import logging
 import re
 from datetime import datetime
 from html import unescape
+from urllib.parse import quote
 
 import httpx
 from azure.identity.aio import DefaultAzureCredential
@@ -68,6 +69,32 @@ async def graph_get_json(token: str, url: str) -> dict:
         if r.status_code >= 400:
             raise GraphError(r.status_code, url, r.text)
         return r.json()
+
+
+async def group_member_emails(token: str, group_name: str, *, get_fn=None) -> set[str]:
+    """Member emails of the Entra group with this display name.
+
+    Resolves the group by displayName, then pages through its members; members
+    without a mail are skipped. Returns an empty set when the group doesn't
+    exist. Shared by the directory sync (role groups) and the admin guard
+    (the "Admin" group). `get_fn` is injectable for tests.
+    """
+    get = get_fn or graph_get_json
+    safe = group_name.replace("'", "''")
+    flt = quote(f"displayName eq '{safe}'")
+    data = await get(token, f"{GRAPH}/groups?$filter={flt}&$select=id")
+    groups = data.get("value", [])
+    if not groups:
+        logger.warning("entra group %r not found", group_name)
+        return set()
+    emails: set[str] = set()
+    url = f"{GRAPH}/groups/{groups[0]['id']}/members?$select=mail"
+    while url:
+        data = await get(token, url)
+        emails |= {(m.get("mail") or "").lower()
+                   for m in data.get("value", []) if m.get("mail")}
+        url = data.get("@odata.nextLink")
+    return emails
 
 
 def parse_users(data: dict) -> list[dict]:

@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 from fastapi.responses import Response
 
-from app.api.admin import require_admin_key
+from app.api._admin_guard import require_admin
 from app.bots.github_cards import (
     cancelled_blocks,
     pr_created_blocks,
@@ -31,6 +31,7 @@ from app.deps import (
     get_approval_flow,
     get_connection_store,
     get_conversation_memory,
+    get_directory_service,
     get_github_flow,
     get_github_store,
     get_orchestrator,
@@ -278,6 +279,7 @@ async def slack_webhook(
     github_store=Depends(get_github_store),
     memory=Depends(get_conversation_memory),
     acknowledger=Depends(get_acknowledger),
+    directory=Depends(get_directory_service),
     x_slack_signature: str | None = Header(default=None),
     x_slack_request_timestamp: str | None = Header(default=None),
 ) -> dict:
@@ -386,13 +388,19 @@ async def slack_webhook(
                 await post_slack_reply(slack_token, channel, thread_ts,
                                        Answer(text=_ERROR_TEXT, citations=[], query_id="err"))
             return
+        # Known requester? Their identity scopes and personalizes the answer.
+        requester = None
+        if directory is not None:
+            with contextlib.suppress(Exception):
+                _, req_email = await _slack_profile(slack_token, slack_user)
+                requester = await directory.resolve(req_email)
         try:
             effective = skill_ctx.clean_query if skill_ctx else text
             cid = f"slack:{channel}:{thread_ts}"
             history = await memory.load_history(user=_bot_user(), conversation_id=cid)
             answer = await orchestrator.answer(
                 QueryRequest(query=effective), user=_bot_user(),
-                skill_context=skill_ctx, history=history,
+                skill_context=skill_ctx, history=history, requester=requester,
             )
             await memory.record(
                 user=_bot_user(), conversation_id=cid, query=effective, answer=answer
@@ -444,7 +452,7 @@ async def slack_interactive(
     return {}
 
 
-@router.get("/admin/bot/status", dependencies=[Depends(require_admin_key)])
+@router.get("/admin/bot/status", dependencies=[Depends(require_admin)])
 async def bot_status() -> dict:
     s = get_settings()
     return {
@@ -457,7 +465,7 @@ async def bot_status() -> dict:
     }
 
 
-@router.get("/admin/bot/teams/manifest", dependencies=[Depends(require_admin_key)])
+@router.get("/admin/bot/teams/manifest", dependencies=[Depends(require_admin)])
 async def teams_manifest() -> Response:
     s = get_settings()
     if not s.teams_bot_app_id:

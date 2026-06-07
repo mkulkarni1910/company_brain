@@ -2,7 +2,7 @@
 
 When → Check → Stop → Do → Record: a user asks to route something for sign-off,
 SubstrateOS resolves the approver (the requester's manager from the Entra `manages`
-edge, with a configured fallback), DMs them an Approve/Reject card, and records
+edge, or stops), DMs them an Approve/Reject card, and records
 every step. Nothing acts until a human decides. Lifts the RefundFlow pattern but
 drops the refund-specific policy engine — the whole point is human sign-off.
 """
@@ -17,7 +17,7 @@ from app.bots.approval_cards import (
     needs_approval_blocks,
     outcome_blocks,
 )
-from app.bots.slack import slack_call
+from app.bots.slack import slack_call, slack_get
 from app.config import get_settings
 from app.domain.identity import User
 from app.people.graph_client import PeopleGraphClient
@@ -54,7 +54,8 @@ class ApprovalFlow:
     async def _slack_id_for_email(self, token: str, email: str | None) -> str | None:
         if not email:
             return None
-        body = await slack_call(token, "users.lookupByEmail", {"email": email})
+        # GET — Slack rejects JSON POST bodies for users.lookupByEmail.
+        body = await slack_get(token, "users.lookupByEmail", {"email": email})
         return ((body or {}).get("user") or {}).get("id")
 
     async def _post(self, token: str, channel: str, thread_ts: str | None,
@@ -66,13 +67,13 @@ class ApprovalFlow:
             payload["thread_ts"] = thread_ts
         return await slack_call(token, "chat.postMessage", payload)
 
-    # ── approver resolution (manager → fallback) ───────────────────────────────
+    # ── approver resolution (manager or stop) ─────────────────────────────────
 
     async def _resolve_approver(self, token: str, requester_slack_id: str | None,
                                 tenant_id: str) -> tuple[str | None, str | None, str]:
-        """Returns (approver_slack_id, approver_name, source). Source is one of
-        'manager' / 'fallback' / 'none'."""
-        # 1) the requester's manager, via Slack email → graph manages-edge → Slack.
+        """Returns (approver_slack_id, approver_name, source). Source is
+        'manager' or 'none' — there is no fallback approver: the playbook
+        stops rather than guessing who may sign off."""
         if self._people is not None:
             email = await self._email(token, requester_slack_id)
             if email:
@@ -81,10 +82,6 @@ class ApprovalFlow:
                     sid = await self._slack_id_for_email(token, mgr.get("email"))
                     if sid:
                         return sid, mgr.get("display_name") or "your manager", "manager"
-        # 2) configured fallback approver.
-        fb = get_settings().slack_refund_approver_id
-        if fb:
-            return fb, (await self._display_name(token, fb) or "an approver"), "fallback"
         return None, None, "none"
 
     # ── inbound request ────────────────────────────────────────────────────────
@@ -109,17 +106,17 @@ class ApprovalFlow:
             run.status = "error"
             await self._store.save(run)
             await self._store.add_event(run.id, step="No approver",
-                                        detail="Couldn't resolve a manager or fallback approver", actor="SubstrateOS")
+                                        detail="Couldn't resolve a manager to approve this", actor="SubstrateOS")
             await self._post(token, channel, thread_ts,
-                             text=(f"On it, {first} — but I couldn't work out who should approve this. "
-                                   "Tell me who to send it to (or set a default approver) and I'll route it."))
+                             text=(f"Hmm, {first} — I couldn't work out who should approve this. "
+                                   "Ask an admin to set your manager in the directory and I'll route it."))
             return
 
         run.status = "pending_approval"
         run.approver_name = approver_name
         run.approver_source = source
         await self._store.save(run)
-        role = "requester's manager" if source == "manager" else "configured approver"
+        role = "requester's manager"
         await self._store.add_event(
             run.id, step="Approver resolved",
             detail=f"{approver_name} — {role}",
@@ -127,7 +124,7 @@ class ApprovalFlow:
         )
 
         await self._post(token, channel, thread_ts,
-                         text=f"On it, {first} — sending that to {approver_name} for sign-off. I'll update here.",
+                         text=f"Sending that to {approver_name} for sign-off, {first} — I'll update here.",
                          card=needs_approval_blocks(request_text=text, approver_label=approver_name, run_id=run.id))
 
         opened = await slack_call(token, "conversations.open", {"users": approver_id})
