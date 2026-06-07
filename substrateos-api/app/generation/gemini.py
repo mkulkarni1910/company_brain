@@ -72,8 +72,10 @@ class GeminiClient:
         # thinking budget. Thinking tokens count against maxOutputTokens, so size the
         # cap to fit both the thinking budget and the visible answer.
         is_plan = deployment is not None
-        # The ack is pure speed (sub-second goal) → lite model; other deployment-
-        # tagged calls (planner, router) keep the stronger fast model.
+        # Every deployment-tagged call is a quick step on a fast model with thinking
+        # off: the ack line on the ack model, the planner/skill-router on the plan
+        # model (both default to gemini-3.1-flash-lite, but stay separately tunable).
+        # Only the untagged answer path uses the strong model + capped thinking budget.
         if deployment == "ack":
             model = self._ack_model
         else:
