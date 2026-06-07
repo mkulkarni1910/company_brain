@@ -144,18 +144,15 @@
   .field .sysprompt{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.65}
   .grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
 
-  /* steps editor (When→Check→Stop→Do→Record) */
+  /* steps editor — a plain editable add/remove list (steps are plain strings;
+     the "When → Check → Stop → Do → Record" guidance lives in the field label) */
   .step-row{display:flex;gap:10px;margin-bottom:9px;align-items:center}
-  .step-tag{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
-    font-weight:600;width:62px;flex:none;text-align:center;padding:5px 0;border-radius:7px;border:1px solid transparent}
-  .tag-when{color:var(--violet);background:#ece9f8;border-color:#d6cef0}
-  .tag-check{color:var(--teal);background:var(--teal-bg);border-color:#bfe4dd}
-  .tag-stop{color:var(--rose);background:var(--rose-bg);border-color:#eecdd4}
-  .tag-do{color:var(--amber);background:var(--amber-bg);border-color:#ecd6a6}
-  .tag-record{color:#2a5a72;background:#dce8ee;border-color:#c4d8e2}
   .step-row input{flex:1;padding:9px 12px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;background:var(--surface-2);color:var(--ink);outline:none}
   .step-row input:focus{border-color:var(--amber)}
   .step-drag{color:var(--line);cursor:grab;flex:none;font-size:14px;user-select:none}
+  .step-remove{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);
+    color:var(--ink-faint);font-size:12px;line-height:1;cursor:pointer;transition:.15s}
+  .step-remove:hover{color:var(--rose);border-color:rgba(200,84,106,.4);background:var(--rose-bg)}
   .list-add{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:10.5px;font-weight:600;
     letter-spacing:.07em;text-transform:uppercase;color:var(--teal);background:var(--teal-bg);border:1px dashed var(--teal);
     border-radius:9px;cursor:pointer;padding:8px 13px;margin-top:8px;transition:.15s}
@@ -167,7 +164,9 @@
   .feed-chip{display:inline-flex;align-items:center;gap:8px;font-family:"JetBrains Mono",monospace;font-size:12px;
     color:var(--ink-dim);background:var(--surface-2);border:1px solid var(--line);border-radius:99px;padding:6px 12px}
   .feed-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(63,143,94,.6)}
-  .feed-chip .x{color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1}
+  /* feeds are editable input chips, not static labels */
+  .feed-chip .feed-input{border:0;background:transparent;outline:none;font-family:inherit;font-size:12px;color:var(--ink-dim);width:auto;min-width:54px;padding:0}
+  .feed-chip .x{color:var(--ink-faint);cursor:pointer;font-size:13px;line-height:1;border:0;background:transparent;padding:0}
   .feed-add{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--teal);background:var(--teal-bg);
     border:1px dashed var(--teal);border-radius:99px;padding:6px 12px;cursor:pointer}
 
@@ -216,6 +215,18 @@
   .sub-footnote b{font-weight:600;color:var(--ink-dim)}
 
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* withdraw / remove confirm modal (styled — replaces a native confirm) */
+  .modal-backdrop{position:fixed;inset:0;z-index:30;background:rgba(26,22,17,.32);
+    display:grid;place-items:center;padding:24px;animation:fade .15s ease}
+  .modal-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:15px;box-shadow:var(--shadow);
+    padding:24px 26px;max-width:420px;width:100%}
+  .modal-card h3{font-family:"Fraunces",serif;font-size:19px;font-weight:600;margin:0 0 8px}
+  .modal-card p{font-size:13.5px;color:var(--ink-dim);margin:0 0 20px;line-height:1.55}
+  .modal-foot{display:flex;justify-content:flex-end;gap:11px}
+  .btn-danger{display:inline-flex;align-items:center;border:0;border-radius:11px;padding:11px 19px;font:inherit;
+    font-size:13.5px;font-weight:600;cursor:pointer;color:#fff;background:var(--rose)}
+  .btn-danger:hover{background:#b8485d}
 
   /* stack the two-pane workspace on narrower screens */
   @media(max-width:1080px){
@@ -346,31 +357,25 @@
       <textarea rows="2">Decides refunds: anything under $500 and within 30 days is auto-approved; larger or older refunds are stopped for the Finance SME to sign off before they're issued.</textarea>
     </div>
 
-    <div class="grid2">
-      <div class="field">
-        <label>Team</label>
-        <input value="Finance" />
-      </div>
-      <div class="field">
-        <label>Owner approval</label>
-        <input value="Deepa Rao (Finance SME)" />
-      </div>
+    <div class="field">
+      <label>Team</label>
+      <input value="Finance" />
     </div>
 
     <div class="field">
       <label>Steps — When → Check → Stop → Do → Record</label>
-      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-when">When</span><input value="A refund is requested for an order." /></div>
-      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-check">Check</span><input value="Pull the order amount and age; compare against the refund policy ($500 / 30 days)." /></div>
-      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-stop">Stop</span><input value="If over $500 or older than 30 days, stop and route to the Finance SME for sign-off." /></div>
-      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-do">Do</span><input value="If within limits, auto-approve and issue the refund." /></div>
-      <div class="step-row"><span class="step-drag">⠿</span><span class="step-tag tag-record">Record</span><input value="Log the decision, amount, and approver to the refund ledger." /></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="When a refund is requested for an order." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="Check the order amount and age; compare against the refund policy ($500 / 30 days)." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="Stop if over $500 or older than 30 days, and route to the Finance SME for sign-off." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="Do auto-approve and issue the refund if within limits." /><button class="step-remove" aria-label="Remove step">✕</button></div>
+      <div class="step-row"><span class="step-drag">⠿</span><input value="Record the decision, amount, and approver to the refund ledger." /><button class="step-remove" aria-label="Remove step">✕</button></div>
       <button class="list-add"><span class="plus">+</span>Add step</button>
     </div>
 
     <div class="field">
       <label>Data feeds</label>
       <div class="feeds">
-        <span class="feed-chip"><span class="dot"></span>Orders<span class="x">×</span></span>
+        <span class="feed-chip"><span class="dot"></span><input class="feed-input" value="Orders" aria-label="Data feed 1" /><button class="x" aria-label="Remove feed">×</button></span>
         <button class="feed-add">+ Add feed</button>
       </div>
     </div>
@@ -427,7 +432,7 @@
             <td>
               <div class="sub-actions">
                 <button class="sk-btn" title="Reopens Cards 1–2 pre-filled — the submit button becomes Resubmit for approval.">Edit</button>
-                <button class="sk-btn del">Withdraw</button>
+                <button class="sk-btn del" onclick="openWithdraw('Withdraw')">Withdraw</button>
               </div>
               <span class="act-caption">Withdraw cancels the request — kept in the audit log, visible to admins in Runs.</span>
             </td>
@@ -454,7 +459,7 @@
             <td>
               <div class="sub-actions">
                 <button class="sk-btn primary" title="Reopens Cards 1–2 pre-filled — the submit button becomes Resubmit for approval.">Edit &amp; resubmit</button>
-                <button class="sk-btn del">Remove</button>
+                <button class="sk-btn del" onclick="openWithdraw('Remove')">Remove</button>
               </div>
               <span class="act-caption">Remove dismisses it — kept in the audit log, visible to admins in Runs.</span>
             </td>
@@ -467,6 +472,18 @@
   </div><!-- /panel-subs -->
 </div><!-- /wrap -->
 </main>
+
+<!-- ── Withdraw / Remove confirm modal (styled; shown here for design reference) ── -->
+<div class="modal-backdrop" id="withdraw-modal" style="display:none">
+  <div class="modal-card">
+    <h3>Withdraw submission?</h3>
+    <p>It stays in the audit log, visible to admins in Runs.</p>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeWithdraw()">Cancel</button>
+      <button class="btn-danger" onclick="closeWithdraw()">Withdraw</button>
+    </div>
+  </div>
+</div>
 </div><!-- /app -->
 
 <script>
@@ -481,6 +498,15 @@
     var main = document.querySelector('.main');
     if (main) main.scrollTop = 0;
   }
+  // Withdraw/Remove use a styled confirm modal (not a native confirm); the verb
+  // and the danger button label flip between "Withdraw" (pending) and "Remove" (rejected).
+  function openWithdraw(verb){
+    var m = document.getElementById('withdraw-modal');
+    m.querySelector('h3').textContent = verb + ' submission?';
+    m.querySelector('.btn-danger').textContent = verb;
+    m.style.display = 'grid';
+  }
+  function closeWithdraw(){ document.getElementById('withdraw-modal').style.display = 'none'; }
 </script>
 
 </body>

@@ -160,6 +160,7 @@
         <li>Climbs the ladder past Find/Plan to <b>Do</b> and <b>Stay in control</b> — where the value is.</li>
         <li>Hybrid retrieval fused across <b>Content · People · Activity</b>; personalized per persona.</li>
         <li>Grounded generation with citations; <b>stops if unsure</b> rather than guessing.</li>
+        <li><b>Plain-English authoring</b>: an SME describes a rule, one LLM call structures it into the playbook form — authoring by anyone, behind human gates.</li>
         <li><b>Two-tier model routing</b>: a fast model acknowledges instantly ("On it…"), the strong model answers — lower perceived latency.</li>
         <li>Gemini today, Azure OpenAI–ready; plugs into Copilot Studio &amp; Foundry.</li>
       </ul>
@@ -215,6 +216,10 @@
       </div>
     </div>
 
+    <div class="kicker" style="margin-top:14px"><b>Anyone with the know-how authors a playbook</b> — SMEs write the rule in plain English at
+      <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber-2)">/studio</code>, the AI drafts the form, an admin approves, and it goes live —
+      feeding the same When → Check → Stop → Do → Record engine. No code.</div>
+
     <div class="mono-label">Built on the tools your IT already trusts</div>
     <div class="grid cols-3">
       <div class="card"><h4>Who can do what</h4><p>Microsoft Entra ID — SSO + identity on every surface. <b>User Directory</b> joins Slack and Entra on email: role (manager / agent / customer) + manager edge used for approval routing. The Admin Console is open to the Entra <b>Admin</b> group only. Answers are identity-scoped — customers only ever see their own orders.</p></div>
@@ -241,7 +246,8 @@
       <div class="card"><h4>Slack / Teams <code>bots/</code></h4><p>Bot ingress + approval cards. Surface-aware rendering (<code>formatting.py</code>): markdown → Slack Block Kit / Teams Adaptive Card. Router <code>/bots</code>.</p></div>
       <div class="card"><h4>Other AI tools <code>mcp/</code></h4><p>MCP server (<code>build_mcp_asgi</code>), session manager. Router <code>/mcp</code>.</p></div>
       <div class="card"><h4>API <code>api/context</code> · <code>tokens/</code></h4><p>Context API + PAT auth. Routers <code>/context</code>, <code>/tokens</code>.</p></div>
-      <div class="card"><h4>Web app <code>web/</code></h4><p>Next.js Web Chat + Admin Panel, MSAL bearer to the API.</p></div>
+      <div class="card"><h4>Web app <code>web/</code></h4><p>Next.js Web Chat + Admin Panel + <b>Skill Studio</b> (<code>/studio</code>), MSAL bearer to the API.</p></div>
+      <div class="card"><h4>Skill Studio <code>api/studio.py</code></h4><p>Plain-English skill authoring for SMEs. Gated by <code>_sme_guard.py</code> (Entra <b>Finance SME</b> group; claims, or cached Graph lookup — fail-closed; admin ⊃ SME). Router <code>/studio</code>.</p></div>
       <div class="card"><h4>Identity <code>auth.py</code> · <code>api/_admin_guard.py</code></h4><p>Entra JWT validation + claims — every surface resolves "who's asking". Admin routes additionally require the Entra <b>Admin</b> group (claims, or cached Graph member lookup — fail-closed); <code>x-admin-key</code> survives for headless scripts only.</p></div>
       <div class="card"><h4>Config <code>config.py</code></h4><p>pydantic-settings from env + Key Vault; no secrets in code.</p></div>
     </div>
@@ -359,10 +365,49 @@
       <span><i style="background:var(--amber)"></i> Stop gate — admin kill-switch reaches the confirm step</span>
     </div>
 
+    <div class="mono-label">Skill Studio — SMEs author playbooks in plain English (draft → review → approve → live)</div>
+    <div class="flow">
+      <div class="row">
+        <div class="node io"><b>SME at /studio</b><small>web/app/studio/ · Entra bearer</small></div>
+        <div class="arrow">→</div>
+        <div class="node"><b>_sme_guard.py</b><small>ENTRA_SME_GROUP · claims/Graph · fail-closed · admin ⊃ SME</small></div>
+        <div class="arrow">→</div>
+        <div class="node brain" style="flex:1"><b>api/studio.py</b><small>draft · submit · resubmit · withdraw · GET my submissions</small>
+          <div class="substeps">
+            <div class="substep"><b>SkillDrafter</b><small>app/skills/drafter.py · one LLM call (Gemini / AOAI) → SkillCreate form</small></div>
+            <div class="substep"><b>SME reviews + edits</b><small>fully editable form · nothing live yet</small></div>
+            <div class="substep"><b>SkillPublishFlow</b><small>app/workflows/skill_publish.py · run kind skill_publish</small></div>
+            <div class="substep acl"><b>Draft never touches the catalog</b><small>lives only as a run + events until approval</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="node"><b>SkillPublishFlow</b><small>skill_publish run + events</small></div>
+        <div class="arrow">→</div>
+        <div class="node brain" style="flex:1"><b>Two approval faces, one decide path</b><small>submitter's Entra manager Slack Approve/Reject card (approval_cards · best-effort) + admin pending queue on /admin/skills</small>
+          <div class="substeps">
+            <div class="substep acl"><b>Stop — approval gate</b><small>admin (or manager) decides · single decide code path · audited</small></div>
+            <div class="substep"><b>Reject</b><small>note carried back to the SME; SME can edit & resubmit</small></div>
+            <div class="substep"><b>Withdraw / remove</b><small>run cancelled · audit kept · card invalidated</small></div>
+            <div class="substep"><b>On approve only → SkillStore</b><small>catalog/router/MCP — now a live playbook</small></div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node io"><b>RunStore</b><small>every step audited → admin Runs</small></div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:#fff;border:1px solid var(--line)"></i> surface / IO / store</span>
+      <span><i style="background:var(--navy)"></i> studio / publish module</span>
+      <span><i style="background:var(--amber)"></i> gate — SME group + approval before the catalog changes</span>
+    </div>
+
     <h2 class="sec" style="font-size:17px">Backend modules — <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber)">substrateos-api/app/</code></h2>
     <div class="grid cols-3">
       <div class="card"><h4><code>orchestrator/</code></h4><p>Semantic Kernel + QueryPlanner — sequences the gather-facts steps; Live Fetch vs cache.</p></div>
-      <div class="card"><h4><code>skills/ · workflows/</code></h4><p>Playbook catalog/router + the When→Check→Stop→Do→Record engine and run store. Flows: RefundFlow · ApprovalFlow · GithubFlow (<code>github_pr.py</code> + <code>github_engine.py</code> PrDraftEngine).</p></div>
+      <div class="card"><h4><code>skills/ · workflows/</code></h4><p>Playbook catalog/router + the When→Check→Stop→Do→Record engine and run store. Flows: RefundFlow · ApprovalFlow · GithubFlow (<code>github_pr.py</code> + <code>github_engine.py</code> PrDraftEngine) · <b>SkillPublishFlow</b> (<code>skill_publish.py</code>).</p></div>
+      <div class="card"><h4><code>skills/drafter.py · api/studio.py · api/_sme_guard.py</code></h4><p><b>Skill Studio</b> — SMEs author skills in plain English. <code>_sme_guard.py</code>: Entra <b>Finance SME</b> group (<code>ENTRA_SME_GROUP</code>; claims or cached Graph member lookup, fail-closed; admin ⊃ SME). <code>drafter.py</code> SkillDrafter: one LLM call → a SkillCreate draft. <code>studio.py</code>: draft / submit / resubmit / withdraw / my-submissions. Submission = a <code>skill_publish</code> run; the live <code>SkillStore</code> is written <b>only on approval</b>.</p>
+        <div class="stack"><span class="chip">Entra group</span><span class="chip">Gemini / AOAI</span><span class="chip">RunStore</span></div></div>
       <div class="card"><h4><code>retrieval/</code></h4><p>AISearchClient + HybridRetriever — BM25 + vector over the content index.</p></div>
       <div class="card"><h4><code>people/</code></h4><p>PeopleGraphClient + PeopleProximity over Cosmos Gremlin.</p></div>
       <div class="card"><h4><code>activity/</code></h4><p>ActivitySignal + ActivityStore — engagement scores from ADX.</p></div>
@@ -386,11 +431,12 @@
     <table class="endpoints">
       <tr><th>Router</th><th>Purpose</th></tr>
       <tr><td><code>/query</code></td><td>Grounded Q&amp;A — orchestrator entrypoint; loads + records conversation history.</td></tr>
-      <tr><td><code>/skills</code> (+ admin) · <code>/runs</code></td><td>Playbook catalog/router; workflow runs &amp; their audit records.</td></tr>
+      <tr><td><code>/skills</code> (+ admin) · <code>/runs</code></td><td>Playbook catalog/router; workflow runs &amp; their audit records. Admin skills: pending <code>skill_publish</code> submissions + a single approve/reject decide path (live <code>SkillStore</code> written only on approve).</td></tr>
+      <tr><td><code>/studio</code></td><td>SME skill authoring (Entra <b>Finance SME</b> group, <code>_sme_guard</code>): draft (one LLM call), submit / resubmit / withdraw, list my submissions. Submission = a <code>skill_publish</code> run; nothing touches the catalog until an admin approves.</td></tr>
       <tr><td><code>/auth/github/*</code> · <code>/workflows/runs/{id}/action</code> · <code>/admin/github/config</code></td><td>Per-user GitHub OAuth (start/callback); requester-only Create PR / Cancel; admin repo target.</td></tr>
       <tr><td><code>/retrieve</code> · <code>/search</code> · <code>/discover</code></td><td>Raw retrieval, search, and discover surfaces.</td></tr>
       <tr><td><code>/conversations</code> · <code>/history</code></td><td>Conversation list + turn history.</td></tr>
-      <tr><td><code>/me</code></td><td>Signed-in identity for the web UI (chat + admin sidebars) — Entra display name + Slack profile title (Redis-cached, fail-soft) + <code>is_admin</code> (Entra Admin-group membership; gates the admin panel UI).</td></tr>
+      <tr><td><code>/me</code></td><td>Signed-in identity for the web UI (chat + admin sidebars) — Entra display name + Slack profile title (Redis-cached, fail-soft) + <code>is_admin</code> (Entra Admin-group membership; gates the admin panel UI) + <code>is_sme</code> (Entra Finance SME group; gates the Skill Studio).</td></tr>
       <tr><td><code>/feedback</code></td><td>Click/dwell → ADX (real activity signal).</td></tr>
       <tr><td><code>/admin</code> · <code>/sources</code> · <code>/surfaces</code></td><td>Ingest, connectors, source &amp; surface management (Admin Console). Gated by the Entra <b>Admin</b> group (<code>require_admin</code>); shared key remains for headless seed/eval scripts only.</td></tr>
       <tr><td><code>POST /admin/directory/sync</code> · <code>GET /admin/directory</code></td><td>Trigger an on-demand directory sync; inspect current directory state (emails redacted).</td></tr>
@@ -399,11 +445,13 @@
     </table>
 
     <h2 class="sec" style="font-size:17px">Frontends — <code style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber)">web/app/</code></h2>
-    <div class="grid cols-2">
+    <div class="grid cols-3">
       <div class="card"><h4>User Web Chat — <code>app/</code></h4><p>Grounded chat with citations, skills. Mockup: <code>mockups/user-web-chat.html</code>.</p>
         <div class="stack"><span class="chip">page.tsx</span><span class="chip">skills/</span></div></div>
-      <div class="card"><h4>Admin Panel — <code>app/admin/</code></h4><p>Sources, skills, surfaces, permissions, runs (execution flow + tamper-evident audit log) — the Admin Console. Entra <b>Admin</b>-group gated via <code>/me.is_admin</code>: non-members get an access-restricted screen (no shared key in the browser). Mockup: <code>mockups/admin-portal.html</code>.</p>
+      <div class="card"><h4>Admin Panel — <code>app/admin/</code></h4><p>Sources, skills, surfaces, permissions, runs (execution flow + tamper-evident audit log) — the Admin Console. Entra <b>Admin</b>-group gated via <code>/me.is_admin</code>: non-members get an access-restricted screen (no shared key in the browser). Skills page carries the SME <b>pending-approval queue</b>. Mockup: <code>mockups/admin-portal.html</code>.</p>
         <div class="stack"><span class="chip">sources/</span><span class="chip">skills/</span><span class="chip">surfaces/</span><span class="chip">permissions/</span><span class="chip">runs/</span></div></div>
+      <div class="card"><h4>Skill Studio — <code>app/studio/</code></h4><p>SME authoring shell (Author + My submissions), Entra <b>Finance SME</b>-group gated via <code>/me.is_sme</code>. Describe in plain English → AI drafts the form → review/edit → submit for approval; edit/resubmit + withdraw own submissions. Mockup: <code>mockups/sme-studio.html</code>.</p>
+        <div class="stack"><span class="chip">studio/page.tsx</span><span class="chip">studio.css</span></div></div>
     </div>
 
     <h2 class="sec" style="font-size:17px">Governance — owned by teams, governed from one place</h2>
@@ -411,7 +459,8 @@
       <div class="card" style="border-left-color:var(--navy)"><h4>One platform team sets the rails</h4>
         <p>The engine · the rules everyone follows · the catalog of every playbook · the links to your tools.
         Each team <b>owns</b> its playbooks with one accountable name. Built &amp; kept current:
-        AI drafts → owner reviews → a human approves → goes live (versioned, roll back anytime) → watched &amp; updated.</p></div>
+        <b>SME describes it in plain English (Skill Studio)</b> → AI drafts the form → owner reviews →
+        a human approves → goes live (versioned, roll back anytime) → watched &amp; updated.</p></div>
       <div class="console"><h4>The Admin Console</h4>
         <table class="tbl">
           <tr><th>Playbook</th><th>Owner</th><th>Status</th></tr>
@@ -443,7 +492,7 @@
     <div class="kicker">It starts with one playbook. <b>The real prize is everything built on top.</b></div>
   </section>
 
-  <div class="foot">SubstrateOS architecture · aligned to the Master Deck · keep in sync with every shipped feature (Phase 4 of the substrateos-feature skill) · updated 2026-06-07</div>
+  <div class="foot">SubstrateOS architecture · aligned to the Master Deck · keep in sync with every shipped feature (Phase 4 of the substrateos-feature skill) · updated 2026-06-07 · + SME Skill Studio</div>
 </div>
 
 <script>
