@@ -284,9 +284,11 @@ class RefundFlow:
             return
 
         # Only the routed approver — who must be a manager in the directory —
-        # may act. Anyone else is refused and the attempt is audited.
+        # may act. Anyone else is refused and the attempt is audited. A run with
+        # no recorded approver (pre-directory legacy) is hard-denied, not open.
         actor_record = await self._directory.get_by_slack_id(approver_id)
-        is_routed = run.approver_slack_id is None or approver_id == run.approver_slack_id
+        is_routed = (run.approver_slack_id is not None
+                     and approver_id == run.approver_slack_id)
         if not is_routed or actor_record is None or actor_record.role != "manager":
             actor_name = (await self._display_name(token, approver_id)
                           or (payload.get("user") or {}).get("name") or "Someone")

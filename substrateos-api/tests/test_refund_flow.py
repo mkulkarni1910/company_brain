@@ -338,6 +338,25 @@ async def test_unknown_clicker_is_denied(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_legacy_run_without_routed_approver_is_denied(monkeypatch):
+    """A pending run with no recorded approver_slack_id is hard-denied — even
+    for a legitimate manager — rather than open to any manager."""
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    flow, store = _flow(decision=_OVER_LIMIT)
+    run = await _pending_run(store)
+    run.approver_slack_id = None  # legacy: created before directory routing
+    await store.save(run)
+    calls, fake = _slack_recorder()
+    with patch("app.workflows.flow.slack_call", new=fake):
+        await flow.handle_action(_click("refund_approve", run.id,
+                                        user_id="U_DIANA", name="diana"))
+    assert (await store.get(run.id)).status == "pending_approval"
+    assert "Approval denied" in [e.step for e in await store.list_events(run.id)]
+
+
+@pytest.mark.asyncio
 async def test_handle_action_reject(monkeypatch):
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
     from app.config import get_settings
