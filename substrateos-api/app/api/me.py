@@ -15,8 +15,8 @@ from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel
 
 from app.api._admin_guard import user_is_admin
-from app.api._sme_guard import user_is_sme
 from app.api._auth_resolve import resolve_user
+from app.api._sme_guard import user_is_sme
 from app.bots.slack import slack_get
 from app.config import get_settings
 from app.deps import get_cache

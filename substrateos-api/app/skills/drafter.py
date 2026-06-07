@@ -52,6 +52,8 @@ def _extract_json(raw: str) -> dict:
     try:
         return json.loads(text)
     except ValueError:
+        # Greedy on purpose: nested objects are the norm here. Known limit: two
+        # top-level JSON objects in one reply won't parse — acceptable at temp 0.
         m = re.search(r"\{.*\}", text, re.DOTALL)
         if m:
             try:
@@ -77,6 +79,9 @@ class SkillDrafter:
         name = str(data.get("name") or "").strip()
         if not name:
             raise SkillDraftError("the draft is missing a name")
+        system_prompt = str(data.get("system_prompt") or "").strip()
+        if not system_prompt:
+            raise SkillDraftError("the draft is missing a system_prompt")
         try:
             return SkillCreate(
                 slug=_slugify(str(data.get("slug") or name)),
@@ -86,7 +91,7 @@ class SkillDrafter:
                 run_scope="org", workflow=None, enabled=True,
                 steps=[str(s) for s in (data.get("steps") or [])],
                 data_feeds=[str(d) for d in (data.get("data_feeds") or [])],
-                system_prompt=str(data.get("system_prompt") or "").strip(),
+                system_prompt=system_prompt,
             )
         except ValidationError as e:
             raise SkillDraftError(f"draft failed validation: {e}") from e

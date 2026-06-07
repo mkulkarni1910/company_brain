@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from app.skills.drafter import SkillDraftError, SkillDrafter
+from app.skills.drafter import SkillDrafter, SkillDraftError
 
 _GOOD = {
     "name": "Refund approvals", "slug": "Refund Approvals!",  # messy slug on purpose
@@ -61,5 +61,12 @@ async def test_llm_failure_raises() -> None:
 @pytest.mark.asyncio
 async def test_missing_name_raises() -> None:
     drafter = SkillDrafter(llm=_LLM(json.dumps({"description": "x"})))
+    with pytest.raises(SkillDraftError):
+        await drafter.draft("whatever")
+
+
+@pytest.mark.asyncio
+async def test_missing_system_prompt_raises() -> None:
+    drafter = SkillDrafter(llm=_LLM(json.dumps({**_GOOD, "system_prompt": ""})))
     with pytest.raises(SkillDraftError):
         await drafter.draft("whatever")

@@ -42,8 +42,11 @@ async def test_admin_group_implies_sme(_prod_like, monkeypatch) -> None:  # noqa
     async def fake_token(tenant):  # noqa: ANN001
         return "tok"
 
+    import app.api._admin_guard as admin_guard
     monkeypatch.setattr(guard, "graph_token", fake_token)
     monkeypatch.setattr(guard, "group_member_emails", no_members)
+    monkeypatch.setattr(admin_guard, "graph_token", fake_token)
+    monkeypatch.setattr(admin_guard, "group_member_emails", no_members)
     assert await guard.user_is_sme(_user(groups={"Admin"}), FakeCache()) is True
 
 
