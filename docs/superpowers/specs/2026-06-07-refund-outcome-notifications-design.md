@@ -31,6 +31,11 @@ it — as a passive "Refund approved by Diane". Two gaps:
 
 ### Changed: `app/domain/workflow.py`
 
+`RefundRun` gains `handoff_channel: str | None = None` and
+`handoff_ts: str | None = None` — the support-channel hand-off card's
+location, captured when the customer's request is routed (the
+`chat.postMessage` response already returns `ts`; today it is discarded).
+
 `RefundDecision` gains `customer_email: str | None = None`. The seeded order
 docs carry `Customer: Name (email)`; the engine extracts it when present.
 Optional → fully backward-compatible with stored runs.
@@ -48,6 +53,11 @@ Returns the most recent run with `kind == "refund"`,
 (scans `list_runs(limit=100)`); `None` otherwise. Because notification flips
 the linked run's status, a second Approve click finds nothing — natural
 idempotency on top of the existing `pending_approval` guard.
+
+### Changed: `app/workflows/flow.py` (`_route_to_support`)
+
+The hand-off post's response `ts` is persisted onto the customer's run as
+`handoff_channel` / `handoff_ts` before the run is saved.
 
 ### Changed: `app/workflows/flow.py` (`handle_action` outcome section)
 
@@ -67,6 +77,11 @@ After the decision is recorded:
    - Else: `decision.customer_email` → `directory.resolve()` →
      `conversations.open` → DM the same card.
    - Else: skip.
+   - If the linked run has `handoff_channel`/`handoff_ts`, thread one line
+     under the hand-off card in the support channel: "✅ Resolved — approved
+     by {approver}, customer notified" / "✕ Resolved — rejected by
+     {approver}, customer notified" (suffix "customer not reachable" when the
+     notification was skipped). Fail-soft.
    - The deciding run always gets one audit event: "Customer notified"
      (with where) or "Customer not reachable".
 
@@ -110,6 +125,9 @@ is the only caller of the new pieces.
   + DM card.
 - Skip path: no link, no email → no customer post, "Customer not reachable"
   event, decision flow completes normally.
+- Hand-off card: `_route_to_support` persists `handoff_channel`/`handoff_ts`;
+  on decision, a resolution line is threaded under the card; absent handles
+  (legacy runs) skip silently.
 - Engine: fake LLM returns `customer_email`; decision carries it.
 - Mention fallback: run without `requester_slack_id` uses plain name.
 
@@ -122,7 +140,9 @@ is the only caller of the new pieces.
 
 ## North-star fit
 
-**Do → Record** completes the loop: the human decision now reaches everyone it
-affects — the agent is pinged to act, the customer hears the outcome where
-they asked — and both runs' audit trails record the relay. The customer never
+**Do → Record** completes the loop: the human decision now reaches every
+surface it touched — the agent is pinged to act, the customer hears the
+outcome where they asked, the approver's card flips, and the support
+channel's hand-off card is marked resolved — and both runs' audit trails
+record the relay. The customer never
 sees internal mechanics, only the policy-grounded outcome.
