@@ -234,3 +234,8 @@ async def test_governed_approval_service_and_audit(monkeypatch):
         if e.actor.type == "human" and e.decision == "approve"
     ]
     assert human_approve, f"No human approve audit event found; events={events}"
+    # ApprovalFlow identities come from Slack profiles — NOT directory-verified,
+    # so the audit actor must NOT carry idp="entra".
+    assert human_approve[0].actor.idp is None, (
+        f"Expected idp=None for Slack-sourced identity, got {human_approve[0].actor.idp!r}"
+    )

@@ -244,7 +244,8 @@ class ApprovalFlow:
                 )
                 try:
                     await self._approvals.resolve(
-                        run.approval_id, "approve" if approved else "reject", identity
+                        run.approval_id, "approve" if approved else "reject", identity,
+                        idp=None,
                     )
                 except NotAuthorized:
                     await self._store.add_event(

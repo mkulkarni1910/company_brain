@@ -2,7 +2,7 @@
 
 What makes this a platform primitive (not a webhook):
   * durable pause/resume — the PendingApproval is persisted (survives restarts)
-  * identity-bound — the decision carries a real Entra identity
+  * identity-bound — the decision carries a verified identity
   * authorized — only an identity in ``required_role`` may resolve; others rejected
   * audited — request and resolution both emit identity-stamped audit events
 """
@@ -85,7 +85,8 @@ class ApprovalService:
         return await self._store.get(approval_id)
 
     async def resolve(
-        self, approval_id: str, choice: ApprovalChoice, identity: User, *, note: str | None = None
+        self, approval_id: str, choice: ApprovalChoice, identity: User, *,
+        note: str | None = None, idp: str | None = "entra",
     ) -> ApprovalDecision:
         pending = await self._store.get(approval_id)
         if pending is None:
@@ -108,7 +109,7 @@ class ApprovalService:
             await self._audit.record(
                 run_id=pending.run_id,
                 step="Approved" if choice == "approve" else "Rejected",
-                actor=Actor(type="human", id=identity.user_id, idp="entra"),
+                actor=Actor(type="human", id=identity.user_id, idp=idp),
                 decision=choice,
                 rule=_rule(pending.rule_id, pending.rule_version),
                 detail=f"{identity.display_name} {choice}d (run {pending.run_id})",

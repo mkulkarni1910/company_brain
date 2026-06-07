@@ -323,7 +323,7 @@ export default function AdminRunsPage() {
                 <div className="audit-wrap">
                   <div className="audit-eyebrow">Audit log</div>
                   <h3>{isApproval(wf.run) ? "request-approval" : isGithubPr(wf.run) ? "raise-pr playbook" : "Refund playbook"} · run #{wf.run.id}</h3>
-                  <p className="sub">A complete, tamper-evident record of every step — nothing is a black box.</p>
+                  <p className="sub">A complete, identity-stamped record of every step — nothing is a black box.</p>
                   <table className="audit-table">
                     <thead><tr><th>Time</th><th>Step</th><th>Detail</th><th>Who</th></tr></thead>
                     <tbody>

@@ -125,3 +125,31 @@ async def test_directory_manager_role_resolves_and_customer_is_refused():
         await svc.resolve(approval_id, "approve", _directory_identity("customer"))
     decision = await svc.resolve(approval_id, "approve", _directory_identity("manager"))
     assert decision.approver.email == "diane@acme.test"
+
+
+# ── idp propagation tests ─────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_resolve_with_default_idp_records_entra():
+    """Default idp='entra' preserves RefundFlow behavior (directory-backed identities)."""
+    audit = AuditLog(client=None, force_memory=True)
+    svc = _service(audit=audit)
+    approval_id = await _request(svc)
+    await svc.resolve(approval_id, "approve", _manager())
+    events = await audit.query("RB-1")
+    human_events = [e for e in events if e.actor.type == "human" and e.decision == "approve"]
+    assert human_events, "Expected a human approve audit event"
+    assert human_events[0].actor.idp == "entra"
+
+
+@pytest.mark.asyncio
+async def test_resolve_with_idp_none_records_no_idp():
+    """Passing idp=None records a human audit event with idp=None (non-directory identity)."""
+    audit = AuditLog(client=None, force_memory=True)
+    svc = _service(audit=audit)
+    approval_id = await _request(svc)
+    await svc.resolve(approval_id, "approve", _manager(), idp=None)
+    events = await audit.query("RB-1")
+    human_events = [e for e in events if e.actor.type == "human" and e.decision == "approve"]
+    assert human_events, "Expected a human approve audit event"
+    assert human_events[0].actor.idp is None
