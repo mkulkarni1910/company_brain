@@ -26,6 +26,7 @@ when you genuinely introduce one** (with a one-line why/where).
 | **python-docx** / **pypdf** | document text extraction on ingest (`app/ingest/`) |
 | **structlog** + **OpenTelemetry** → **Azure Monitor / App Insights** | structured logs + one trace per request |
 | **pytest** (+ asyncio, cov) · **respx** | tests under `tests/` |
+| **PyYAML** | policy-as-code specs (`policies/*.yaml`), loaded + validated by `app/policy/store.py` (governed act layer) |
 
 ## Frontend — `web/` (User Web Chat + Admin Panel, one Next.js app)
 
