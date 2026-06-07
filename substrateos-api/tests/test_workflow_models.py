@@ -81,3 +81,22 @@ def test_routing_statuses_and_approver_slack_id():
                        created_at=now, updated_at=now)
     assert routed.status == "routed_to_support"
     assert routed.approver_slack_id is None
+
+
+def test_outcome_notification_fields():
+    from datetime import UTC, datetime
+
+    from app.domain.workflow import RefundDecision, RefundRun
+
+    d = RefundDecision(found=True, order_id="48213", customer="Priya Sharma",
+                       customer_email="priya@x", auto_approve=False, reasoning="r")
+    assert d.customer_email == "priya@x"
+    assert RefundDecision(found=False, reasoning="r").customer_email is None
+
+    now = datetime.now(UTC)
+    run = RefundRun(id="RB-1", requester_name="Priya", status="routed_to_support",
+                    handoff_channel="C_SUPPORT", handoff_ts="222.333",
+                    created_at=now, updated_at=now)
+    assert run.handoff_channel == "C_SUPPORT" and run.handoff_ts == "222.333"
+    legacy = RefundRun(id="RB-2", requester_name="X", created_at=now, updated_at=now)
+    assert legacy.handoff_channel is None and legacy.handoff_ts is None

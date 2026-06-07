@@ -18,6 +18,7 @@ class RefundDecision(BaseModel):
     found: bool = False
     order_id: str | None = None
     customer: str | None = None
+    customer_email: str | None = None  # from the order record — powers the outcome DM fallback
     amount_usd: float | None = None
     order_age_days: int | None = None
     policy_limit_usd: float | None = None
@@ -57,6 +58,9 @@ class RefundRun(BaseModel):
     requester_slack_id: str | None = None
     channel: str | None = None
     thread_ts: str | None = None
+    # support-channel hand-off card (customer routed runs) — resolved on outcome
+    handoff_channel: str | None = None
+    handoff_ts: str | None = None
     dm_channel: str | None = None
     dm_ts: str | None = None
     decision: RefundDecision | None = None
