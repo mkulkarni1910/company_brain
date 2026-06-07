@@ -156,3 +156,17 @@ class RunStore:
             with contextlib.suppress(Exception):
                 events.append(RunEvent.model_validate_json(raw))
         return events
+
+    async def find_routed_run(self, order_id: str | None) -> RefundRun | None:
+        """Most recent customer hand-off run for this order still awaiting an
+        outcome. list_runs is newest-first, so the first match wins. Notification
+        flips the run's status, so a second lookup finds nothing — natural
+        double-notify protection."""
+        if not order_id:
+            return None
+        for run in await self.list_runs(limit=100):
+            if (run.kind == "refund" and run.status == "routed_to_support"
+                    and run.decision is not None
+                    and run.decision.order_id == order_id):
+                return run
+        return None
