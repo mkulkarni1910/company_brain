@@ -11,9 +11,11 @@ import logging
 from dataclasses import dataclass
 from typing import Literal
 
+from app.audit.log import AuditLog
 from app.config import get_settings
 from app.connectors.github import GithubApiError, GithubAuthError, GithubClient
 from app.connectors.github_store import GithubStore
+from app.domain.audit import Actor
 from app.domain.workflow import RefundRun
 from app.workflows.github_engine import PrDraftEngine
 from app.workflows.store import RunStore
@@ -46,12 +48,14 @@ class ActionResult:
 
 class GithubFlow:
     def __init__(self, *, store: RunStore, github: GithubStore, connections,
-                 engine: PrDraftEngine, client_factory=GithubClient) -> None:
+                 engine: PrDraftEngine, client_factory=GithubClient,
+                 audit_log: AuditLog | None = None) -> None:
         self._store = store
         self._github = github
         self._connections = connections
         self._engine = engine
         self._client_factory = client_factory
+        self._audit = audit_log or AuditLog()
 
     async def _tool_enabled(self, tenant: str) -> bool:
         try:
@@ -112,8 +116,18 @@ class GithubFlow:
         await self._store.save(run)
         await self._store.add_event(run.id, step="Request received",
                                     detail=f"{text[:160]} · from {surface}", actor=requester_name)
+        await self._audit.record(
+            run_id=run.id, step="Request received",
+            actor=Actor(type="human", id=requester_email),
+            inputs_summary=text[:160], surface=surface,
+        )
         await self._store.add_event(run.id, step="Change drafted",
                                     detail=f"{draft.path} — {draft.summary}", actor="SubstrateOS")
+        await self._audit.record(
+            run_id=run.id, step="Change drafted",
+            actor=Actor.agent("pr-drafter"),
+            detail=f"{draft.path} — {draft.summary}",
+        )
         await self._store.add_event(run.id, step="Preview shown",
                                     detail="Awaiting the requester's confirm — nothing acts until they decide",
                                     actor="SubstrateOS")
@@ -193,9 +207,21 @@ class GithubFlow:
         await self._store.save(run)
         await self._store.add_event(run.id, step="Confirmed",
                                     detail=f"{actor_name} confirmed the drafted change", actor=actor_name)
+        await self._audit.record(
+            run_id=run.id, step="Confirmed",
+            actor=Actor(type="human", id=actor_email),
+            detail=f"{actor_name} confirmed the drafted change",
+        )
         await self._store.add_event(run.id, step="PR created",
                                     detail=f"{pr_url} · branch {branch} · authored as the requester",
                                     actor="SubstrateOS")
+        await self._audit.record(
+            run_id=run.id, step="PR created",
+            actor=Actor.system(),
+            action="github.create_pr",
+            target={"pr_url": pr_url, "branch": branch},
+            detail=f"{pr_url} · branch {branch} · authored as the requester",
+        )
         return ActionResult(ok=True, status="completed", pr_url=pr_url)
 
     async def cancel(self, run_id: str, *, actor_email: str | None,

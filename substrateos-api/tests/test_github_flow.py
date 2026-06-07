@@ -1,6 +1,7 @@
 """GithubFlow: the raise-PR playbook (transport-agnostic)."""
 import pytest
 
+from app.audit.log import AuditLog
 from app.connectors.github import GithubApiError, GithubAuthError
 from app.connectors.github_store import GithubStore
 from app.connectors.models import GithubConfig, SurfaceConfig
@@ -325,3 +326,56 @@ async def test_tool_check_fails_open_on_store_outage(monkeypatch):
     r = await broken_flow.start("update window", requester_name="Tom",
                                 requester_email="tom@x", surface="web")
     assert r.status == "preview"
+
+
+@pytest.mark.asyncio
+async def test_full_cycle_emits_typed_audit_events(monkeypatch):
+    """The full start→confirm cycle emits typed audit events for all four moments."""
+    _creds(monkeypatch)
+    audit = AuditLog(force_memory=True)
+    client = _Client()
+    store = RunStore(client=None, force_memory=True)
+    github = GithubStore(client=None, force_memory=True)
+    flow = GithubFlow(
+        store=store, github=github, connections=_Connections(enabled=True),
+        engine=_Engine(), client_factory=lambda tok: client,
+        audit_log=audit,
+    )
+    await _seed(github)
+
+    # Run the full draft → confirm cycle
+    r = await flow.start("update refund window to 30 days", requester_name="Tom",
+                         requester_email="tom@x", surface="web")
+    assert r.status == "preview"
+    run_id = r.run.id
+
+    out = await flow.confirm(run_id, actor_email="tom@x", actor_name="Tom")
+    assert out.ok
+
+    events = await audit.query(run_id)
+    steps = {e.step: e for e in events}
+
+    # 1. "Request received" — human actor
+    req_ev = steps.get("Request received")
+    assert req_ev is not None, f"'Request received' not in {list(steps)}"
+    assert req_ev.actor.type == "human"
+
+    # 2. Draft-prepared event — agent actor whose id contains "pr-drafter"
+    draft_ev = steps.get("Change drafted")
+    assert draft_ev is not None, f"'Change drafted' not in {list(steps)}"
+    assert draft_ev.actor.type == "agent"
+    assert "pr-drafter" in draft_ev.actor.id
+
+    # 3. Confirm event — human actor whose id equals the requester email
+    confirm_ev = steps.get("Confirmed")
+    assert confirm_ev is not None, f"'Confirmed' not in {list(steps)}"
+    assert confirm_ev.actor.type == "human"
+    assert confirm_ev.actor.id == "tom@x"
+
+    # 4. PR-raised event — system actor, action == "github.create_pr", target has PR URL
+    pr_ev = steps.get("PR created")
+    assert pr_ev is not None, f"'PR created' not in {list(steps)}"
+    assert pr_ev.actor.type == "system"
+    assert pr_ev.action == "github.create_pr"
+    assert pr_ev.target is not None
+    assert "https://github.com" in pr_ev.target.get("pr_url", "")
