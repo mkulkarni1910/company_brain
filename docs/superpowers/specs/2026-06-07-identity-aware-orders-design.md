@@ -45,6 +45,9 @@ requester is "known" when the sender's Slack email resolves through
   `build_grounded_messages` (below).
 - After ACL recheck, applies the own-orders filter (below) to the
   candidate list when `requester.role == "customer"`.
+- Skips the answer cache (read AND write) when a requester is present —
+  the cache key is (user, query) with the shared bot user, so cached
+  identity-scoped answers would leak across requesters.
 
 ### Changed: `app/generation/prompts.py`
 

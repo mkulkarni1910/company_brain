@@ -15,7 +15,9 @@ from app.domain.identity import User
 from app.domain.query import Answer, Candidate, QueryRequest, RankedResult
 from app.domain.skill import ResolvedSkill
 from app.generation.azure_openai import AzureOpenAIClient
-from app.generation.prompts import build_grounded_messages, parse_citations_from_answer
+from app.domain.directory import DirectoryUser
+from app.generation.prompts import build_grounded_messages, parse_citations_from_answer, requester_note_for
+from app.retrieval.order_scope import scope_order_chunks
 from app.live_fetch.base import LiveFetcher
 from app.orchestrator.planner import QueryPlanner
 from app.orchestrator.timing import StageTimer
@@ -158,6 +160,7 @@ class SemanticKernelOrchestrator:
         self, request: QueryRequest, *, user: User, user_token: str | None = None,
         skill_context: ResolvedSkill | None = None,
         history: list[ConversationTurn] | None = None,
+        requester: DirectoryUser | None = None,
     ) -> Answer:
         query_id = str(uuid.uuid4())
         timer = StageTimer(query_id=query_id)
@@ -166,6 +169,7 @@ class SemanticKernelOrchestrator:
             return await self._answer(
                 request, user=user, user_token=user_token, timer=timer,
                 query_id=query_id, skill_context=skill_context, history=history,
+                requester=requester,
             )
         finally:
             total_ms = round((time.perf_counter() - t0) * 1000, 1)
@@ -181,13 +185,16 @@ class SemanticKernelOrchestrator:
         query_id: str,
         skill_context: ResolvedSkill | None = None,
         history: list[ConversationTurn] | None = None,
+        requester: DirectoryUser | None = None,
     ) -> Answer:
         key = _cache_key(user, request.query)
         # Skip the cache for debug requests (cached answers carry debug=None) and
         # for history-carrying requests (answers depend on the conversation and
         # the key is (user, query) only — serving or storing them would leak
         # across conversations).
-        use_cache = not request.include_debug and not history
+        # Requester-carrying answers are identity-scoped — the (user, query) key uses the shared bot user, so caching them would leak across requesters.
+        use_cache = (not request.include_debug and not history
+                     and requester is None)
         if use_cache:
             async with timer.stage("cache_get"):
                 cached = await self._cache.get_json(key)
@@ -205,10 +212,18 @@ class SemanticKernelOrchestrator:
             )
 
         candidates = [r.candidate for r in ranked]
+        candidates = scope_order_chunks(candidates, requester)
+        if not candidates:
+            return Answer(
+                text="I don't have information about that.",
+                citations=[],
+                query_id=query_id,
+            )
         messages = build_grounded_messages(
             query=request.query, candidates=candidates[:5],
             skill_prompt=skill_context.system_prompt if skill_context else None,
             history=history,
+            requester_note=requester_note_for(requester) if requester else None,
         )
         async with timer.stage("generate"):
             text = await self._llm.complete(messages=messages, temperature=0.0, max_tokens=800)
