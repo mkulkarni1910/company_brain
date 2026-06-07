@@ -168,7 +168,7 @@ class RefundFlow:
                          text=f"On it, {first} — pulling up the order and checking the refund policy…")
 
         try:
-            decision = await self._engine.evaluate(text, user=user)
+            decision = await self._engine.evaluate(text, user=user, requester=record)
         except RefundEngineError:
             run.status = "error"
             await self._store.save(run)
