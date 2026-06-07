@@ -10,11 +10,30 @@ RunStatus = Literal[
     "approved", "rejected", "completed", "cancelled", "error",
     "needs_attention",    # stopped: no eligible approver / identity unknown
     "routed_to_support",  # customer request handed to the support channel
+    "denied",             # guardrail verdict: forbidden outright (policy-as-code)
+    "halted",             # guardrail fail-closed: missing/ambiguous facts
 ]
 
 
+class RefundFacts(BaseModel):
+    """Typed facts the model EXTRACTS from the request + grounded order context.
+
+    The model produces facts only — it never decides the outcome. The deterministic
+    PolicyEngine (app/policy) decides allow/require_approval over these facts.
+    """
+    found: bool = False
+    order_id: str | None = None
+    customer: str | None = None
+    customer_email: str | None = None  # from the order record — powers the outcome DM fallback
+    amount_usd: float | None = None
+    order_age_days: int | None = None
+    reasoning: str = ""
+
+
 class RefundDecision(BaseModel):
-    """Structured output of the refund engine's single LLM call."""
+    """Render view for the Slack cards + run record. Populated by the flow from the
+    extracted RefundFacts plus the evaluated policy — NOT directly by the model
+    (``policy_limit_*`` and ``auto_approve`` now come from the guardrail, in code)."""
     found: bool = False
     order_id: str | None = None
     customer: str | None = None
@@ -66,6 +85,7 @@ class RefundRun(BaseModel):
     decision: RefundDecision | None = None
     approver_name: str | None = None
     approver_slack_id: str | None = None  # the routed approver — click enforcement key
+    approval_id: str | None = None  # the durable PendingApproval gating this run
     # generic approval playbook
     request_text: str | None = None
     approver_source: str | None = None  # "manager" | "mention"

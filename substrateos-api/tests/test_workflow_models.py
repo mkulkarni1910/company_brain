@@ -100,3 +100,25 @@ def test_outcome_notification_fields():
     assert run.handoff_channel == "C_SUPPORT" and run.handoff_ts == "222.333"
     legacy = RefundRun(id="RB-2", requester_name="X", created_at=now, updated_at=now)
     assert legacy.handoff_channel is None and legacy.handoff_ts is None
+
+
+from app.domain.workflow import RefundFacts
+
+
+def test_refund_facts_defaults_and_fields():
+    f = RefundFacts()
+    assert f.found is False and f.amount_usd is None
+    f2 = RefundFacts(found=True, order_id="A-1001", customer="Dana",
+                     customer_email="dana@acme.test", amount_usd=120.0,
+                     order_age_days=10, reasoning="extracted")
+    assert f2.customer_email == "dana@acme.test"
+
+
+def test_run_supports_durable_approval_and_guardrail_statuses():
+    from app.domain.workflow import RefundRun
+    from datetime import UTC, datetime
+    now = datetime.now(UTC)
+    run = RefundRun(id="RB-1", requester_name="Tom", created_at=now, updated_at=now,
+                    approval_id="AP-8201", status="halted")
+    assert run.approval_id == "AP-8201"
+    run.status = "denied"  # both new statuses are valid RunStatus values
