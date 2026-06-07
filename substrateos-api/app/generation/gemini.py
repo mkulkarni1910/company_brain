@@ -44,6 +44,7 @@ class GeminiClient:
         self._key = s.gemini_api_key
         self._model = s.gemini_model
         self._plan_model = s.gemini_plan_model
+        self._ack_model = s.gemini_ack_model
         self._thinking_budget = s.gemini_thinking_budget
         self._base = s.gemini_endpoint.rstrip("/")
         self._http = httpx.AsyncClient(timeout=s.gemini_timeout_s)
@@ -71,7 +72,12 @@ class GeminiClient:
         # thinking budget. Thinking tokens count against maxOutputTokens, so size the
         # cap to fit both the thinking budget and the visible answer.
         is_plan = deployment is not None
-        model = self._plan_model if is_plan else self._model
+        # The ack is pure speed (sub-second goal) → lite model; other deployment-
+        # tagged calls (planner, router) keep the stronger fast model.
+        if deployment == "ack":
+            model = self._ack_model
+        else:
+            model = self._plan_model if is_plan else self._model
         thinking = 0 if is_plan else self._thinking_budget
         system, contents = _translate(messages)
         body: dict = {
