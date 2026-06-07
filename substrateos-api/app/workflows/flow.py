@@ -365,7 +365,7 @@ class RefundFlow:
 
         await self._store.add_event(
             run.id, step="Facts gathered",
-            detail=(f"Order #{decision.order_id} · ${decision.amount_usd:,.0f} · "
+            detail=(f"Order #{decision.order_id} · ${(decision.amount_usd or 0):,.0f} · "
                     f"age {decision.order_age_days} days · customer {decision.customer}"),
             actor="SubstrateOS",
         )
@@ -373,7 +373,7 @@ class RefundFlow:
             run.id, step="Rule evaluated",
             detail=(f"{rule} → {guardrail.result} "
                     f"(limits ${(decision.policy_limit_usd or 0):,.0f} / "
-                    f"{decision.policy_limit_days} days): {guardrail.reason}"),
+                    f"{decision.policy_limit_days if decision.policy_limit_days is not None else '?'} days): {guardrail.reason}"),
             actor=rule,
         )
         # provenance: typed, identity-stamped audit trail (the receipt)
@@ -399,7 +399,7 @@ class RefundFlow:
                                         detail=guardrail.reason, actor=rule)
             await self._store.add_event(
                 run.id, step="Refund issued",
-                detail=(f"${decision.amount_usd:,.0f} refunded to {decision.customer} · "
+                detail=(f"${(decision.amount_usd or 0):,.0f} refunded to {decision.customer} · "
                         f"{receipt.refund_id}"),
                 actor="SubstrateOS",
             )
@@ -619,7 +619,7 @@ class RefundFlow:
         await self._store.add_event(
             run.id, step="Approved" if approved else "Rejected",
             detail=(f"Manager {'approved' if approved else 'rejected'} the over-limit refund "
-                    f"of ${d.amount_usd:,.0f} on order #{d.order_id}"),
+                    f"of ${(d.amount_usd or 0):,.0f} on order #{d.order_id}"),
             actor=approver_name,
         )
         if dm_channel and dm_ts:
@@ -634,7 +634,7 @@ class RefundFlow:
             )
             await self._store.add_event(
                 run.id, step="Refund issued",
-                detail=f"${d.amount_usd:,.0f} refunded to {d.customer} · {receipt.refund_id}",
+                detail=f"${(d.amount_usd or 0):,.0f} refunded to {d.customer} · {receipt.refund_id}",
                 actor="SubstrateOS",
             )
             await self._audit.record(

@@ -240,6 +240,26 @@ async def test_unauthorized_clicker_cannot_decide(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_stop_path_survives_found_order_with_missing_amount(monkeypatch):
+    """Regression: when found=True but amount_usd=None, the policy correctly returns
+    'stop' (fail closed, on_missing_data). Before the fix the flow crashed with TypeError
+    on the 'Facts gathered' f-string before reaching its own graceful stop handler."""
+    flow, store, audit, _ = _flow_with(_require_approval_policy(), monkeypatch)
+    # engine returns facts with amount_usd=None — amount is unreadable
+    flow._engine.evaluate.return_value = RefundFacts(
+        found=True, order_id="A-77", customer="Dana",
+        amount_usd=None, order_age_days=12, reasoning="amount unreadable",
+    )
+    with patch("app.workflows.flow.slack_call", new=_noop_slack):
+        await flow.handle_request(text="refund order A-77", channel="C", thread_ts=None,
+                                  requester_slack_id="U_TOM", user=_user())
+    run = (await store.list_runs())[0]
+    assert run.status == "halted"
+    steps = [e.step for e in await store.list_events(run.id)]
+    assert "Halted" in steps
+
+
+@pytest.mark.asyncio
 async def test_auto_approve_emits_typed_audit_and_calls_connector(monkeypatch):
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
     from app.config import get_settings
