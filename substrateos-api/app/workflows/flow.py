@@ -66,8 +66,10 @@ class RefundFlow:
         return await slack_call(token, "chat.postMessage", payload)
 
     async def _route_to_support(self, token: str, run, *, text: str, requester: str,
-                                channel: str, thread_ts: str | None) -> None:
-        """Customer path: no engine run — hand the ask to the support channel."""
+                                record, channel: str, thread_ts: str | None,
+                                user: User) -> None:
+        """Customer path: read-only engine lookup pre-fills the hand-off card;
+        lookup failure never blocks routing."""
         support_channel = get_settings().slack_refund_channel_id
         if not support_channel:
             run.status = "needs_attention"
@@ -80,11 +82,25 @@ class RefundFlow:
                              text="Refunds are handled by our support team — "
                                   "please contact them directly.")
             return
+        decision = None
+        try:
+            decision = await self._engine.evaluate(text, user=user, requester=record)
+        except RefundEngineError:
+            logger.warning("customer order lookup failed; routing without facts")
+        if decision is not None and decision.found:
+            run.decision = decision
+            await self._store.add_event(
+                run.id, step="Order fetched",
+                detail=(f"Order #{decision.order_id} · ${decision.amount_usd:,.0f} · "
+                        f"age {decision.order_age_days} days — fetched for {requester}"),
+                actor="SubstrateOS")
+        else:
+            decision = None
         posted = await slack_call(token, "chat.postMessage", {
             "channel": support_channel,
             "text": f"Customer refund request from {requester}",
             **customer_request_blocks(request_text=text, customer_name=requester,
-                                      run_id=run.id),
+                                      run_id=run.id, decision=decision),
         })
         if not posted:
             run.status = "needs_attention"
@@ -142,7 +158,8 @@ class RefundFlow:
 
         if record.role == "customer":
             await self._route_to_support(token, run, text=text, requester=requester,
-                                         channel=channel, thread_ts=thread_ts)
+                                         record=record, channel=channel,
+                                         thread_ts=thread_ts, user=user)
             return
 
         first = requester.split()[0]

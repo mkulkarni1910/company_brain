@@ -181,7 +181,7 @@ async def test_manager_without_slack_stops(monkeypatch):
 # ── customer path ──────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_customer_routes_to_support_channel(monkeypatch):
+async def test_customer_routes_to_support_with_prefetched_order(monkeypatch):
     monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
     monkeypatch.setenv("SLACK_REFUND_CHANNEL_ID", "C_SUPPORT")
     from app.config import get_settings
@@ -193,12 +193,35 @@ async def test_customer_routes_to_support_channel(monkeypatch):
                                   thread_ts=None, requester_slack_id="U_PRIYA", user=_user())
     run = (await store.list_runs())[0]
     assert run.status == "routed_to_support"
-    # engine must NOT run for customers
-    flow._engine.evaluate.assert_not_called()
+    assert run.decision is not None and run.decision.order_id == "48213"
+    # engine ran scoped to the customer
+    kwargs = flow._engine.evaluate.await_args.kwargs
+    assert kwargs["requester"].email == "priya@x"
     posts = [p for m, p in calls if m == "chat.postMessage"]
-    assert any(p["channel"] == "C_SUPPORT" for p in posts)   # support card
-    assert any(p["channel"] == "D_PRIYA" for p in posts)     # customer told
-    assert "Routed to support" in [e.step for e in await store.list_events(run.id)]
+    support_post = next(p for p in posts if p["channel"] == "C_SUPPORT")
+    assert "48213" in str(support_post)              # facts on the card
+    assert any(p["channel"] == "D_PRIYA" for p in posts)
+    steps = [e.step for e in await store.list_events(run.id)]
+    assert "Order fetched" in steps and "Routed to support" in steps
+
+
+@pytest.mark.asyncio
+async def test_customer_routing_survives_engine_error(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    monkeypatch.setenv("SLACK_REFUND_CHANNEL_ID", "C_SUPPORT")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    flow, store = _flow(error=True)
+    calls, fake = _slack_recorder()
+    with patch("app.workflows.flow.slack_call", new=fake):
+        await flow.handle_request(text="refund please", channel="D_PRIYA", thread_ts=None,
+                                  requester_slack_id="U_PRIYA", user=_user())
+    run = (await store.list_runs())[0]
+    assert run.status == "routed_to_support"   # lookup failure never blocks routing
+    assert run.decision is None
+    posts = [p for m, p in calls if m == "chat.postMessage"]
+    assert any(p["channel"] == "C_SUPPORT" for p in posts)  # bare card still posted
+    assert "Order fetched" not in [e.step for e in await store.list_events(run.id)]
 
 
 @pytest.mark.asyncio

@@ -81,3 +81,25 @@ def test_customer_request_blocks():
     body = str(card["attachments"])
     assert "Priya Sharma" in body and "order 48213" in body
     assert card["attachments"][0]["color"] == "#c8860d"  # amber: waiting on a human
+
+
+def test_customer_request_blocks_with_decision_facts():
+    from app.bots.refund_cards import customer_request_blocks
+    from app.domain.workflow import RefundDecision
+
+    d = RefundDecision(found=True, order_id="48213", customer="Priya Sharma",
+                       amount_usd=1200, order_age_days=45, policy_limit_usd=500,
+                       policy_limit_days=30, auto_approve=False,
+                       reasoning="Over the limit.")
+    card = customer_request_blocks(
+        request_text="I want a refund", customer_name="Priya Sharma",
+        run_id="RB-1", decision=d,
+    )
+    body = str(card["attachments"])
+    assert "#48213" in body and "$1,200" in body and "45 days" in body
+    assert "over the auto-approve limit" in body
+
+    bare = customer_request_blocks(
+        request_text="I want a refund", customer_name="Priya Sharma", run_id="RB-1",
+    )
+    assert "#48213" not in str(bare["attachments"])

@@ -106,19 +106,29 @@ def outcome_blocks(d: RefundDecision, *, approved: bool, approver_name: str) -> 
     ])]}
 
 
-def customer_request_blocks(*, request_text: str, customer_name: str, run_id: str) -> dict:
+def customer_request_blocks(*, request_text: str, customer_name: str, run_id: str,
+                            decision: RefundDecision | None = None) -> dict:
     """Channel card for a customer's refund ask — needs a support agent to pick
-    it up and run the playbook themselves (customers can't trigger refunds)."""
+    it up and run the playbook themselves (customers can't trigger refunds).
+    When the engine pre-fetched their order, the facts ride along."""
+    inner: list[dict] = []
+    if decision is not None and decision.found:
+        inner.append(_facts_fields(decision))
+        inner.append({"type": "context", "elements": [{"type": "mrkdwn",
+            "text": (f"Order fetched automatically for the requester — "
+                     f"{'within' if decision.auto_approve else 'over'} "
+                     "the auto-approve limit.")}]})
+    inner.extend([
+        {"type": "section", "fields": [
+            {"type": "mrkdwn", "text": f"*From*\n{customer_name}"},
+            {"type": "mrkdwn", "text": f"*Request*\n{request_text[:500]}"},
+        ]},
+        {"type": "context", "elements": [{"type": "mrkdwn",
+            "text": "Customers can't trigger refunds directly — an agent should "
+                    "pick this up and run it."}]},
+    ])
     return {
         "blocks": [{"type": "section", "text": {"type": "mrkdwn",
             "text": f":wave: *Customer refund request* — needs a support agent · run {run_id}"}}],
-        "attachments": [_bar(_AMBER, [
-            {"type": "section", "fields": [
-                {"type": "mrkdwn", "text": f"*From*\n{customer_name}"},
-                {"type": "mrkdwn", "text": f"*Request*\n{request_text[:500]}"},
-            ]},
-            {"type": "context", "elements": [{"type": "mrkdwn",
-                "text": "Customers can't trigger refunds directly — an agent should "
-                        "pick this up and run it."}]},
-        ])],
+        "attachments": [_bar(_AMBER, inner)],
     }
