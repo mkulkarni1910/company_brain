@@ -1,7 +1,26 @@
 # Governed Act Layer (DO-NOW core) — Design
 
 **Date:** 2026-06-07
-**Status:** In review
+**Status:** Approved (see Addendum — direction changed from greenfield to
+reconciliation)
+
+> **Addendum (2026-06-07, post-spec):** after this spec was written we
+> discovered `origin/feat/governed-act-layer` (PR #1), which already
+> implements workstreams 1–4 — but forked from a main that predates the
+> user-directory work (88 commits behind). `feat/identity-aware-orders`
+> has since merged into `origin/main` (directory, manager-only routing,
+> refund outcome fan-out). **Direction (user-confirmed): reconcile PR #1
+> onto current main in this worktree** rather than re-implement. The
+> slices below stand as the definition of *what must be true*; the
+> implementation plan (`2026-06-07-governed-act-layer-reconcile.md`)
+> replaces the greenfield build order with: merge → resolve the six
+> conflicts (keep main's directory routing + fan-out, graft the act
+> layer's seams) → close the gaps PR #1 leaves (directory-bound approver
+> identity instead of its demo mapping, `required_role: manager`
+> vocabulary, audit trail on `GET /runs/{id}`, the admin receipt UI,
+> declared PyYAML dependency, stretch adoption by the other flows).
+
+**Original status:** In review
 **Builds on:** `2026-06-07-entra-approval-routing-design.md` (user directory,
 manager-only approval), `2026-06-05-refund-experience-design.md` (refund
 playbook). Source documents: "SubstrateOS — Platform Positioning" and
