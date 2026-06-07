@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SubstrateOS — Detailed Architecture (image)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#102444; --navy-2:#0a1c38; --navy-soft:#13294e;
+    --amber:#c8860d; --amber-2:#b3760a; --amber-bg:#f7ead2; --amber-line:#e7c98a;
+    --ink:#13233f; --ink-dim:#46546b; --muted:#7b8698;
+    --panel:#f4f6f9; --panel-2:#eef1f5; --line:#dde3ea; --white:#ffffff;
+    --green:#2f8f5b; --green-bg:#e2f0e8; --azure:#0078D4; --redis:#D82C20; --gemini:#9B72CB;
+    --shadow:0 1px 2px rgba(16,36,68,.05), 0 16px 36px -26px rgba(16,36,68,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#fff}
+  .stage{
+    width:1920px;height:1080px;position:relative;overflow:hidden;background:#fff;
+    font-family:"Lato",-apple-system,Segoe UI,sans-serif;color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    padding:20px 30px 16px 42px;display:flex;flex-direction:column;gap:9px;
+  }
+  .stage::before{content:"";position:absolute;left:0;top:0;bottom:0;width:11px;background:var(--amber)}
+  code{font-family:"JetBrains Mono",monospace}
+  .mono{font-family:"JetBrains Mono",monospace}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--amber)}
+
+  /* HEADER */
+  .hero{background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:13px;
+    padding:12px 26px;color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;flex:none}
+  .hero::after{content:"";position:absolute;right:-40px;top:-70px;width:210px;height:210px;border-radius:50%;
+    background:radial-gradient(circle,rgba(200,134,13,.22),transparent 70%)}
+  .hero .eyebrow{font-size:10.5px}
+  .hero h1{font-weight:900;font-size:30px;letter-spacing:-.5px;line-height:1.05;margin:2px 0 3px}
+  .hero h1 span{color:var(--amber)}
+  .hero .sub{font-size:9.5px;letter-spacing:3px;text-transform:uppercase;color:#9fb0c8;font-family:"JetBrains Mono",monospace}
+  .hero .legend{display:flex;gap:14px;align-items:center}
+  .hero .lg{display:flex;align-items:center;gap:6px;font-family:"JetBrains Mono",monospace;font-size:9px;color:#cfdaec;letter-spacing:.5px}
+  .hero .lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  .lbl{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:1.8px;text-transform:uppercase;
+    color:var(--muted);font-weight:600;display:flex;align-items:center;gap:7px;margin-bottom:5px}
+  .lbl b{color:var(--navy)} .lbl code{font-size:11px;color:var(--amber);font-weight:600}
+  .lbl .dot{width:6px;height:6px;border-radius:2px;background:var(--amber);display:inline-block}
+  .sect{flex:none}
+
+  /* HANDLER CARDS */
+  .handlers{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  .hcard{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:9px;
+    padding:9px 11px;box-shadow:var(--shadow)}
+  .hcard .hh{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .hcard .ico{width:22px;height:22px;flex:none;display:flex;align-items:center;justify-content:center}
+  .hcard .ico svg{width:100%;height:100%;display:block}
+  .hcard h4{font-size:12.5px;color:var(--navy);font-weight:900;line-height:1.05}
+  .hcard code.path{display:block;font-size:9.5px;color:var(--amber-2);font-weight:600;margin-bottom:4px}
+  .hcard p{font-size:9.5px;color:var(--ink-dim);line-height:1.32}
+  .hcard p code{font-size:9px;color:var(--ink)}
+
+  /* REQUEST PATH */
+  .pathrow{display:flex;align-items:stretch;gap:9px}
+  .node{background:var(--navy);color:#fff;border-radius:10px;padding:9px 13px;display:flex;flex-direction:column;justify-content:center;box-shadow:var(--shadow)}
+  .node b{font-size:12.5px;line-height:1.1} .node small{display:block;color:#b8c4d8;font-size:9px;font-family:"JetBrains Mono",monospace;margin-top:2px}
+  .node.io{background:#fff;color:var(--ink);border:1px solid var(--line);border-left:3px solid var(--amber)} .node.io small{color:var(--muted)}
+  .arrow{display:flex;align-items:center;color:var(--amber);font-size:17px;font-weight:700}
+  .orch{flex:1;background:linear-gradient(135deg,var(--navy),var(--navy-2));border:1px solid var(--amber);border-radius:11px;padding:9px 12px;box-shadow:var(--shadow)}
+  .orch .oh{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+  .orch .oh .ic{width:22px;height:22px} .orch .oh .ic svg{width:100%;height:100%;display:block}
+  .orch .oh b{color:#fff;font-size:13px} .orch .oh small{color:var(--amber);font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.5px}
+  .substeps{display:grid;grid-template-columns:repeat(9,1fr);gap:7px}
+  .ss{background:var(--navy-soft);border:1px solid rgba(255,255,255,.12);border-left:3px solid var(--azure);border-radius:7px;padding:7px 8px;color:#fff;position:relative}
+  .ss .n{position:absolute;top:6px;right:7px;font-family:"JetBrains Mono",monospace;font-size:8px;color:rgba(255,255,255,.4);font-weight:600}
+  .ss b{font-size:10.5px;display:block;line-height:1.12;padding-right:10px}
+  .ss small{font-size:8.5px;font-family:"JetBrains Mono",monospace;color:#aebbd0;display:block;margin-top:3px;line-height:1.25}
+  .ss.lat{border-left-color:var(--amber)} .ss.gate{border-left-color:#ffcf6b;background:var(--amber-2)} .ss.gate small{color:rgba(255,255,255,.92)}
+  .ss.gen{border-left-color:var(--gemini)} .ss.rank{border-left-color:#fff}
+
+  /* ENGINE */
+  .engine{background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:12px;padding:10px 14px 11px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .engine .top{display:flex;align-items:center;gap:11px;margin-bottom:8px}
+  .engine .top .ttl{color:var(--amber);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;font-weight:600}
+  .gov-badge{background:var(--amber);color:var(--navy-2);font-family:"JetBrains Mono",monospace;font-size:9px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;border-radius:6px;padding:4px 11px}
+  .esteps{display:flex;align-items:stretch;gap:7px}
+  .estep{flex:1;background:var(--navy-soft);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:9px 11px;color:#fff;display:flex;gap:9px;align-items:flex-start}
+  .estep.risk{background:var(--amber-2);border-color:rgba(255,255,255,.22)} .estep.act{background:#1d5d3d}
+  .estep .badge{width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;flex:none}
+  .estep .badge svg{width:15px;height:15px;display:block}
+  .estep.risk .badge,.estep.act .badge{background:rgba(255,255,255,.18)}
+  .estep b{font-size:12.5px;display:block;line-height:1.1} .estep small{font-size:8.8px;font-family:"JetBrains Mono",monospace;color:#bcc8dc;display:block;margin-top:2px;line-height:1.25}
+  .estep.risk small,.estep.act small{color:rgba(255,255,255,.92)}
+  .eseq{display:flex;align-items:center;color:rgba(255,255,255,.4);font-size:15px;font-weight:700}
+  .efoot{margin-top:8px;font-family:"JetBrains Mono",monospace;font-size:9px;color:#aebbd0;line-height:1.4}
+  .efoot code{color:var(--amber);font-size:9px}
+
+  /* DIRECTORY + GITHUB ROW */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  .dcard{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--navy);border-radius:10px;padding:9px 13px;box-shadow:var(--shadow)}
+  .dcard.gh{border-top-color:var(--green)}
+  .dcard .dh{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .dcard .ico{width:20px;height:20px} .dcard .ico svg{width:100%;height:100%;display:block}
+  .dcard h4{font-size:12.5px;color:var(--navy);font-weight:900}
+  .dcard p{font-size:9.5px;color:var(--ink-dim);line-height:1.34}
+  .dcard p code{font-size:9px;color:var(--amber-2)}
+  .roles{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .rchip{font-family:"JetBrains Mono",monospace;font-size:8.5px;font-weight:600;border-radius:5px;padding:2px 7px;border:1px solid var(--line);background:#fff;color:var(--ink-dim)}
+  .rchip.m{border-color:var(--amber-line);background:var(--amber-bg);color:var(--amber-2)}
+  .rchip.g{border-color:#bfe0cd;background:var(--green-bg);color:#1d5d3d}
+
+  /* MODULE MAP */
+  .modwrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .mods{display:flex;flex-wrap:wrap;gap:6px}
+  .mchip{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;background:#fff;border:1px solid var(--line);
+    border-left:3px solid var(--amber);border-radius:6px;padding:4px 9px;color:var(--navy)}
+  .mchip small{color:var(--muted);font-weight:500;margin-left:5px;font-size:8.5px}
+
+  /* FOUNDATION + CROSS-CUTTING */
+  .lower{display:grid;grid-template-columns:1.35fr 1fr;gap:12px}
+  .found,.cross{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .fgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+  .fcell{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 5px;text-align:center}
+  .fcell .ico{width:24px;height:24px;margin:0 auto 5px;display:flex;align-items:center;justify-content:center}
+  .fcell .ico svg{width:100%;height:100%;display:block}
+  .fcell b{font-size:9.5px;color:var(--navy);display:block;line-height:1.1}
+  .fcell small{font-size:8px;font-family:"JetBrains Mono",monospace;color:var(--muted);display:block;margin-top:2px;line-height:1.2}
+  .xlist{display:flex;flex-direction:column;gap:6px}
+  .xitem{display:flex;gap:9px;align-items:flex-start}
+  .xitem .xi{width:20px;height:20px;flex:none;border-radius:6px;background:var(--navy);display:flex;align-items:center;justify-content:center}
+  .xitem .xi svg{width:12px;height:12px;display:block}
+  .xitem .xi.amber{background:var(--amber-2)} .xitem .xi.green{background:var(--green)} .xitem .xi.azure{background:var(--azure)}
+  .xitem b{font-size:10.5px;color:var(--navy);display:block;line-height:1.1}
+  .xitem small{font-size:8.8px;color:var(--ink-dim);font-family:"JetBrains Mono",monospace;display:block;margin-top:2px;line-height:1.25}
+
+  .foot{display:flex;align-items:center;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:9px;color:var(--muted);letter-spacing:.5px;padding-top:1px}
+  .foot b{color:var(--amber-2)}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- HEADER -->
+  <div class="hero">
+    <div>
+      <div class="eyebrow">The Company Brain</div>
+      <h1>Substrate<span>OS</span> — Detailed Architecture</h1>
+      <div class="sub">Surfaces · Live Request Path · Governed Act Layer · Modules · Foundation</div>
+    </div>
+    <div class="legend">
+      <span class="lg"><i style="background:#fff;border:1px solid #8aa">surface / IO</i></span>
+      <span class="lg"><i style="background:var(--navy)"></i> module</span>
+      <span class="lg"><i style="background:var(--azure)"></i> Azure data</span>
+      <span class="lg"><i style="background:var(--amber)"></i> security gate · fail-closed</span>
+      <span class="lg"><i style="background:var(--green)"></i> act tool</span>
+    </div>
+  </div>
+
+  <!-- SURFACES -> HANDLERS -->
+  <div class="sect">
+    <div class="lbl"><span class="dot"></span>Surfaces &rarr; backend handlers · <code>substrateos-api/app/</code></div>
+    <div class="handlers">
+      <div class="hcard">
+        <div class="hh">
+          <div class="ico"><svg viewBox="0 0 122.8 122.8" xmlns="http://www.w3.org/2000/svg"><path d="M25.8 77.6c0 7.1-5.8 12.9-12.9 12.9S0 84.7 0 77.6s5.8-12.9 12.9-12.9h12.9v12.9z" fill="#E01E5A"/><path d="M32.3 77.6c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9v32.3c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V77.6z" fill="#E01E5A"/><path d="M45.2 25.8c-7.1 0-12.9-5.8-12.9-12.9S38.1 0 45.2 0s12.9 5.8 12.9 12.9v12.9H45.2z" fill="#36C5F0"/><path d="M45.2 32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H12.9C5.8 58.1 0 52.3 0 45.2s5.8-12.9 12.9-12.9h32.3z" fill="#36C5F0"/><path d="M97 45.2c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9-5.8 12.9-12.9 12.9H97V45.2z" fill="#2EB67D"/><path d="M90.5 45.2c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V12.9C64.7 5.8 70.5 0 77.6 0s12.9 5.8 12.9 12.9v32.3z" fill="#2EB67D"/><path d="M77.6 97c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9-12.9-5.8-12.9-12.9V97h12.9z" fill="#ECB22E"/><path d="M77.6 90.5c-7.1 0-12.9-5.8-12.9-12.9s5.8-12.9 12.9-12.9h32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H77.6z" fill="#ECB22E"/></svg></div>
+          <h4>Slack / Teams</h4>
+        </div>
+        <code class="path">bots/ · /bots</code>
+        <p>Bot ingress + approval cards. <code>formatting.py</code>: markdown &rarr; Block Kit / Adaptive Card.</p>
+      </div>
+
+      <div class="hcard">
+        <div class="hh">
+          <div class="ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="6" r="3" fill="none" stroke="#102444" stroke-width="1.7"/><circle cx="5" cy="18" r="3" fill="none" stroke="#102444" stroke-width="1.7"/><circle cx="18.5" cy="12" r="3.3" fill="#c8860d"/><path d="M7.6 7.3l8 3.6M7.6 16.7l8-3.6" fill="none" stroke="#102444" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+          <h4>Other AI tools</h4>
+        </div>
+        <code class="path">mcp/ · /mcp</code>
+        <p>MCP server (<code>build_mcp_asgi</code>) + session manager for external agents.</p>
+      </div>
+
+      <div class="hcard">
+        <div class="hh">
+          <div class="ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="4.5" width="21" height="15" rx="3" fill="none" stroke="#102444" stroke-width="1.7"/><path d="M8 9l-3 3 3 3M16 9l3 3-3 3M13.2 8l-2.4 8" fill="none" stroke="#c8860d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h4>API</h4>
+        </div>
+        <code class="path">api/context · tokens/</code>
+        <p>Context API + PAT auth. Routers <code>/context</code> <code>/tokens</code>.</p>
+      </div>
+
+      <div class="hcard">
+        <div class="hh">
+          <div class="ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#000"/><path d="M9.9 6.6v8.1M9.9 6.6l6.4 9.4M16.1 6.9v5.4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h4>Web app</h4>
+        </div>
+        <code class="path">web/ · Next.js</code>
+        <p>Web Chat + Admin Panel, MSAL bearer to the API.</p>
+      </div>
+
+      <div class="hcard">
+        <div class="hh">
+          <div class="ico"><svg viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="12" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="12" width="10" height="10" fill="#00A4EF"/><rect x="12" y="12" width="10" height="10" fill="#FFB900"/></svg></div>
+          <h4>Identity</h4>
+        </div>
+        <code class="path">auth.py · _admin_guard.py</code>
+        <p>Entra JWT + claims — "who's asking". Admin group, fail-closed.</p>
+      </div>
+
+      <div class="hcard">
+        <div class="hh">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#102444" stroke-width="1.7" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1" stroke-linecap="round"/></svg></div>
+          <h4>Config</h4>
+        </div>
+        <code class="path">config.py</code>
+        <p>pydantic-settings from env + Key Vault. No secrets in code.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE REQUEST PATH -->
+  <div class="sect">
+    <div class="lbl"><span class="dot"></span>Live request path — <code>POST /query</code> · gather facts &rarr; ground (answer returns to the calling surface)</div>
+    <div class="pathrow">
+      <div class="node io"><b>Surface</b><small>bearer JWT</small></div>
+      <div class="arrow">&rarr;</div>
+      <div class="node"><b>auth.py</b><small>Entra validate</small></div>
+      <div class="arrow">&rarr;</div>
+      <div class="orch">
+        <div class="oh">
+          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#c8860d" stroke-width="1.7" xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1.5v3M15 1.5v3M9 19.5v3M15 19.5v3M1.5 9h3M1.5 15h3M19.5 9h3M19.5 15h3" stroke-linecap="round"/><rect x="10" y="10" width="4" height="4" rx="1" fill="#c8860d" stroke="none"/></svg></div>
+          <div><b>Orchestrator</b> <small>Semantic Kernel · QueryPlanner — sequences the steps</small></div>
+        </div>
+        <div class="substeps">
+          <div class="ss lat"><span class="n">1</span><b>Immediate Ack</b><small>fast model · "On it…"</small></div>
+          <div class="ss"><span class="n">2</span><b>Hybrid Retriever</b><small>AI Search BM25+vec</small></div>
+          <div class="ss"><span class="n">3</span><b>People Proximity</b><small>Cosmos Gremlin</small></div>
+          <div class="ss"><span class="n">4</span><b>Activity Signal</b><small>Azure Data Explorer</small></div>
+          <div class="ss"><span class="n">5</span><b>Live Fetch</b><small>MS Graph (OBO)</small></div>
+          <div class="ss gate"><span class="n">6</span><b>ACL Recheck</b><small>Redis · fail-closed</small></div>
+          <div class="ss rank"><span class="n">7</span><b>Personalized Ranker</b><small>RRF + signals</small></div>
+          <div class="ss gen"><span class="n">8</span><b>Generation</b><small>Gemini / Azure OpenAI · citations</small></div>
+          <div class="ss"><span class="n">9</span><b>Conversation Memory</b><small>trimmed history</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENGINE -->
+  <div class="sect">
+    <div class="engine">
+      <div class="top">
+        <span class="ttl">The playbook engine — same shape for any task (act &rarr; stay in control)</span>
+        <span class="gov-badge">Governed Act Layer · guardrails · human approval · audit receipt</span>
+      </div>
+      <div class="esteps">
+        <div class="estep">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></div>
+          <div><b>When</b><small>trigger / event · SkillRouter</small></div>
+        </div>
+        <div class="eseq">&rarr;</div>
+        <div class="estep risk">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <div><b>Check</b><small>PolicyEngine · policies/*.yaml · deterministic, fail-closed</small></div>
+        </div>
+        <div class="eseq">&rarr;</div>
+        <div class="estep risk">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M19 8l1.6 1.6L23 7"/></svg></div>
+          <div><b>Stop</b><small>ApprovalService · Redis PendingApproval · Entra manager signs off (or stops)</small></div>
+        </div>
+        <div class="eseq">&rarr;</div>
+        <div class="estep act">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L4 14h7l-1 7 9-11h-7z"/></svg></div>
+          <div><b>Do it</b><small>act in your tools · connectors/act/</small></div>
+        </div>
+        <div class="eseq">&rarr;</div>
+        <div class="estep">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h6"/></svg></div>
+          <div><b>Record</b><small>AuditLog · append-only, actor-stamped</small></div>
+        </div>
+      </div>
+      <div class="efoot"><code>app/workflows/</code> RefundFlow · ApprovalFlow · GithubFlow · RunStore &nbsp;+&nbsp; <code>app/skills/</code> SkillStore · SkillRouter &nbsp;—&nbsp; approval routed to the requester's Entra manager (Managers group) via <code>DirectoryService</code>; customers &rarr; support channel; run stops (<code>needs_attention</code>) when no eligible approver.</div>
+    </div>
+  </div>
+
+  <!-- DIRECTORY + GITHUB -->
+  <div class="sect duo">
+    <div class="dcard">
+      <div class="dh">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#102444" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5"/><circle cx="18" cy="9" r="2.4"/><path d="M16 14.5c2.3.4 4 2.4 4 4.8"/></svg></div>
+        <h4>User Directory + Scheduler</h4>
+      </div>
+      <p><code>app/directory/</code> — joins Slack &amp; Entra on email. <code>DirectorySync</code> daily via <code>scheduler.py</code> (Graph <code>$expand=manager</code> + group members); <code>DirectoryStore</code> (Redis); <code>DirectoryService.resolve()</code> cache-first w/ live fallback.</p>
+      <div class="roles"><span class="rchip m">manager</span><span class="rchip g">agent</span><span class="rchip">customer</span><span class="rchip">+ manager edge → approval routing</span></div>
+    </div>
+    <div class="dcard gh">
+      <div class="dh">
+        <div class="ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#181717" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></div>
+        <h4>GitHub raise-pr flow &nbsp;—&nbsp; the first act tool</h4>
+      </div>
+      <p><code>app/workflows/github_pr.py</code> (GithubFlow) + <code>github_engine.py</code> (PrDraftEngine, 2 grounded LLM steps, path-validated). Per-user OAuth (<code>api/github.py</code>), token in <code>github_store.py</code>. <b>Stop</b> &rarr; requester previews; <b>Do</b> &rarr; branch + commit + PR <i>as the user</i>; rendered via <code>bots/github_cards.py</code> (Slack blocks · Teams card · Web).</p>
+    </div>
+  </div>
+
+  <!-- MODULE MAP -->
+  <div class="sect">
+    <div class="lbl"><span class="dot"></span>Backend modules · <code>substrateos-api/app/</code> — strict boundaries, each a swappable interface</div>
+    <div class="modwrap">
+      <div class="mods">
+        <span class="mchip">orchestrator/ <small>SK + QueryPlanner</small></span>
+        <span class="mchip">retrieval/ <small>AISearch + Hybrid</small></span>
+        <span class="mchip">people/ <small>Cosmos Gremlin</small></span>
+        <span class="mchip">activity/ <small>ADX signals</small></span>
+        <span class="mchip">ranking/ <small>PersonalizedRanker</small></span>
+        <span class="mchip">generation/ <small>Gemini · AOAI</small></span>
+        <span class="mchip">live_fetch/ <small>Graph OBO</small></span>
+        <span class="mchip">acl/ <small>double-enforce</small></span>
+        <span class="mchip">policy/ <small>PolicyEngine · YAML</small></span>
+        <span class="mchip">approvals/ <small>ApprovalService</small></span>
+        <span class="mchip">audit/ <small>AuditLog</small></span>
+        <span class="mchip">skills/ · workflows/ <small>playbooks</small></span>
+        <span class="mchip">directory/ <small>identity join</small></span>
+        <span class="mchip">scheduler.py <small>daily sync</small></span>
+        <span class="mchip">conversations/ <small>memory</small></span>
+        <span class="mchip">ingest/ · connectors/ <small>chunk→embed→ACL</small></span>
+        <span class="mchip">bots/ · mcp/ <small>surface dispatch</small></span>
+        <span class="mchip">discover/ · search/ · history/</span>
+        <span class="mchip">cache/ · tokens/ · metrics/</span>
+        <span class="mchip">domain/ · deps.py <small>models + DI</small></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOUNDATION + CROSS-CUTTING -->
+  <div class="sect lower">
+    <div class="found">
+      <div class="lbl"><span class="dot"></span>Foundation &amp; infrastructure — built on tools IT already trusts</div>
+      <div class="fgrid">
+        <div class="fcell"><div class="ico"><svg viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="12" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="12" width="10" height="10" fill="#00A4EF"/><rect x="12" y="12" width="10" height="10" fill="#FFB900"/></svg></div><b>Entra ID</b><small>identity</small></div>
+        <div class="fcell"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M21 21l-5.2-5.2"/></svg></div><b>AI Search</b><small>BM25+vec</small></div>
+        <div class="fcell"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.7"><circle cx="12" cy="12" r="2.6" fill="#0078D4" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></svg></div><b>Cosmos DB</b><small>Gremlin</small></div>
+        <div class="fcell"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V9M8 20V5M13 20v-7M18 20V8"/><path d="M2 21h20" stroke-width="1.5"/></svg></div><b>Data Explorer</b><small>activity</small></div>
+        <div class="fcell"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.8"><circle cx="6" cy="7" r="2.6" fill="#0078D4" stroke="none"/><circle cx="18" cy="6" r="2.6"/><circle cx="16" cy="18" r="2.6" fill="#0078D4" stroke="none"/><circle cx="6" cy="17" r="2.6"/><path d="M8.3 7.2l7.4-1M7.4 9.2l7.6 7M16 9l1 6.5M8.5 16h5" stroke-linecap="round"/></svg></div><b>MS Graph</b><small>OBO fetch</small></div>
+        <div class="fcell"><div class="ico"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><ellipse cx="12" cy="6" rx="8" ry="3" fill="none" stroke="#D82C20" stroke-width="1.7"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6" fill="none" stroke="#D82C20" stroke-width="1.7"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="#D82C20" stroke-width="1.5"/></svg></div><b>Redis</b><small>ACL · pending</small></div>
+        <div class="fcell"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2l8.5 5v10L12 22l-8.5-5V7z"/><path d="M12 12l8.5-5M12 12v10M12 12L3.5 7" stroke-width="1.3"/></svg></div><b>Container Apps</b><small>centralindia</small></div>
+        <div class="fcell"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13h4l3-8 4 16 3-8h6"/></svg></div><b>Monitor</b><small>OTel traces</small></div>
+      </div>
+    </div>
+
+    <div class="cross">
+      <div class="lbl"><span class="dot"></span>Cross-cutting</div>
+      <div class="xlist">
+        <div class="xitem"><div class="xi amber"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg></div><div><b>Security — safe to allow</b><small>known identity · double-enforcement ACLs · policy-as-code · human approval · stops if unsure</small></div></div>
+        <div class="xitem"><div class="xi"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg></div><div><b>Audit + Observability</b><small>AuditLog append-only, actor-stamped · structlog + OpenTelemetry &rarr; Azure Monitor, one trace / request</small></div></div>
+        <div class="xitem"><div class="xi green"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div><div><b>Quality gates</b><small>pytest suite + eval harness (golden Q&amp;A recall/MRR) · frontend typecheck + lint + build before ship</small></div></div>
+        <div class="xitem"><div class="xi azure"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3.3 7L12 12l8.7-5M12 12v9"/></svg></div><div><b>Deploy</b><small>Docker amd64 &rarr; ACR (<code>cbrainindiaacr</code>) &rarr; Container Apps · DefaultAzureCredential / managed identity</small></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>SubstrateOS · detailed architecture — aligned to the Master Deck &amp; the shipped codebase</span>
+    <span><b>2026-06-07</b></span>
+  </div>
+
+</div>
+</body>
+</html>

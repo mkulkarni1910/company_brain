@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SubstrateOS — High-Level Architecture (image)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#102444; --navy-2:#0a1c38; --navy-soft:#13294e;
+    --amber:#c8860d; --amber-2:#b3760a; --amber-bg:#f7ead2; --amber-line:#e7c98a;
+    --ink:#13233f; --ink-dim:#46546b; --muted:#7b8698;
+    --panel:#f4f6f9; --panel-2:#eef1f5; --line:#dde3ea; --white:#ffffff;
+    --green:#2f8f5b; --green-bg:#e2f0e8; --azure:#0078D4;
+    --shadow:0 1px 2px rgba(16,36,68,.05), 0 16px 36px -26px rgba(16,36,68,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#fff}
+  .stage{
+    width:1600px;height:900px;position:relative;overflow:hidden;background:#fff;
+    font-family:"Lato",-apple-system,Segoe UI,sans-serif;color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    padding:24px 38px 18px 50px;display:flex;flex-direction:column;
+  }
+  .stage::before{content:"";position:absolute;left:0;top:0;bottom:0;width:12px;background:var(--amber)}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;color:var(--amber)}
+
+  /* ---------- HEADER ---------- */
+  .hero{background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:14px;
+    padding:14px 28px;color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between}
+  .hero::after{content:"";position:absolute;right:-40px;top:-70px;width:230px;height:230px;border-radius:50%;
+    background:radial-gradient(circle,rgba(200,134,13,.22),transparent 70%)}
+  .hero .eyebrow{font-size:11px}
+  .hero h1{font-weight:900;font-size:33px;letter-spacing:-.5px;line-height:1.05;margin:2px 0 3px}
+  .hero h1 span{color:var(--amber)}
+  .hero .sub{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#9fb0c8;font-family:"JetBrains Mono",monospace}
+  .hero .theme{position:relative;z-index:2;font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;
+    letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);border-radius:8px;padding:8px 14px}
+
+  .lbl{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+    color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px}
+  .lbl b{color:var(--navy)}
+  .lbl .dot{width:7px;height:7px;border-radius:2px;background:var(--amber);display:inline-block}
+
+  /* ---------- SURFACES ---------- */
+  .surfaces{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  .surface{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--amber);
+    border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+  .surface .ico{width:34px;height:34px;flex:none;display:flex;align-items:center;justify-content:center}
+  .surface .ico svg{width:100%;height:100%;display:block}
+  .surface b{display:block;font-size:15px;color:var(--navy);line-height:1.1}
+  .surface small{display:block;color:var(--muted);font-size:10.5px;font-family:"JetBrains Mono",monospace;margin-top:2px}
+
+  /* ---------- DATA-FLOW ARROWS ---------- */
+  .flow-legend{display:flex;align-items:center;justify-content:center;gap:22px;
+    font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;letter-spacing:.4px;margin:7px 0 1px}
+  .flow-legend .ttl{color:var(--muted);letter-spacing:2px}
+  .flow-legend .req{color:var(--navy)} .flow-legend .req b{color:var(--navy)}
+  .flow-legend .ans{color:var(--amber-2)}
+  .arrowband{display:grid;grid-template-columns:repeat(5,1fr);align-items:center;height:34px}
+  .arrowband .cell{display:flex;justify-content:center}
+  .arrowband svg{height:34px;width:46px;display:block;overflow:visible}
+
+  /* ---------- SUBSTRATEOS LAYER BOUNDARY ---------- */
+  .os-layer{position:relative;border:1.6px dashed var(--amber-line);border-radius:16px;
+    padding:15px 16px 15px;margin-top:5px;
+    background:linear-gradient(180deg, rgba(247,234,210,.20), rgba(247,234,210,0))}
+  .os-tag{position:absolute;top:-10px;left:22px;background:#fff;padding:0 10px;
+    font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber-2)}
+  .os-tag b{color:var(--navy)}
+
+  /* ENTRA GATEWAY */
+  .gateway{display:flex;align-items:center;justify-content:center;gap:13px;
+    background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:11px;padding:8px 18px}
+  .gateway .ms{width:24px;height:24px;flex:none}
+  .gateway .ms svg{width:100%;height:100%;display:block}
+  .gateway b{color:var(--navy);font-size:14px}
+  .gateway b span{color:var(--amber-2)}
+  .gateway .sub{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--amber-2);font-weight:600;letter-spacing:.3px}
+
+  /* ENGINE */
+  .engine{background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:14px;
+    padding:14px 18px 15px;box-shadow:var(--shadow);position:relative;overflow:hidden;margin-top:11px}
+  .engine::after{content:"";position:absolute;left:-50px;bottom:-90px;width:240px;height:240px;border-radius:50%;
+    background:radial-gradient(circle,rgba(200,134,13,.12),transparent 70%)}
+  .engine .top{display:flex;align-items:center;gap:12px;margin-bottom:11px;position:relative;z-index:2}
+  .engine .top .ttl{color:var(--amber);font-family:"JetBrains Mono",monospace;font-size:11px;
+    letter-spacing:1.5px;text-transform:uppercase;font-weight:600}
+  .gov-badge{background:var(--amber);color:var(--navy-2);font-family:"JetBrains Mono",monospace;font-size:10px;
+    font-weight:700;letter-spacing:2px;text-transform:uppercase;border-radius:7px;padding:5px 13px}
+  .steps{display:flex;align-items:stretch;gap:8px;position:relative;z-index:2}
+  .step{flex:1;background:var(--navy-soft);border:1px solid rgba(255,255,255,.12);border-radius:10px;
+    padding:11px 12px;color:#fff;display:flex;flex-direction:column;gap:8px}
+  .step.risk{background:var(--amber-2);border-color:rgba(255,255,255,.22)}
+  .step.act{background:#1d5d3d;border-color:rgba(255,255,255,.18)}
+  .step .badge{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.10);
+    display:flex;align-items:center;justify-content:center}
+  .step .badge svg{width:18px;height:18px;display:block}
+  .step.risk .badge,.step.act .badge{background:rgba(255,255,255,.18)}
+  .step b{font-size:13.5px;display:block;line-height:1.15}
+  .step small{font-size:10px;font-family:"JetBrains Mono",monospace;color:#c2cde0;display:block;margin-top:3px;line-height:1.3}
+  .step.risk small,.step.act small{color:rgba(255,255,255,.92)}
+  .seq{display:flex;align-items:center;color:rgba(255,255,255,.42);font-size:18px;font-weight:700}
+
+  /* ACT / FACTS ARROW BAND (engine -> bottom) */
+  .actband{display:grid;grid-template-columns:300px 1fr;gap:16px;height:28px;align-items:center;margin:6px 0 0}
+  .actband .seg{display:flex;align-items:center;justify-content:center;gap:8px}
+  .actband svg{height:28px;width:36px;display:block;overflow:visible}
+  .actband .cap{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;letter-spacing:.4px}
+
+  /* BOTTOM: tools + foundation */
+  .bottom{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-top:0}
+  .panelcard{border-radius:13px;padding:12px 16px;box-shadow:var(--shadow)}
+  .tools{background:var(--green-bg);border:1px solid #bfe0cd;border-left:4px solid var(--green)}
+  .tools .lbl b{color:#1d5d3d}
+  .tool-row{display:flex;align-items:center;gap:13px;margin-top:9px}
+  .tool-row .ico{width:40px;height:40px;flex:none;background:#fff;border:1px solid #bfe0cd;border-radius:11px;
+    display:flex;align-items:center;justify-content:center}
+  .tool-row .ico svg{width:25px;height:25px;display:block}
+  .tool-row b{font-size:16px;color:var(--navy);display:block;line-height:1.1}
+  .tool-row small{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--green);font-weight:600;display:block;margin-top:3px}
+  .tools .note{margin-top:8px;font-size:10.5px;color:var(--ink-dim);line-height:1.35}
+
+  .foundation{background:var(--panel);border:1px solid var(--line)}
+  .fgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-top:9px}
+  .fcell{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 8px;text-align:center}
+  .fcell .ico{width:31px;height:31px;margin:0 auto 7px;display:flex;align-items:center;justify-content:center}
+  .fcell .ico svg{width:100%;height:100%;display:block}
+  .fcell b{font-size:11.5px;color:var(--navy);display:block;line-height:1.2}
+  .fcell small{font-size:9px;font-family:"JetBrains Mono",monospace;color:var(--muted);display:block;margin-top:3px;line-height:1.25}
+
+  /* FOOTER KICKER */
+  .kicker{border-left:5px solid var(--amber);background:var(--amber-bg);border-radius:0 9px 9px 0;
+    padding:8px 16px;font-size:13.5px;color:var(--navy);display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+  .kicker b{color:var(--amber-2)}
+  .kicker .src{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--amber-2);letter-spacing:.5px;opacity:.85}
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- ===== HEADER ===== -->
+  <div class="hero">
+    <div>
+      <div class="eyebrow">The Company Brain</div>
+      <h1>Substrate<span>OS</span></h1>
+      <div class="sub">High-Level Architecture · Productivity &amp; Teamwork Reimagined</div>
+    </div>
+    <div class="theme">Microsoft Build AI</div>
+  </div>
+
+  <!-- ===== SURFACES ===== -->
+  <div class="lbl" style="margin-top:13px"><span class="dot"></span>Surfaces — where requests start · <b>it always knows who's asking</b></div>
+  <div class="surfaces" style="margin-top:8px">
+    <div class="surface">
+      <div class="ico">
+        <svg viewBox="0 0 122.8 122.8" xmlns="http://www.w3.org/2000/svg">
+          <path d="M25.8 77.6c0 7.1-5.8 12.9-12.9 12.9S0 84.7 0 77.6s5.8-12.9 12.9-12.9h12.9v12.9z" fill="#E01E5A"/>
+          <path d="M32.3 77.6c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9v32.3c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V77.6z" fill="#E01E5A"/>
+          <path d="M45.2 25.8c-7.1 0-12.9-5.8-12.9-12.9S38.1 0 45.2 0s12.9 5.8 12.9 12.9v12.9H45.2z" fill="#36C5F0"/>
+          <path d="M45.2 32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H12.9C5.8 58.1 0 52.3 0 45.2s5.8-12.9 12.9-12.9h32.3z" fill="#36C5F0"/>
+          <path d="M97 45.2c0-7.1 5.8-12.9 12.9-12.9s12.9 5.8 12.9 12.9-5.8 12.9-12.9 12.9H97V45.2z" fill="#2EB67D"/>
+          <path d="M90.5 45.2c0 7.1-5.8 12.9-12.9 12.9s-12.9-5.8-12.9-12.9V12.9C64.7 5.8 70.5 0 77.6 0s12.9 5.8 12.9 12.9v32.3z" fill="#2EB67D"/>
+          <path d="M77.6 97c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9-12.9-5.8-12.9-12.9V97h12.9z" fill="#ECB22E"/>
+          <path d="M77.6 90.5c-7.1 0-12.9-5.8-12.9-12.9s5.8-12.9 12.9-12.9h32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H77.6z" fill="#ECB22E"/>
+        </svg>
+      </div>
+      <div><b>Slack</b><small>bot</small></div>
+    </div>
+
+    <div class="surface">
+      <div class="ico">
+        <svg width="256px" height="239px" viewBox="0 0 256 239" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+          <defs><linearGradient x1="17.372046%" y1="-6.51032331%" x2="82.6280767%" y2="106.510437%" id="tg1">
+            <stop stop-color="#5A62C3" offset="0%"></stop><stop stop-color="#4D55BD" offset="50%"></stop><stop stop-color="#3940AB" offset="100%"></stop>
+          </linearGradient></defs>
+          <g>
+            <path d="M178.562984,89.3023389 L244.688409,89.3023389 C250.935667,89.3023389 256,94.3666717 256,100.61393 L256,160.8454 C256,183.805692 237.387095,202.418597 214.426804,202.418597 L214.230281,202.418597 C191.269989,202.421813 172.654443,183.81155 172.651112,160.851258 L172.651112,95.2142112 C172.651112,91.9491339 175.298022,89.3023389 178.562984,89.3023389 Z" fill="#5059C9"></path>
+            <circle fill="#5059C9" cx="223.255847" cy="50.6046204" r="26.7907017"></circle>
+            <circle fill="#7B83EB" cx="139.906959" cy="38.6977185" r="38.6977185"></circle>
+            <path d="M191.505908,89.3023389 L82.3545595,89.3023389 C76.1817292,89.4551005 71.2986428,94.5778961 71.4418711,100.750956 L71.4418711,169.448288 C70.5798595,206.492276 99.8873366,237.23307 136.930291,238.139647 C173.973246,237.23307 203.280608,206.492276 202.418711,169.448288 L202.418711,100.750956 C202.56171,94.5778961 197.678739,89.4551005 191.505908,89.3023389 Z" fill="#7B83EB"></path>
+            <path d="M142.883742,89.3023389 L142.883742,185.57026 C142.854109,189.98484 140.178944,193.950782 136.096765,195.631619 C134.797028,196.181446 133.400121,196.465146 131.988857,196.465146 L76.6809034,196.465146 C75.9069881,194.500494 75.1925694,192.535843 74.5971439,190.511695 C72.5131546,183.680267 71.4497964,176.578577 71.4417563,169.436343 L71.4417563,100.733038 C71.2986428,94.5698561 76.1736891,89.4551005 82.3366416,89.3023389 L142.883742,89.3023389 Z" fill="#000000" opacity="0.1"></path>
+            <path d="M136.930291,89.3023389 L136.930291,191.523711 C136.930291,192.934975 136.646591,194.331882 136.096765,195.631619 C134.415928,199.713798 130.449985,202.389078 126.035406,202.418597 L79.4790817,202.418597 C78.4669502,200.453945 77.5144302,198.489294 76.6809034,196.465146 C75.8473766,194.440998 75.1925694,192.535843 74.5971439,190.511695 C72.5131546,183.680382 71.4497964,176.578577 71.4417563,169.436343 L71.4417563,100.733038 C71.2986428,94.5698561 76.1736891,89.4551005 82.3366416,89.3023389 L136.930291,89.3023389 Z" fill="#000000" opacity="0.2"></path>
+            <path d="M10.9126884,53.5814034 L120.063922,53.5814034 C126.090883,53.5814034 130.976611,58.4672463 130.976611,64.4940918 L130.976611,173.645326 C130.976611,179.672286 126.090768,184.558014 120.063922,184.558014 L10.9126884,184.558014 C4.88572809,184.558014 0,179.672171 0,173.645326 L0,64.4940918 C0,58.4672463 4.88584295,53.5814034 10.9126884,53.5814034 Z" fill="url(#tg1)"></path>
+            <polygon fill="#FFFFFF" points="94.2080524 95.1248514 72.3884185 95.1248514 72.3884185 154.540713 58.4871168 154.540713 58.4871168 95.1248514 36.768788 95.1248514 36.768788 83.5989345 94.2080524 83.5989345"></polygon>
+          </g>
+        </svg>
+      </div>
+      <div><b>Teams</b><small>bot · approvals</small></div>
+    </div>
+
+    <div class="surface">
+      <div class="ico">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="12" fill="#000"/>
+          <path d="M9.9 6.6v8.1M9.9 6.6l6.4 9.4M16.1 6.9v5.4" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div><b>Web app</b><small>Next.js</small></div>
+    </div>
+
+    <div class="surface">
+      <div class="ico">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="5" cy="6" r="3" fill="none" stroke="#102444" stroke-width="1.7"/>
+          <circle cx="5" cy="18" r="3" fill="none" stroke="#102444" stroke-width="1.7"/>
+          <circle cx="18.5" cy="12" r="3.3" fill="#c8860d"/>
+          <path d="M7.6 7.3l8 3.6M7.6 16.7l8-3.6" fill="none" stroke="#102444" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div><b>AI tools</b><small>MCP</small></div>
+    </div>
+
+    <div class="surface">
+      <div class="ico">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1.5" y="4.5" width="21" height="15" rx="3" fill="none" stroke="#102444" stroke-width="1.7"/>
+          <path d="M8 9l-3 3 3 3M16 9l3 3-3 3M13.2 8l-2.4 8" fill="none" stroke="#c8860d" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div><b>API</b><small>PAT / context</small></div>
+    </div>
+  </div>
+
+  <!-- ===== DATA-FLOW (surfaces <-> layer) ===== -->
+  <div class="flow-legend">
+    <span class="ttl">DATA FLOW</span>
+    <span class="req">▼ request · directory sync &mdash; into the layer</span>
+    <span class="ans">▲ grounded answer · approval card &mdash; back to each surface</span>
+  </div>
+  <div class="arrowband">
+    <div class="cell">
+      <svg viewBox="0 0 46 34" xmlns="http://www.w3.org/2000/svg">
+        <line x1="17" y1="4" x2="17" y2="23" stroke="#102444" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="17,30 11,21 23,21" fill="#102444"/>
+        <line x1="29" y1="30" x2="29" y2="11" stroke="#c8860d" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="29,4 23,13 35,13" fill="#c8860d"/>
+      </svg>
+    </div>
+    <div class="cell">
+      <svg viewBox="0 0 46 34" xmlns="http://www.w3.org/2000/svg">
+        <line x1="17" y1="4" x2="17" y2="23" stroke="#102444" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="17,30 11,21 23,21" fill="#102444"/>
+        <line x1="29" y1="30" x2="29" y2="11" stroke="#c8860d" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="29,4 23,13 35,13" fill="#c8860d"/>
+      </svg>
+    </div>
+    <div class="cell">
+      <svg viewBox="0 0 46 34" xmlns="http://www.w3.org/2000/svg">
+        <line x1="17" y1="4" x2="17" y2="23" stroke="#102444" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="17,30 11,21 23,21" fill="#102444"/>
+        <line x1="29" y1="30" x2="29" y2="11" stroke="#c8860d" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="29,4 23,13 35,13" fill="#c8860d"/>
+      </svg>
+    </div>
+    <div class="cell">
+      <svg viewBox="0 0 46 34" xmlns="http://www.w3.org/2000/svg">
+        <line x1="17" y1="4" x2="17" y2="23" stroke="#102444" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="17,30 11,21 23,21" fill="#102444"/>
+        <line x1="29" y1="30" x2="29" y2="11" stroke="#c8860d" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="29,4 23,13 35,13" fill="#c8860d"/>
+      </svg>
+    </div>
+    <div class="cell">
+      <svg viewBox="0 0 46 34" xmlns="http://www.w3.org/2000/svg">
+        <line x1="17" y1="4" x2="17" y2="23" stroke="#102444" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="17,30 11,21 23,21" fill="#102444"/>
+        <line x1="29" y1="30" x2="29" y2="11" stroke="#c8860d" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="29,4 23,13 35,13" fill="#c8860d"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ===== SUBSTRATEOS LAYER ===== -->
+  <div class="os-layer">
+    <span class="os-tag"><b>SubstrateOS</b> — the governed layer · identity · engine · foundation</span>
+
+    <!-- ENTRA GATEWAY -->
+    <div class="gateway">
+      <div class="ms">
+        <svg viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+          <rect x="12" y="1" width="10" height="10" fill="#7FBA00"/>
+          <rect x="1" y="12" width="10" height="10" fill="#00A4EF"/>
+          <rect x="12" y="12" width="10" height="10" fill="#FFB900"/>
+        </svg>
+      </div>
+      <b>All surfaces sign in through <span>Microsoft Entra ID</span></b>
+      <span class="sub">— known identity on every request · double-enforcement ACLs, fail-closed —</span>
+    </div>
+
+    <!-- ENGINE -->
+    <div class="engine">
+      <div class="top">
+        <span class="ttl">The engine — runs the playbook, step by step</span>
+        <span class="gov-badge">Governed Act Layer · guardrails · human approval · audit receipt</span>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+          <div><b>Who's asking</b><small>Entra identity</small></div>
+        </div>
+        <div class="seq">→</div>
+        <div class="step">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div>
+          <div><b>Gather facts</b><small>Search · People · Activity · Graph</small></div>
+        </div>
+        <div class="seq">→</div>
+        <div class="step risk">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <div><b>Check rules</b><small>PolicyEngine · policy + ACL</small></div>
+        </div>
+        <div class="seq">→</div>
+        <div class="step risk">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M19 8l1.6 1.6L23 7"/></svg></div>
+          <div><b>Ask a human</b><small>ApprovalService · Teams</small></div>
+        </div>
+        <div class="seq">→</div>
+        <div class="step act">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L4 14h7l-1 7 9-11h-7z"/></svg></div>
+          <div><b>Do it</b><small>act in your tools · GitHub PR</small></div>
+        </div>
+        <div class="seq">→</div>
+        <div class="step">
+          <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h6"/></svg></div>
+          <div><b>Log it</b><small>AuditLog · append-only</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ENGINE -> BOTTOM ARROWS -->
+    <div class="actband">
+      <div class="seg">
+        <svg viewBox="0 0 36 28" xmlns="http://www.w3.org/2000/svg">
+          <line x1="18" y1="3" x2="18" y2="16" stroke="#2f8f5b" stroke-width="2.4" stroke-linecap="round"/>
+          <polygon points="18,24 12,16 24,16" fill="#2f8f5b"/>
+        </svg>
+        <span class="cap" style="color:#2f8f5b">act &mdash; open a PR</span>
+      </div>
+      <div class="seg">
+        <svg viewBox="0 0 36 28" xmlns="http://www.w3.org/2000/svg">
+          <line x1="18" y1="8" x2="18" y2="20" stroke="#0078D4" stroke-width="2.4" stroke-linecap="round"/>
+          <polygon points="18,3 13,10 23,10" fill="#0078D4"/>
+          <polygon points="18,25 13,18 23,18" fill="#0078D4"/>
+        </svg>
+        <span class="cap" style="color:#0078D4">gather facts · live data &amp; daily sync</span>
+      </div>
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="bottom">
+      <div class="panelcard tools">
+        <div class="lbl"><span class="dot" style="background:var(--green)"></span><b>Tools</b> — where it acts</div>
+        <div class="tool-row">
+          <div class="ico">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#181717" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222 0 1.606-.014 2.898-.014 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+          </div>
+          <div><b>GitHub</b><small>raise PRs · as the user</small></div>
+        </div>
+        <div class="note">The first place the engine <b>acts</b> — branch, commit &amp; open a PR on your behalf, only after Check + Stop pass.</div>
+      </div>
+
+      <div class="panelcard foundation">
+        <div class="lbl"><span class="dot"></span>Foundation — <b>built on the tools your IT already trusts</b></div>
+        <div class="fgrid">
+          <div class="fcell">
+            <div class="ico"><svg viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="12" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="12" width="10" height="10" fill="#00A4EF"/><rect x="12" y="12" width="10" height="10" fill="#FFB900"/></svg></div>
+            <b>Entra ID</b><small>who can do what</small>
+          </div>
+          <div class="fcell">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M21 21l-5.2-5.2"/></svg></div>
+            <b>AI Search</b><small>find info</small>
+          </div>
+          <div class="fcell">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.7"><circle cx="12" cy="12" r="2.6" fill="#0078D4" stroke="none"/><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></svg></div>
+            <b>Cosmos DB</b><small>people &amp; history</small>
+          </div>
+          <div class="fcell">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.8"><circle cx="6" cy="7" r="2.6" fill="#0078D4" stroke="none"/><circle cx="18" cy="6" r="2.6"/><circle cx="16" cy="18" r="2.6" fill="#0078D4" stroke="none"/><circle cx="6" cy="17" r="2.6"/><path d="M8.3 7.2l7.4-1M7.4 9.2l7.6 7M16 9l1 6.5M8.5 16h5" stroke-linecap="round"/></svg></div>
+            <b>MS Graph</b><small>live data</small>
+          </div>
+          <div class="fcell">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2l8.5 5v10L12 22l-8.5-5V7z"/><path d="M12 12l8.5-5M12 12v10M12 12L3.5 7" stroke-width="1.3"/></svg></div>
+            <b>Container Apps</b><small>runs &amp; scales</small>
+          </div>
+          <div class="fcell">
+            <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="#0078D4" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13h4l3-8 4 16 3-8h6"/></svg></div>
+            <b>Monitor</b><small>watches it all</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== KICKER ===== -->
+  <div class="kicker">
+    <div>One engine for every task — <b>it checks who's asking, follows the rules, asks a human if risky, and logs it all.</b></div>
+    <div class="src">SubstrateOS · aligned to the Master Deck · 2026-06-07</div>
+  </div>
+
+</div>
+</body>
+</html>
