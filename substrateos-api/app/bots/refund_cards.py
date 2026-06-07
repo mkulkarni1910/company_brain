@@ -93,16 +93,39 @@ def decided_dm_blocks(d: RefundDecision, *, approved: bool, approver_name: str) 
     ])]}
 
 
-def outcome_blocks(d: RefundDecision, *, approved: bool, approver_name: str) -> dict:
+def outcome_blocks(d: RefundDecision, *, approved: bool, approver_name: str,
+                   mention: str | None = None) -> dict:
+    verdict = "approved" if approved else "rejected"
     if approved:
-        head = f":white_check_mark: *Approved by {approver_name}*"
+        head = (f":white_check_mark: *Hello {mention} — refund {verdict} by {approver_name}*"
+                if mention else f":white_check_mark: *Approved by {approver_name}*")
         body = f"Refund of {_usd(d.amount_usd)} issued to {d.customer} on order #{d.order_id}. Confirmation sent."
     else:
-        head = f":x: *Rejected by {approver_name}*"
+        head = (f":x: *Hello {mention} — refund {verdict} by {approver_name}*"
+                if mention else f":x: *Rejected by {approver_name}*")
         body = f"The refund of {_usd(d.amount_usd)} on order #{d.order_id} was declined."
     return {"attachments": [_bar(_GREEN if approved else _RED, [
         {"type": "section", "text": {"type": "mrkdwn", "text": f"{head}\n{body}"}},
         {"type": "context", "elements": [{"type": "mrkdwn", "text": ":lock: recorded with the decision"}]},
+    ])]}
+
+
+def customer_outcome_blocks(d: RefundDecision, *, approved: bool) -> dict:
+    """Customer-facing outcome — policy facts only, never internal mechanics
+    (no managers, approvals, or exceptions in the REJECTED copy)."""
+    first = (d.customer or "there").split()[0]
+    if approved:
+        text = (f"Hello {first} — good news! Your refund of {_usd(d.amount_usd)} for "
+                f"order #{d.order_id} has been approved and is being processed.")
+        color = _GREEN
+    else:
+        text = (f"Hello {first} — we couldn't process your refund for order "
+                f"#{d.order_id}: it falls outside our refund policy "
+                f"({_usd(d.policy_limit_usd)} within {d.policy_limit_days} days). "
+                "Please reach out to our support team if you have questions.")
+        color = _RED
+    return {"attachments": [_bar(color, [
+        {"type": "section", "text": {"type": "mrkdwn", "text": text}},
     ])]}
 
 

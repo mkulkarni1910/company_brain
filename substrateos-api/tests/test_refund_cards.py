@@ -103,3 +103,40 @@ def test_customer_request_blocks_with_decision_facts():
         request_text="I want a refund", customer_name="Priya Sharma", run_id="RB-1",
     )
     assert "#48213" not in str(bare["attachments"])
+
+
+def _decision_for_cards():
+    from app.domain.workflow import RefundDecision
+    return RefundDecision(found=True, order_id="48213", customer="Priya Sharma",
+                          amount_usd=1200, order_age_days=45, policy_limit_usd=500,
+                          policy_limit_days=30, auto_approve=False, reasoning="over limit")
+
+
+def test_outcome_blocks_mentions_agent():
+    from app.bots.refund_cards import outcome_blocks
+
+    card = outcome_blocks(_decision_for_cards(), approved=True,
+                          approver_name="Diana Foster", mention="<@U_TOM>")
+    body = str(card["attachments"])
+    assert "Hello <@U_TOM>" in body and "Diana Foster" in body
+
+    plain = outcome_blocks(_decision_for_cards(), approved=False,
+                           approver_name="Diana Foster")
+    assert "Hello" not in str(plain["attachments"])  # no mention → old header
+
+
+def test_customer_outcome_blocks_approved_and_rejected():
+    from app.bots.refund_cards import customer_outcome_blocks
+
+    ok = customer_outcome_blocks(_decision_for_cards(), approved=True)
+    body = str(ok["attachments"])
+    assert "Hello Priya" in body and "$1,200" in body and "#48213" in body
+    assert "approved" in body and ok["attachments"][0]["color"] == "#2f8f5b"
+
+    no = customer_outcome_blocks(_decision_for_cards(), approved=False)
+    body = str(no["attachments"]).lower()
+    assert "hello priya" in body and "refund policy" in body and "$500" in body
+    # customer copy never leaks internal mechanics
+    for banned in ("exception", "manager", "approv"):
+        assert banned not in body
+    assert no["attachments"][0]["color"] == "#c8546a"
