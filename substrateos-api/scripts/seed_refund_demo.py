@@ -46,7 +46,7 @@ the approver's identity are recorded in the audit log with the decision.
 
 ORDER_48213_BODY = """# Order #48213
 
-- **Customer:** Priya Sharma (priya.sharma@example.com)
+- **Customer:** Priya Sharma (priya@OmkarConsultancy1910.onmicrosoft.com)
 - **Order ID:** 48213
 - **Order total:** $1,200.00
 - **Order date:** {d48213}

@@ -217,7 +217,7 @@
 
     <div class="mono-label">Built on the tools your IT already trusts</div>
     <div class="grid cols-3">
-      <div class="card"><h4>Who can do what</h4><p>Microsoft Entra ID — SSO + identity on every surface. <b>User Directory</b> joins Slack and Entra on email: role (manager / agent / customer) + manager edge used for approval routing.</p></div>
+      <div class="card"><h4>Who can do what</h4><p>Microsoft Entra ID — SSO + identity on every surface. <b>User Directory</b> joins Slack and Entra on email: role (manager / agent / customer) + manager edge used for approval routing. Answers are identity-scoped — customers only ever see their own orders.</p></div>
       <div class="card"><h4>Find the right info</h4><p>Azure AI Search — hybrid retrieval over content.</p></div>
       <div class="card"><h4>Remember people &amp; history</h4><p>Cosmos DB — people graph + conversation history.</p></div>
       <div class="card"><h4>Live company data</h4><p>Microsoft Graph — on-behalf-of live fetch.</p></div>
@@ -309,9 +309,9 @@
       <div class="row">
         <div class="node"><b>RefundFlow</b><small>app/workflows/</small></div>
         <div class="arrow">→</div>
-        <div class="node brain" style="flex:1"><b>DirectoryService.resolve(email)</b><small>cache-first · live Slack+Graph write-through fallback · returns role (manager/agent/customer) + manager identity</small>
+        <div class="node brain" style="flex:1"><b>DirectoryService.resolve(email)</b><small>cache-first · live Slack+Graph write-through fallback · returns role (manager/agent/customer) + manager identity · feeds requester identity into answers — prompt note + own-orders scoping (<code style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--amber)">retrieval/order_scope</code>), cache bypass for personalized answers</small>
           <div class="substeps">
-            <div class="substep acl"><b>customer</b><small>→ post to #refunds support channel; no engine run</small></div>
+            <div class="substep acl"><b>customer</b><small>→ customer requests route to the support channel with their own order pre-fetched (read-only engine lookup)</small></div>
             <div class="substep"><b>agent</b><small>→ engine evaluates; over-limit → route to requester's Entra manager</small></div>
             <div class="substep acl"><b>no eligible manager</b><small>→ run stops (needs_attention); no fallback approver</small></div>
             <div class="substep"><b>approve/reject</b><small>only routed manager (role=manager) may act — enforced + audited</small></div>
