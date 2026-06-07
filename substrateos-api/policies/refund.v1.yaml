@@ -7,5 +7,5 @@ all:
   - { fact: order_age_days, op: "<=", value: 30 }
 on_pass: allow
 on_fail: require_approval
-required_role: support_manager
+required_role: manager      # the directory's role vocabulary (Entra Managers group)
 on_missing_data: stop

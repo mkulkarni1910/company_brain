@@ -63,6 +63,12 @@ from app.search.service import SearchService
 from app.skills.service import SkillRouter as SkillRouterSvc
 from app.skills.store import SkillStore
 from app.tokens.store import CosmosTokenStore, NullTokenStore
+from app.approvals.service import ApprovalService
+from app.approvals.store import ApprovalStore
+from app.audit.log import AuditLog
+from app.connectors.act.stripe_mock import StripeRefundConnector
+from app.policy.engine import PolicyEngine
+from app.policy.store import PolicyStore
 from app.workflows.approval import ApprovalFlow
 from app.workflows.engine import RefundEngine
 from app.workflows.flow import RefundFlow
@@ -174,6 +180,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         llm=app.state.llm,
     )
     app.state.run_store = RunStore()
+    # Governed-act-layer platform services (one impl each), shared across playbooks.
+    app.state.audit_log = AuditLog()
+    app.state.policy_engine = PolicyEngine()
+    app.state.policy_store = PolicyStore()
+    app.state.approval_store = ApprovalStore()
+    app.state.approval_service = ApprovalService(
+        store=app.state.approval_store, audit=app.state.audit_log,
+    )
+    app.state.refund_connector = StripeRefundConnector()
     app.state.directory_store = DirectoryStore()
     app.state.directory = DirectoryService(store=app.state.directory_store)
     app.state.directory_sync = DirectorySync(store=app.state.directory_store)
@@ -181,6 +196,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine=RefundEngine(retriever=app.state.retriever, llm=app.state.llm),
         store=app.state.run_store,
         directory=app.state.directory,
+        policy_engine=app.state.policy_engine,
+        policy_store=app.state.policy_store,
+        audit_log=app.state.audit_log,
+        refund_connector=app.state.refund_connector,
+        approval_service=app.state.approval_service,
     )
     app.state.approval_flow = ApprovalFlow(
         store=app.state.run_store, people=app.state.people_graph,
@@ -224,6 +244,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             with contextlib.suppress(asyncio.CancelledError):
                 await _dir_task
         await app.state.directory_store.aclose()
+        await app.state.audit_log.aclose()
+        await app.state.approval_store.aclose()
         await app.state.orchestrator.aclose()
         await app.state.run_store.aclose()
         await app.state.acl_store.aclose()
