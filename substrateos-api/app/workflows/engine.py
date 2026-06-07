@@ -5,9 +5,11 @@ import logging
 import re
 from datetime import UTC, datetime
 
+from app.domain.directory import DirectoryUser
 from app.domain.identity import User
 from app.domain.workflow import RefundDecision
 from app.orchestrator.timing import StageTimer
+from app.retrieval.order_scope import scope_order_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +41,17 @@ class RefundEngine:
         self._retriever = retriever
         self._llm = llm
 
-    async def evaluate(self, text: str, *, user: User) -> RefundDecision:
+    async def evaluate(self, text: str, *, user: User,
+                       requester: DirectoryUser | None = None) -> RefundDecision:
         timer = StageTimer()
-        order_hits = await self._retriever.retrieve(query=text, user=user, k=6, timer=timer)
+        order_query = text
+        if requester is not None:
+            who = f"{requester.display_name or ''} {requester.email or ''}".strip()
+            order_query = f"{text} customer {who}"
+        order_hits = await self._retriever.retrieve(
+            query=order_query, user=user, k=6, timer=timer
+        )
+        order_hits = scope_order_chunks(list(order_hits), requester)
         policy_hits = await self._retriever.retrieve(
             query=_POLICY_QUERY, user=user, k=4, timer=timer
         )
@@ -55,10 +65,18 @@ class RefundEngine:
             parts.append(f"[{ch.title}]\n{ch.content}")
         context = "\n\n".join(parts[:8]) or "(no documents found)"
         today = datetime.now(UTC).strftime("%Y-%m-%d")
+        requester_line = ""
+        if requester is not None:
+            requester_line = (
+                f"Requester: {requester.display_name or requester.email} "
+                f"({requester.email}), role {requester.role} — "
+                "'my order' refers to them.\n"
+            )
         messages = [
             {"role": "system", "content": DECISION_PROMPT},
             {"role": "user", "content": (
-                f"Today's date: {today}\n\nContext documents:\n{context}\n\n"
+                f"Today's date: {today}\n{requester_line}\n"
+                f"Context documents:\n{context}\n\n"
                 f"Refund request: {text}"
             )},
         ]
