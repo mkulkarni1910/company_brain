@@ -26,6 +26,16 @@ def test_system_prompt_scopes_greeting_to_the_asker():
     assert "no name at all" in _SYSTEM
 
 
+def test_system_prompt_demands_varied_openers():
+    # Guards the "On it… On it…" stutter: the model must vary its opening phrase.
+    assert "VARY your opening phrase" in _SYSTEM
+    # examples must not all share one opener
+    import re
+    openers = re.findall(r"→ '([A-Za-z]+[^…']*)", _SYSTEM)
+    firsts = {o.split()[0] for o in openers}
+    assert len(firsts) >= 4, firsts
+
+
 class _FakeLLM:
     """Minimal stand-in for GeminiClient.complete."""
 

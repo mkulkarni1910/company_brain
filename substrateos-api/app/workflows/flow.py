@@ -163,9 +163,8 @@ class RefundFlow:
                                          thread_ts=thread_ts, user=user)
             return
 
-        first = requester.split()[0]
         await self._post(token, channel, thread_ts,
-                         text=f"On it, {first} — pulling up the order and checking the refund policy…")
+                         text="Pulling up the order and checking the refund policy…")
 
         try:
             decision = await self._engine.evaluate(text, user=user, requester=record)

@@ -108,7 +108,7 @@ class ApprovalFlow:
             await self._store.add_event(run.id, step="No approver",
                                         detail="Couldn't resolve a manager to approve this", actor="SubstrateOS")
             await self._post(token, channel, thread_ts,
-                             text=(f"On it, {first} — but I couldn't work out who should approve this. "
+                             text=(f"Hmm, {first} — I couldn't work out who should approve this. "
                                    "Ask an admin to set your manager in the directory and I'll route it."))
             return
 
@@ -124,7 +124,7 @@ class ApprovalFlow:
         )
 
         await self._post(token, channel, thread_ts,
-                         text=f"On it, {first} — sending that to {approver_name} for sign-off. I'll update here.",
+                         text=f"Sending that to {approver_name} for sign-off, {first} — I'll update here.",
                          card=needs_approval_blocks(request_text=text, approver_label=approver_name, run_id=run.id))
 
         opened = await slack_call(token, "conversations.open", {"users": approver_id})
