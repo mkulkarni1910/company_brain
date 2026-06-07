@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import pytest
 
 from app.domain.chunk import Chunk
+from app.domain.directory import DirectoryUser
 from app.domain.identity import User
 from app.domain.query import Candidate
 from app.workflows.engine import RefundEngine, RefundEngineError
@@ -49,6 +50,7 @@ def _user() -> User:
 
 _DECISION = {
     "found": True, "order_id": "48213", "customer": "Priya Sharma",
+    "customer_email": "dana@acme.test",
     "amount_usd": 1200, "order_age_days": 45,
     "reasoning": "Order #48213 is $1,200 placed 45 days ago by Priya Sharma.",
 }
@@ -65,6 +67,7 @@ async def test_evaluate_extracts_facts_only():
     assert facts.order_id == "48213"
     assert facts.amount_usd == 1200
     assert facts.order_age_days == 45
+    assert facts.customer_email == "dana@acme.test"
     # the verdict is NOT the model's job — RefundFacts has no auto_approve field
     assert not hasattr(facts, "auto_approve")
     # one retrieval (order context); the policy is code now, not a retrieval
@@ -75,6 +78,17 @@ async def test_evaluate_extracts_facts_only():
     assert "Today's date" in user_msg
     # the prompt instructs facts-only extraction
     assert "do not decide" in llm.messages[0]["content"].lower()
+
+
+@pytest.mark.asyncio
+async def test_evaluate_with_requester_adds_identity_line():
+    llm = _FakeLLM(json.dumps(_DECISION))
+    engine = RefundEngine(retriever=_FakeRetriever(), llm=llm)
+    record = DirectoryUser(email="dana@acme.test", role="customer")
+    await engine.evaluate("refund my order", user=_user(), requester=record)
+    user_msg = llm.messages[-1]["content"]
+    assert "role customer" in user_msg
+    assert "dana@acme.test" in user_msg
 
 
 @pytest.mark.asyncio

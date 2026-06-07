@@ -111,7 +111,7 @@ async def test_decision_carries_customer_email():
 
 
 def test_decision_prompt_requests_customer_email():
-    from app.workflows.engine import DECISION_PROMPT
+    from app.workflows.engine import FACTS_PROMPT
 
-    assert '"customer_email"' in DECISION_PROMPT
-    assert "email" in DECISION_PROMPT.lower()
+    assert '"customer_email"' in FACTS_PROMPT
+    assert "email" in FACTS_PROMPT.lower()
