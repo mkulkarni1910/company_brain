@@ -12,7 +12,8 @@ from app.workflows.flow import RefundFlow
 from app.workflows.store import RunStore
 
 _OVER_LIMIT = RefundDecision(
-    found=True, order_id="48213", customer="Priya Sharma", amount_usd=1200,
+    found=True, order_id="48213", customer="Priya Sharma", customer_email="priya@x",
+    amount_usd=1200,
     order_age_days=45, policy_limit_usd=500, policy_limit_days=30,
     auto_approve=False, reasoning="Over the $500 / 30 day auto-approve limit.",
 )
@@ -75,7 +76,9 @@ def _slack_recorder():
             return {"ok": True, "user": {"real_name": name,
                                          "profile": {"display_name": "", "email": email}}}
         if method == "conversations.open":
-            return {"ok": True, "channel": {"id": "D_DIANA"}}
+            dm = {"U_DIANA": "D_DIANA", "U_PRIYA": "D_PRIYA_DM"}.get(
+                payload.get("users"), "D_OTHER")
+            return {"ok": True, "channel": {"id": dm}}
         if method == "chat.postMessage":
             return {"ok": True, "ts": "111.222", "channel": payload["channel"]}
         return {"ok": True}
@@ -201,6 +204,8 @@ async def test_customer_routes_to_support_with_prefetched_order(monkeypatch):
     support_post = next(p for p in posts if p["channel"] == "C_SUPPORT")
     assert "48213" in str(support_post)              # facts on the card
     assert any(p["channel"] == "D_PRIYA" for p in posts)
+    assert run.handoff_channel == "C_SUPPORT"
+    assert run.handoff_ts == "111.222"
     steps = [e.step for e in await store.list_events(run.id)]
     assert "Order fetched" in steps and "Routed to support" in steps
 
@@ -423,3 +428,113 @@ async def test_handle_action_unknown_run_is_noop(monkeypatch):
         await flow.handle_action(_click("refund_approve", "RB-0000",
                                         user_id="U_DIANA", name="diana"))
     assert calls == []
+
+
+async def _routed_customer_run(store, *, with_handoff: bool = True):
+    """Priya's earlier hand-off run, awaiting an outcome."""
+    run = await store.create(requester_name="Priya Sharma", requester_slack_id="U_PRIYA",
+                             channel="D_PRIYA", thread_ts="50.1")
+    run.decision = _OVER_LIMIT
+    run.status = "routed_to_support"
+    if with_handoff:
+        run.handoff_channel, run.handoff_ts = "C_SUPPORT", "222.333"
+    await store.save(run)
+    return run
+
+
+@pytest.mark.asyncio
+async def test_approve_fans_out_to_agent_customer_and_handoff(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    flow, store = _flow(decision=_OVER_LIMIT)
+    linked = await _routed_customer_run(store)
+    run = await _pending_run(store)
+    calls, fake = _slack_recorder()
+    with patch("app.workflows.flow.slack_call", new=fake):
+        await flow.handle_action(_click("refund_approve", run.id,
+                                        user_id="U_DIANA", name="diana"))
+    posts = [p for m, p in calls if m == "chat.postMessage"]
+    # 1. agent channel post mentions Tom
+    agent_post = next(p for p in posts if p["channel"] == "C_REFUNDS")
+    assert "<@U_TOM>" in str(agent_post)
+    # 2. customer's original thread gets the good news
+    cust_post = next(p for p in posts if p["channel"] == "D_PRIYA")
+    assert cust_post.get("thread_ts") == "50.1"
+    assert "good news" in str(cust_post) and "#48213" in str(cust_post)
+    # 3. hand-off card in the support channel marked resolved
+    handoff_post = next(p for p in posts if p["channel"] == "C_SUPPORT")
+    assert handoff_post.get("thread_ts") == "222.333"
+    assert "Resolved" in str(handoff_post) and "approved" in str(handoff_post)
+    # 4. linked run closed + audited; deciding run audited
+    linked2 = await store.get(linked.id)
+    assert linked2.status == "completed"
+    assert "Outcome relayed" in [e.step for e in await store.list_events(linked.id)]
+    assert "Customer notified" in [e.step for e in await store.list_events(run.id)]
+
+
+@pytest.mark.asyncio
+async def test_reject_customer_copy_has_no_internal_language(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    flow, store = _flow(decision=_OVER_LIMIT)
+    await _routed_customer_run(store)
+    run = await _pending_run(store)
+    calls, fake = _slack_recorder()
+    with patch("app.workflows.flow.slack_call", new=fake):
+        await flow.handle_action(_click("refund_reject", run.id,
+                                        user_id="U_DIANA", name="diana"))
+    posts = [p for m, p in calls if m == "chat.postMessage"]
+    cust = str(next(p for p in posts if p["channel"] == "D_PRIYA")).lower()
+    assert "refund policy" in cust and "$500" in cust
+    for banned in ("exception", "manager", "approv", "diana"):
+        assert banned not in cust
+    # the linked customer run is closed as rejected
+    linked = next(r for r in await store.list_runs()
+                  if r.requester_name == "Priya Sharma")
+    assert linked.status == "rejected"
+
+
+@pytest.mark.asyncio
+async def test_dm_fallback_when_no_linked_run(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    flow, store = _flow(decision=_OVER_LIMIT)   # directory has _PRIYA (slack U_PRIYA)
+    run = await _pending_run(store)             # no routed run exists
+    calls, fake = _slack_recorder()
+    with patch("app.workflows.flow.slack_call", new=fake):
+        await flow.handle_action(_click("refund_approve", run.id,
+                                        user_id="U_DIANA", name="diana"))
+    opened = [p for m, p in calls if m == "conversations.open"]
+    assert {"users": "U_PRIYA"} in opened
+    posts = [p for m, p in calls if m == "chat.postMessage"]
+    assert any(p["channel"] == "D_PRIYA_DM" and "good news" in str(p) for p in posts)
+    assert "Customer notified" in [e.step for e in await store.list_events(run.id)]
+
+
+@pytest.mark.asyncio
+async def test_skip_when_unreachable_and_mention_fallback(monkeypatch):
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+    no_email = _OVER_LIMIT.model_copy(update={"customer_email": None})
+    flow, store = _flow(decision=no_email, directory=_Directory(_TOM, _DIANA))
+    run = await store.create(requester_name="Tom Reyes", requester_slack_id=None,
+                             channel="C_REFUNDS", thread_ts="100.1")
+    run.decision = no_email
+    run.status = "pending_approval"
+    run.approver_slack_id = "U_DIANA"
+    await store.save(run)
+    calls, fake = _slack_recorder()
+    with patch("app.workflows.flow.slack_call", new=fake):
+        await flow.handle_action(_click("refund_approve", run.id,
+                                        user_id="U_DIANA", name="diana"))
+    posts = [p for m, p in calls if m == "chat.postMessage"]
+    assert not any(p["channel"].startswith("D_PRIYA") for p in posts)
+    assert "Customer not reachable" in [e.step for e in await store.list_events(run.id)]
+    # no requester_slack_id → plain-name header, no broken mention
+    agent_post = str(next(p for p in posts if p["channel"] == "C_REFUNDS"))
+    assert "<@" not in agent_post.replace("<@U_DIANA>", "")  # no agent mention
+    assert "Tom Reyes" in agent_post

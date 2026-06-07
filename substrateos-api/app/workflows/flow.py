@@ -5,6 +5,7 @@ import logging
 from app.bots.refund_cards import (
     approval_dm_blocks,
     auto_approved_blocks,
+    customer_outcome_blocks,
     customer_request_blocks,
     decided_dm_blocks,
     needs_approval_blocks,
@@ -113,6 +114,8 @@ class RefundFlow:
                              text="I couldn't reach the support team — please contact them directly.")
             return
         run.status = "routed_to_support"
+        run.handoff_channel = support_channel
+        run.handoff_ts = posted.get("ts")
         await self._store.save(run)
         await self._store.add_event(
             run.id, step="Routed to support",
@@ -121,6 +124,63 @@ class RefundFlow:
         await self._post(token, channel, thread_ts,
                          text="Refunds are handled by our support team — I've passed your "
                               "request to them and someone will follow up here.")
+
+    async def _notify_customer(self, token: str, run, *, approved: bool,
+                               approver_name: str) -> None:
+        """Relay the outcome to the customer (their original thread, else a DM via
+        the directory) and mark the support-channel hand-off card resolved.
+        Fail-soft: the relay must never break the recorded decision."""
+        d = run.decision
+        if d is None or not d.order_id:
+            return
+        try:
+            linked = await self._store.find_routed_run(d.order_id)
+            notified_where: str | None = None
+            if linked is not None and linked.channel:
+                posted = await slack_call(token, "chat.postMessage", {
+                    "channel": linked.channel, "thread_ts": linked.thread_ts,
+                    "text": f"Your refund was {'approved' if approved else 'declined'}",
+                    **customer_outcome_blocks(d, approved=approved),
+                })
+                if posted:
+                    notified_where = "their thread"
+                    linked.status = "completed" if approved else "rejected"
+                    await self._store.save(linked)
+                    await self._store.add_event(
+                        linked.id, step="Outcome relayed",
+                        detail=(f"{'Approved' if approved else 'Rejected'} by "
+                                f"{approver_name} — customer notified"),
+                        actor="SubstrateOS")
+            elif d.customer_email:
+                record = await self._directory.resolve(d.customer_email)
+                if record is not None and record.slack_id:
+                    opened = await slack_call(token, "conversations.open",
+                                              {"users": record.slack_id})
+                    dm = ((opened or {}).get("channel") or {}).get("id")
+                    if dm:
+                        posted = await slack_call(token, "chat.postMessage", {
+                            "channel": dm,
+                            "text": f"Your refund was {'approved' if approved else 'declined'}",
+                            **customer_outcome_blocks(d, approved=approved),
+                        })
+                        if posted:
+                            notified_where = "a DM"
+            await self._store.add_event(
+                run.id,
+                step="Customer notified" if notified_where else "Customer not reachable",
+                detail=(f"Outcome sent to {d.customer} in {notified_where}" if notified_where
+                        else f"No conversation or directory match for {d.customer or 'the customer'}"),
+                actor="SubstrateOS")
+            if linked is not None and linked.handoff_channel and linked.handoff_ts:
+                mark = "✅" if approved else "✕"
+                suffix = "customer notified" if notified_where else "customer not reachable"
+                await slack_call(token, "chat.postMessage", {
+                    "channel": linked.handoff_channel, "thread_ts": linked.handoff_ts,
+                    "text": (f"{mark} Resolved — "
+                             f"{'approved' if approved else 'rejected'} by {approver_name}, {suffix}"),
+                })
+        except Exception:  # noqa: BLE001 — relay must never break the decision
+            logger.exception("customer outcome relay failed for run %s", run.id)
 
     # ── inbound request (from the Slack webhook) ─────────────────────────────
 
@@ -351,6 +411,11 @@ class RefundFlow:
             run.status = "completed"
             await self._store.save(run)
         if run.channel:
+            mention = (f"<@{run.requester_slack_id}>" if run.requester_slack_id else None)
+            label = mention or run.requester_name
             await self._post(token, run.channel, run.thread_ts,
-                             text=f"Refund {'approved' if approved else 'rejected'} by {approver_name}",
-                             card=outcome_blocks(d, approved=approved, approver_name=approver_name))
+                             text=f"Hello {label} — refund {'approved' if approved else 'rejected'} by {approver_name}",
+                             card=outcome_blocks(d, approved=approved,
+                                                 approver_name=approver_name, mention=label))
+        await self._notify_customer(token, run, approved=approved,
+                                    approver_name=approver_name)
