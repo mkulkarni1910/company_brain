@@ -35,9 +35,9 @@ def _client(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_sync_requires_admin_key(_client):
+def test_sync_requires_auth(_client):
     client, _ = _client
-    assert client.post("/admin/directory/sync").status_code == 403
+    assert client.post("/admin/directory/sync").status_code == 401
 
 
 def test_sync_returns_summary(_client):

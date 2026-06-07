@@ -10,11 +10,10 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from urllib.parse import quote
 
 from app.bots.slack import slack_users_list
 from app.config import get_settings
-from app.connectors.graph import GRAPH, graph_get_json, graph_token
+from app.connectors.graph import GRAPH, graph_get_json, graph_token, group_member_emails
 from app.directory.store import DirectoryStore
 from app.domain.directory import DirectoryUser
 
@@ -103,18 +102,4 @@ class DirectorySync:
         return out
 
     async def _group_member_emails(self, token: str, group_name: str) -> set[str]:
-        safe = group_name.replace("'", "''")
-        flt = quote(f"displayName eq '{safe}'")
-        data = await self._get_fn(token, f"{GRAPH}/groups?$filter={flt}&$select=id")
-        groups = data.get("value", [])
-        if not groups:
-            logger.warning("directory sync: Entra group %r not found", group_name)
-            return set()
-        emails: set[str] = set()
-        url = f"{GRAPH}/groups/{groups[0]['id']}/members?$select=mail"
-        while url:
-            data = await self._get_fn(token, url)
-            emails |= {(m.get("mail") or "").lower()
-                       for m in data.get("value", []) if m.get("mail")}
-            url = data.get("@odata.nextLink")
-        return emails
+        return await group_member_emails(token, group_name, get_fn=self._get_fn)

@@ -72,6 +72,9 @@ class Settings(BaseSettings):
     # onto `substrateos_tenant_id` and grant the `<substrateos_tenant_id>:everyone` group, so
     # the loaded corpus is reachable without per-user provisioning. Off in tests.
     pilot_single_tenant: bool = False
+    # Shared key for HEADLESS admin automation only (seed scripts, eval corpus
+    # loader). Browser admin access is gated by the Entra group instead — see
+    # `entra_admins_group`.
     admin_api_key: str | None = None
     # SharePoint connector: hard cap on files ingested per site sync (no silent truncation).
     connector_max_items: int = 500
@@ -107,6 +110,7 @@ class Settings(BaseSettings):
     # User directory + Entra-driven approval routing
     entra_managers_group: str = "Managers"        # Entra group → role "manager"
     entra_agents_group: str = "Support Agent"     # Entra group → role "agent"
+    entra_admins_group: str = "Admin"             # Entra group → admin panel access
     slack_refund_channel_id: str | None = None    # SLACK_REFUND_CHANNEL_ID — customer requests land here
     directory_sync_interval_hours: float = 24.0   # daily Slack+Entra directory sync
 

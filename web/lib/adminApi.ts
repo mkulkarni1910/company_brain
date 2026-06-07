@@ -3,13 +3,6 @@ const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH ?? "t-eval,u-demo,t-eval:e
 
 export class AdminAuthError extends Error {}
 
-export function getAdminKey(): string | null {
-  if (typeof window === "undefined") return null;
-  return sessionStorage.getItem("adminKey");
-}
-export function setAdminKey(k: string) { sessionStorage.setItem("adminKey", k); }
-export function clearAdminKey() { sessionStorage.removeItem("adminKey"); }
-
 let _idTokenPromise: Promise<string | null> | null = null;
 async function easyAuthIdToken(): Promise<string | null> {
   if (!_idTokenPromise) {
@@ -21,10 +14,10 @@ async function easyAuthIdToken(): Promise<string | null> {
   return _idTokenPromise;
 }
 
+// Admin endpoints are gated by the Entra "Admin" group server-side; requests
+// just carry the signed-in identity (debug principal locally, Easy Auth in prod).
 async function headers(): Promise<Record<string, string>> {
   const h: Record<string, string> = { "Content-Type": "application/json" };
-  const key = getAdminKey();
-  if (key) h["x-admin-key"] = key;
   if (DEBUG_AUTH) h["x-debug-bypass-auth"] = DEBUG_AUTH;
   else { const t = await easyAuthIdToken(); if (t) h["Authorization"] = `Bearer ${t}`; }
   return h;
@@ -34,9 +27,10 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   const resp = await fetch(`${API_BASE}${path}`,
     { ...init, headers: { ...(init.headers ?? {}), ...(await headers()) } });
   if (resp.status === 403) {
-    clearAdminKey();
+    // Signed in, but not in the Entra "Admin" group — the layout shows the
+    // access-restricted screen when this fires.
     if (typeof window !== "undefined") window.dispatchEvent(new Event("admin-auth-error"));
-    throw new AdminAuthError("admin key rejected");
+    throw new AdminAuthError("admin access denied");
   }
   if (!resp.ok) throw new Error(`admin-api ${resp.status}: ${await resp.text()}`);
   return (await resp.json()) as T;

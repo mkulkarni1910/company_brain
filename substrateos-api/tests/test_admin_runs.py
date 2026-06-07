@@ -107,8 +107,8 @@ def test_conversation_runs_endpoints(monkeypatch):
     app.dependency_overrides[get_conversation_store] = lambda: _FakeConvStore()
     try:
         with TestClient(app) as client:
-            # gating: no key → 403
-            assert client.get("/admin/conversation-runs").status_code == 403
+            # gating: no credentials → 401
+            assert client.get("/admin/conversation-runs").status_code == 401
 
             r = client.get("/admin/conversation-runs", headers={"x-admin-key": "k"})
             assert r.status_code == 200

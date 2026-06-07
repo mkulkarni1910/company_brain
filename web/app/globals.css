@@ -393,13 +393,33 @@
   .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft)}
   .modal-close{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;color:var(--ink-dim);cursor:pointer;font-size:13px;font-weight:600;padding:8px 18px;transition:.15s}
   .modal-close:hover{border-color:#cabd9f;color:var(--ink);background:var(--surface)}
-  .admin-gate{display:grid;place-items:center;height:100%}
-  .admin-gate-card{display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:34px 38px;box-shadow:var(--shadow);width:min(360px,90vw)}
-  .admin-gate-card h2{font-family:var(--font-fraunces),serif;margin:6px 0 0}
-  .admin-gate-card p{color:var(--ink-faint);font-size:13px;margin:0;text-align:center}
-  .admin-gate-card input{width:100%;padding:10px 13px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--paper)}
-  .admin-gate-card button{width:100%;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--amber),#9a5e0e);color:#fff;font-weight:600;cursor:pointer}
-  .admin-gate-card .gate-err{color:var(--rose);font-size:12.5px;margin:0;text-align:center}
+  /* access restricted — signed in, but not in the Entra "Admin" group */
+  .denied{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:24px;
+    background:
+      radial-gradient(900px 460px at 88% -16%, rgba(196,122,22,.05), transparent 60%),
+      radial-gradient(800px 600px at -8% 116%, rgba(15,137,126,.04), transparent 55%),
+      var(--paper)}
+  .denied-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);
+    box-shadow:var(--shadow);max-width:430px;width:100%;padding:36px 36px 30px;text-align:center}
+  .denied-card .glyph{margin:0 auto 18px;width:42px;height:42px;border-radius:12px}
+  .denied-card h2{font-family:var(--font-fraunces),serif;font-size:22px;font-weight:600;margin:0 0 6px}
+  .denied-card .why{font-size:13.5px;color:var(--ink-dim);line-height:1.6;margin:0 0 18px}
+  .denied-card .why b{color:var(--ink)}
+  .denied-group{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono),monospace;font-size:10.5px;
+    letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:#3a5bd0;background:#e6edfb;
+    border:1px solid #c9d7f5;border-radius:99px;padding:4px 12px}
+  .denied-group svg{width:12px;height:12px;flex:none}
+  .denied-id{display:flex;align-items:center;gap:11px;text-align:left;background:var(--paper-2);
+    border:1px solid var(--line-soft);border-radius:11px;padding:11px 14px;margin:20px 0 18px}
+  .denied-id .avatar{width:32px;height:32px;font-size:12.5px}
+  .denied-id .nm{font-size:13px;font-weight:600;line-height:1.3}
+  .denied-id .nm span{display:block;font-family:var(--font-mono),monospace;font-size:10.5px;color:var(--ink-faint);font-weight:400}
+  .denied-hint{font-size:12.5px;color:var(--ink-faint);line-height:1.55;margin:0 0 22px}
+  .denied-back{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink-dim);background:var(--surface-2);
+    border:1px solid var(--line);border-radius:10px;padding:9px 18px;text-decoration:none;transition:.15s}
+  .denied-back svg{width:15px;height:15px;flex:none;transition:.15s}
+  .denied-back:hover{border-color:#cabd9f;color:var(--ink)}
+  .denied-back:hover svg{transform:translateX(-2px)}
   /* surfaces */
   .surf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
   .surf-card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;transition:opacity .2s}

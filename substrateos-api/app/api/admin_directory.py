@@ -8,11 +8,11 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from app.api.admin import require_admin_key
+from app.api._admin_guard import require_admin
 from app.deps import get_directory_store, get_directory_sync
 
 router = APIRouter(prefix="/admin", tags=["admin"],
-                   dependencies=[Depends(require_admin_key)])
+                   dependencies=[Depends(require_admin)])
 logger = logging.getLogger(__name__)
 
 
