@@ -120,3 +120,15 @@ def get_github_store(request: Request):
 
 def get_github_flow(request: Request):
     return getattr(request.app.state, "github_flow", None)
+
+
+def get_directory_store(request: Request):
+    return getattr(request.app.state, "directory_store", None)
+
+
+def get_directory_service(request: Request):
+    return getattr(request.app.state, "directory", None)
+
+
+def get_directory_sync(request: Request):
+    return getattr(request.app.state, "directory_sync", None)
