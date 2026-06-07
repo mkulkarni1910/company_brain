@@ -186,3 +186,20 @@ def test_withdraw_hides_from_list_and_blocks_decisions(harness) -> None:
         assert client.get("/studio/submissions", headers=_SME).json() == []
         assert client.post(f"/admin/skill-submissions/{run_id}/approve",
                            headers=_ADMIN).status_code == 409
+
+
+def test_double_decision_is_409(harness) -> None:
+    with TestClient(app) as client:
+        run_id = client.post("/studio/submit", json={"skill": _DRAFT},
+                             headers=_SME).json()["run_id"]
+        assert client.post(f"/admin/skill-submissions/{run_id}/approve",
+                           headers=_ADMIN).status_code == 200
+        r = client.post(f"/admin/skill-submissions/{run_id}/approve", headers=_ADMIN)
+        assert r.status_code == 409
+        assert "already" in r.json()["detail"]
+
+
+def test_blank_draft_text_is_422(harness) -> None:
+    with TestClient(app) as client:
+        assert client.post("/studio/draft", json={"text": "   "},
+                           headers=_SME).status_code == 422
