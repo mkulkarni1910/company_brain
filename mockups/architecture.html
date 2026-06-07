@@ -217,7 +217,7 @@
 
     <div class="mono-label">Built on the tools your IT already trusts</div>
     <div class="grid cols-3">
-      <div class="card"><h4>Who can do what</h4><p>Microsoft Entra ID — SSO + identity on every surface.</p></div>
+      <div class="card"><h4>Who can do what</h4><p>Microsoft Entra ID — SSO + identity on every surface. <b>User Directory</b> joins Slack and Entra on email: role (manager / agent / customer) + manager edge used for approval routing.</p></div>
       <div class="card"><h4>Find the right info</h4><p>Azure AI Search — hybrid retrieval over content.</p></div>
       <div class="card"><h4>Remember people &amp; history</h4><p>Cosmos DB — people graph + conversation history.</p></div>
       <div class="card"><h4>Live company data</h4><p>Microsoft Graph — on-behalf-of live fetch.</p></div>
@@ -276,18 +276,53 @@
 
     <div class="mono-label">The playbook engine — same shape for any task (act → stay in control)</div>
     <div class="engine">
-      <div class="lbl"><code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/workflows/</code> (RefundFlow · ApprovalFlow · GithubFlow · RunStore — manager resolved via Entra <code style="color:var(--amber)">manages</code> edge) + <code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/skills/</code> (SkillStore · SkillRouter)</div>
+      <div class="lbl"><code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/workflows/</code> (RefundFlow · ApprovalFlow · GithubFlow · RunStore) + <code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/skills/</code> (SkillStore · SkillRouter) — approval routed to the requester's <b>Entra manager</b> (Managers group only) via <code style="color:var(--amber)">DirectoryService</code>; customers route to the support channel; run stops (<code style="color:var(--amber)">needs_attention</code>) when no eligible approver exists</div>
       <div class="steps">
         <div class="step"><b>When</b><small>trigger / event</small></div>
         <div class="seq">→</div>
-        <div class="step"><b>Check</b><small>rules + ACL</small></div>
+        <div class="step"><b>Check</b><small>rules + ACL + role (manager/agent/customer)</small></div>
         <div class="seq">→</div>
-        <div class="step risk"><b>Stop</b><small>risky → human signs off</small></div>
+        <div class="step risk"><b>Stop</b><small>risky → Entra manager signs off (or stops if none)</small></div>
         <div class="seq">→</div>
         <div class="step"><b>Do it</b><small>act in your tools</small></div>
         <div class="seq">→</div>
         <div class="step"><b>Record</b><small>RunStore audit</small></div>
       </div>
+    </div>
+
+    <div class="mono-label">User Directory + Scheduler — identity joins, role resolution, daily sync</div>
+    <div class="flow">
+      <div class="row">
+        <div class="node io"><b>Slack users.list</b><small>display name · slack_id</small></div>
+        <div class="arrow">→</div>
+        <div class="node brain" style="flex:1"><b>DirectorySync</b><small>app/directory/ — daily via app/scheduler.py (FastAPI lifespan, 24 h)</small>
+          <div class="substeps">
+            <div class="substep"><b>Graph users/$expand=manager</b><small>Entra manager edge</small></div>
+            <div class="substep"><b>Managers group members</b><small>role: manager</small></div>
+            <div class="substep"><b>Support Agent group members</b><small>role: agent</small></div>
+            <div class="substep"><b>Fail-soft merge</b><small>join on email; partial failures tolerated</small></div>
+          </div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node io"><b>DirectoryStore</b><small>Redis: directory:user:{email} · directory:slack:{id} + in-process fallback</small></div>
+      </div>
+      <div class="row">
+        <div class="node"><b>RefundFlow</b><small>app/workflows/</small></div>
+        <div class="arrow">→</div>
+        <div class="node brain" style="flex:1"><b>DirectoryService.resolve(email)</b><small>cache-first · live Slack+Graph write-through fallback · returns role (manager/agent/customer) + manager identity</small>
+          <div class="substeps">
+            <div class="substep acl"><b>customer</b><small>→ post to #refunds support channel; no engine run</small></div>
+            <div class="substep"><b>agent</b><small>→ engine evaluates; over-limit → route to requester's Entra manager</small></div>
+            <div class="substep acl"><b>no eligible manager</b><small>→ run stops (needs_attention); no fallback approver</small></div>
+            <div class="substep"><b>approve/reject</b><small>only routed manager (role=manager) may act — enforced + audited</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background:#fff;border:1px solid var(--line)"></i> external source / store</span>
+      <span><i style="background:var(--navy)"></i> directory module</span>
+      <span><i style="background:var(--amber)"></i> role gate — enforced at approval click</span>
     </div>
 
     <div class="mono-label">Tool — GitHub · the first place the engine <i>acts</i> (raise-pr playbook)</div>
@@ -338,6 +373,10 @@
       <div class="card"><h4><code>ingest/ · connectors/</code></h4><p>chunk→embed→ACL-stamp→index; SharePoint/Outlook/Teams connectors. GitHub action connector: <code>github.py</code> (REST client) + <code>github_store.py</code> (config · per-user tokens · OAuth states).</p></div>
       <div class="card"><h4><code>discover/ · search/ · history/</code></h4><p>Discover, search, and history services behind the nav surfaces.</p></div>
       <div class="card"><h4><code>cache/ · tokens/ · metrics/</code></h4><p>Redis answer cache · PAT token accounting · metrics store.</p></div>
+      <div class="card"><h4><code>directory/</code></h4><p><b>User Directory</b> — joins Slack and Entra ID identities on email. <code>DirectoryStore</code>: Redis-backed (keys <code>directory:user:{email}</code>, <code>directory:slack:{id}</code>) + in-process fallback. <code>DirectorySync</code>: daily pull of Slack <code>users.list</code> + Graph users/<code>$expand=manager</code> + Managers / Support Agent group members; fail-soft merge. <code>DirectoryService</code>: request-time <code>resolve(email)</code> — cache-first, live Slack+Graph write-through fallback. Roles: <b>manager · agent · customer</b>.</p>
+        <div class="stack"><span class="chip">Redis</span><span class="chip">Graph users</span><span class="chip">Slack users.list</span></div></div>
+      <div class="card"><h4><code>scheduler.py</code></h4><p><b>In-process periodic runner</b> — FastAPI lifespan-owned. Current consumer: <code>directory_sync</code> every 24 h. Foundation for future scheduled maintenance tasks.</p>
+        <div class="stack"><span class="chip">FastAPI lifespan</span><span class="chip">asyncio</span></div></div>
       <div class="card"><h4><code>bots/ · mcp/</code></h4><p>Slack/Teams bot ingress + interactive dispatch; <code>github_cards.py</code> (Slack blocks + Teams Adaptive Card); MCP server for other AI tools.</p></div>
       <div class="card"><h4><code>domain/ · deps.py</code></h4><p>Pydantic data classes + DI wiring shared across modules.</p></div>
     </div>
@@ -353,6 +392,7 @@
       <tr><td><code>/me</code></td><td>Signed-in identity for the web UI — Entra display name + Slack profile title (Redis-cached, fail-soft).</td></tr>
       <tr><td><code>/feedback</code></td><td>Click/dwell → ADX (real activity signal).</td></tr>
       <tr><td><code>/admin</code> · <code>/sources</code> · <code>/surfaces</code></td><td>Ingest, connectors, source &amp; surface management (Admin Console).</td></tr>
+      <tr><td><code>POST /admin/directory/sync</code> · <code>GET /admin/directory</code></td><td>Trigger an on-demand directory sync; inspect current directory state (emails redacted).</td></tr>
       <tr><td><code>/bots</code></td><td>Slack / Teams surface ingress + approval callbacks.</td></tr>
       <tr><td><code>/context</code> · <code>/mcp</code> · <code>/tokens</code></td><td>Context API + MCP server for other AI tools; PAT token management.</td></tr>
     </table>
