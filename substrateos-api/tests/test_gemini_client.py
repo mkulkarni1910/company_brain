@@ -18,9 +18,11 @@ def test_translate_splits_system_and_roles() -> None:
 def _client(post):
     c = GeminiClient.__new__(GeminiClient)
     c._key = "k"
-    c._model = "gemini-2.5-pro"
-    c._plan_model = "gemini-2.5-flash"
-    c._ack_model = "gemini-3.1-flash-lite"
+    # Arbitrary, distinct sentinels per tier so each dispatch branch is verifiable
+    # independently (in prod several tiers may map to one model, e.g. flash-lite).
+    c._model = "answer-model"
+    c._plan_model = "plan-router-model"
+    c._ack_model = "ack-model"
     c._thinking_budget = 256
     c._base = "https://x/v1beta"
 
@@ -58,8 +60,8 @@ async def test_complete_parses_text_and_sends_body() -> None:
         max_tokens=200,
     )
     assert out == "20 days"
-    # no deployment → answer path → pro model + capped thinking budget
-    assert captured["url"].endswith("/models/gemini-2.5-pro:generateContent")
+    # no deployment → answer path → strong answer model + capped thinking budget
+    assert captured["url"].endswith("/models/answer-model:generateContent")
     assert captured["params"] == {"key": "k"}
     assert captured["json"]["systemInstruction"]["parts"][0]["text"] == "s"
     gen = captured["json"]["generationConfig"]
@@ -68,7 +70,7 @@ async def test_complete_parses_text_and_sends_body() -> None:
 
 
 @pytest.mark.asyncio
-async def test_plan_step_uses_flash_with_no_thinking() -> None:
+async def test_plan_step_routes_to_plan_model_with_no_thinking() -> None:
     captured = {}
 
     def post(url, params, json):
@@ -80,14 +82,14 @@ async def test_plan_step_uses_flash_with_no_thinking() -> None:
         messages=[{"role": "user", "content": "classify"}],
         deployment="plan", max_tokens=200,
     )
-    assert captured["url"].endswith("/models/gemini-2.5-flash:generateContent")
+    assert captured["url"].endswith("/models/plan-router-model:generateContent")
     assert captured["json"]["generationConfig"]["thinkingConfig"]["thinkingBudget"] == 0
 
 
 @pytest.mark.asyncio
 async def test_ack_deployment_uses_ack_model() -> None:
-    # The ack is pure speed — it gets the lite model; plan/router classifiers
-    # keep the stronger flash model.
+    # "ack" routes to the ack model; other deployment-tagged tiers route to the
+    # plan model (in prod both default to gemini-3.1-flash-lite, separately tunable).
     captured = {}
 
     def post(url, params, json):
@@ -99,7 +101,7 @@ async def test_ack_deployment_uses_ack_model() -> None:
         messages=[{"role": "user", "content": "refund please"}],
         deployment="ack", max_tokens=60,
     )
-    assert captured["url"].endswith("/models/gemini-3.1-flash-lite:generateContent")
+    assert captured["url"].endswith("/models/ack-model:generateContent")
     assert captured["json"]["generationConfig"]["thinkingConfig"]["thinkingBudget"] == 0
 
 
