@@ -132,7 +132,7 @@ function stepTagClass(step: string): string {
   return "pt-do";
 }
 
-function PendingCard({ sub, onDecide }: { sub: SkillSubmission; onDecide: (runId: string, approve: boolean, note?: string) => void }) {
+function PendingCard({ sub, onDecide, deciding }: { sub: SkillSubmission; onDecide: (runId: string, approve: boolean, note?: string) => void; deciding: boolean }) {
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -197,13 +197,16 @@ function PendingCard({ sub, onDecide }: { sub: SkillSubmission; onDecide: (runId
             <label className="pending-sec-label">Drafted steps · When → Check → Stop → Do → Record</label>
             <ol className="pending-steps">
               {skill.steps.map((step, i) => {
+                const firstWord = step.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+                const isKeyword = ["when", "check", "stop", "do", "record"].includes(firstWord);
                 const tagClass = stepTagClass(step);
-                const firstWord = step.trim().split(/\s+/)[0] ?? "";
                 const rest = step.trim().slice(firstWord.length).trim();
                 return (
                   <li key={i} className="pending-step">
-                    <span className={`pending-step-tag ${tagClass}`}>{firstWord}</span>
-                    <span>{rest || step}</span>
+                    {isKeyword && (
+                      <span className={`pending-step-tag ${tagClass}`}>{firstWord}</span>
+                    )}
+                    <span>{isKeyword ? rest : step}</span>
                   </li>
                 );
               })}
@@ -240,15 +243,16 @@ function PendingCard({ sub, onDecide }: { sub: SkillSubmission; onDecide: (runId
         <div className="pending-foot">
           <button
             className="pending-approve"
+            disabled={deciding}
             onClick={() => onDecide(sub.run_id, true)}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12l5 5L20 6" />
             </svg>
-            Approve
+            {deciding ? "Approving…" : "Approve"}
           </button>
           {!rejecting && (
-            <button className="pending-reject" onClick={startReject}>
+            <button className="pending-reject" disabled={deciding} onClick={startReject}>
               Reject…
             </button>
           )}
@@ -272,7 +276,7 @@ function PendingCard({ sub, onDecide }: { sub: SkillSubmission; onDecide: (runId
               <button className="pending-reject-cancel" onClick={() => { setRejecting(false); setNote(""); }}>
                 Cancel
               </button>
-              <button className="pending-reject-send" onClick={() => onDecide(sub.run_id, false, note)}>
+              <button className="pending-reject-send" disabled={deciding} onClick={() => onDecide(sub.run_id, false, note)}>
                 Reject &amp; notify
               </button>
             </div>
@@ -288,6 +292,7 @@ export default function AdminSkillsPage() {
   const [pending, setPending] = useState<SkillSubmission[]>([]);
   const [deciding, setDeciding] = useState(false);
   const [err, setErr] = useState(false);
+  const [pendingErr, setPendingErr] = useState(false);
   const [form, setForm] = useState<{ open: boolean; editing: SkillFull | null }>({ open: false, editing: null });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -296,8 +301,8 @@ export default function AdminSkillsPage() {
   useEffect(() => {
     load();
     getSkillSubmissions()
-      .then((all) => setPending(all.filter((s) => s.status === "pending_approval")))
-      .catch(() => {});
+      .then((all) => { setPendingErr(false); setPending(all.filter((s) => s.status === "pending_approval")); })
+      .catch(() => setPendingErr(true));
   }, []);
 
   const handleToggle = async (skill: SkillFull) => {
@@ -357,14 +362,17 @@ export default function AdminSkillsPage() {
         {err && <div className="admin-note">Couldn&apos;t load skills. Check the admin key / API.</div>}
 
         {/* Pending approval queue */}
-        {pending.length > 0 && (
+        {(pending.length > 0 || pendingErr) && (
           <div className="pending-block">
             <div className="pending-label">
               <span className="pending-label-text">Pending approval</span>
-              <span className="pending-count">{pending.length} waiting</span>
+              {pending.length > 0 && <span className="pending-count">{pending.length} waiting</span>}
             </div>
+            {pendingErr && (
+              <div className="admin-note">Couldn&apos;t load pending skill submissions — refresh to retry.</div>
+            )}
             {pending.map((sub) => (
-              <PendingCard key={sub.run_id} sub={sub} onDecide={handleDecide} />
+              <PendingCard key={sub.run_id} sub={sub} onDecide={handleDecide} deciding={deciding} />
             ))}
           </div>
         )}
