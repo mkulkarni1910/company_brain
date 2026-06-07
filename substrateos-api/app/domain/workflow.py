@@ -79,6 +79,6 @@ class RefundRun(BaseModel):
     # skill_publish playbook (SME Skill Studio): the AI-drafted skill awaiting
     # an admin's decision — the live SkillStore is only written on approval.
     skill_draft: SkillCreate | None = None
-    rejection_note: str | None = None
+    rejection_note: str | None = None  # admin's reason on a skill_publish rejection
     created_at: datetime
     updated_at: datetime
