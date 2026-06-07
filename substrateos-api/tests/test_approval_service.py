@@ -107,3 +107,21 @@ async def test_pending_survives_a_fresh_service_over_same_store():
     svc2 = ApprovalService(store=store)
     decision = await svc2.resolve(approval_id, "approve", _manager())
     assert decision.choice == "approve"
+
+
+def _directory_identity(role: str) -> User:
+    return User(user_id="diane@acme.test", tenant_id="t-demo",
+                email="diane@acme.test", display_name="Diane",
+                group_ids={role})
+
+
+@pytest.mark.asyncio
+async def test_directory_manager_role_resolves_and_customer_is_refused():
+    svc = ApprovalService(store=ApprovalStore(client=None, force_memory=True))
+    approval_id = await svc.request(run_id="RB-9", step="approve",
+                                    required_role="manager",
+                                    rule_id="refund.v1", rule_version=1)
+    with pytest.raises(NotAuthorized):
+        await svc.resolve(approval_id, "approve", _directory_identity("customer"))
+    decision = await svc.resolve(approval_id, "approve", _directory_identity("manager"))
+    assert decision.approver.email == "diane@acme.test"
