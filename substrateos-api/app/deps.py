@@ -132,3 +132,11 @@ def get_directory_service(request: Request):
 
 def get_directory_sync(request: Request):
     return getattr(request.app.state, "directory_sync", None)
+
+
+def get_skill_drafter(request: Request):
+    return getattr(request.app.state, "skill_drafter", None)
+
+
+def get_skill_publish_flow(request: Request):
+    return getattr(request.app.state, "skill_publish_flow", None)

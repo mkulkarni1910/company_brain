@@ -30,6 +30,8 @@ from app.api.search import router as search_router
 from app.api.skills import admin_router as skills_admin_router
 from app.api.skills import router as skills_router
 from app.api.sources import router as sources_router
+from app.api.studio import admin_router as studio_admin_router
+from app.api.studio import router as studio_router
 from app.api.surfaces import router as surfaces_router
 from app.api.tokens import router as tokens_router
 from app.cache.redis_cache import RedisCache
@@ -60,6 +62,7 @@ from app.retrieval.ai_search_client import AISearchClient
 from app.retrieval.hybrid_retriever import HybridRetriever
 from app.scheduler import start_periodic
 from app.search.service import SearchService
+from app.skills.drafter import SkillDrafter
 from app.skills.service import SkillRouter as SkillRouterSvc
 from app.skills.store import SkillStore
 from app.tokens.store import CosmosTokenStore, NullTokenStore
@@ -68,6 +71,7 @@ from app.workflows.engine import RefundEngine
 from app.workflows.flow import RefundFlow
 from app.workflows.github_engine import PrDraftEngine
 from app.workflows.github_pr import GithubFlow
+from app.workflows.skill_publish import SkillPublishFlow
 from app.workflows.store import RunStore
 
 logger = logging.getLogger("app.startup")
@@ -185,6 +189,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.approval_flow = ApprovalFlow(
         store=app.state.run_store, people=app.state.people_graph,
     )
+    app.state.skill_drafter = SkillDrafter(llm=app.state.llm)
+    app.state.skill_publish_flow = SkillPublishFlow(
+        store=app.state.run_store, skill_store=app.state.skill_store,
+        people=app.state.people_graph)
     app.state.github_store = GithubStore()
     app.state.github_flow = GithubFlow(
         store=app.state.run_store,
@@ -273,6 +281,8 @@ app.include_router(tokens_router)
 app.include_router(context_router)
 app.include_router(skills_router)
 app.include_router(skills_admin_router)
+app.include_router(studio_router)
+app.include_router(studio_admin_router)
 app.include_router(runs_router)
 app.include_router(admin_runs_router)
 app.include_router(github_router)
