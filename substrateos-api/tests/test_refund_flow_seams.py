@@ -3,6 +3,10 @@
 The flow now CALLS services: PolicyEngine (verdict), AuditLog (typed provenance),
 and the Stripe connector (the act). This proves the typed, identity-stamped trail
 and the connector receipt — not just the human-readable run timeline.
+
+All tests drive the flow through the NEW directory-aware contract: a fake
+DirectoryService whose resolve(email) returns a real DirectoryUser (role="agent",
+manager set) and get_by_slack_id(id) returns the manager record.
 """
 
 from __future__ import annotations
@@ -15,11 +19,33 @@ from app.approvals.service import ApprovalService
 from app.approvals.store import ApprovalStore
 from app.audit.log import AuditLog
 from app.connectors.act.stripe_mock import StripeRefundConnector
+from app.domain.directory import DirectoryUser
 from app.domain.identity import User
 from app.domain.policy import Condition, Policy
 from app.domain.workflow import RefundFacts
 from app.workflows.flow import RefundFlow
 from app.workflows.store import RunStore
+
+# ── shared directory personas ────────────────────────────────────────────────
+
+_TOM = DirectoryUser(email="tom@x", slack_id="U_TOM", display_name="Tom Reyes",
+                     manager_email="diana@x", groups=["Support Agent"], role="agent")
+_DIANA = DirectoryUser(email="diana@x", slack_id="U_DIANA", display_name="Diana Foster",
+                       groups=["Managers"], role="manager")
+
+
+class _Directory:
+    """In-memory stand-in for DirectoryService."""
+
+    def __init__(self, *records: DirectoryUser) -> None:
+        self._by_email = {r.email: r for r in records}
+        self._by_slack = {r.slack_id: r for r in records if r.slack_id}
+
+    async def resolve(self, email):  # noqa: ANN001
+        return self._by_email.get((email or "").lower())
+
+    async def get_by_slack_id(self, slack_id):  # noqa: ANN001
+        return self._by_slack.get(slack_id)
 
 
 def _user() -> User:
@@ -28,6 +54,15 @@ def _user() -> User:
 
 
 async def _noop_slack(token, method, payload):
+    """Fake slack_call: handles users.info + conversations.open; returns canned ts."""
+    if method == "users.info":
+        uid = payload.get("user")
+        people = {"U_TOM": ("Tom Reyes", "tom@x"), "U_DIANA": ("Diana Foster", "diana@x")}
+        name, email = people.get(uid, ("Someone", ""))
+        return {"ok": True, "user": {"real_name": name,
+                                     "profile": {"display_name": "", "email": email}}}
+    if method == "conversations.open":
+        return {"ok": True, "channel": {"id": "D_APPROVER"}}
     return {"ok": True, "ts": "1", "channel": payload.get("channel")}
 
 
@@ -55,7 +90,8 @@ def _flow_with(policy, monkeypatch):
     store = RunStore(client=None, force_memory=True)
     audit = AuditLog(client=None, force_memory=True)
     approvals = ApprovalService(store=ApprovalStore(client=None, force_memory=True), audit=audit)
-    flow = RefundFlow(engine=engine, store=store, audit_log=audit,
+    directory = _Directory(_TOM, _DIANA)
+    flow = RefundFlow(engine=engine, store=store, directory=directory, audit_log=audit,
                       refund_connector=StripeRefundConnector(),
                       approval_service=approvals, policy_store=_FakePolicyStore(policy))
     return flow, store, audit, approvals
@@ -71,7 +107,7 @@ async def test_deny_refuses_without_routing_to_approval(monkeypatch):
     flow, store, audit, _ = _flow_with(deny_policy, monkeypatch)
     with patch("app.workflows.flow.slack_call", new=_noop_slack):
         await flow.handle_request(text="refund 1200 order 48213", channel="C",
-                                  thread_ts=None, requester_slack_id=None, user=_user())
+                                  thread_ts=None, requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
     assert run.status == "denied"  # NOT pending_approval
     steps = [e.step for e in await store.list_events(run.id)]
@@ -91,7 +127,7 @@ async def test_require_approval_opens_durable_pending(monkeypatch):
     flow, store, audit, approvals = _flow_with(policy, monkeypatch)
     with patch("app.workflows.flow.slack_call", new=_noop_slack):
         await flow.handle_request(text="refund 1200 order 48213", channel="C",
-                                  thread_ts=None, requester_slack_id=None, user=_user())
+                                  thread_ts=None, requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
     assert run.status == "pending_approval"
     # a DURABLE, role-scoped pending approval now backs the run
@@ -102,12 +138,26 @@ async def test_require_approval_opens_durable_pending(monkeypatch):
 
 
 def _require_approval_policy() -> Policy:
+    """Policy that requires approval with 'support_manager' role — for open/stop tests."""
     return Policy(
         id="refund.v1", version=1, owner="support_manager",
         all=[Condition(fact="amount_usd", op="<=", value=500),
              Condition(fact="order_age_days", op="<=", value=30)],
         on_pass="allow", on_fail="require_approval",
         required_role="support_manager", on_missing_data="stop",
+    )
+
+
+def _manager_role_policy() -> Policy:
+    """Same shape as refund.v1.yaml (required_role='manager') — needed so
+    _DIANA's directory role ('manager') satisfies the ApprovalService authZ check
+    in end-to-end click tests."""
+    return Policy(
+        id="refund.v1", version=1, owner="support_manager",
+        all=[Condition(fact="amount_usd", op="<=", value=500),
+             Condition(fact="order_age_days", op="<=", value=30)],
+        on_pass="allow", on_fail="require_approval",
+        required_role="manager", on_missing_data="stop",
     )
 
 
@@ -121,7 +171,7 @@ async def test_stop_halts_without_routing_or_pending(monkeypatch):
     )
     with patch("app.workflows.flow.slack_call", new=_noop_slack):
         await flow.handle_request(text="refund", channel="C", thread_ts=None,
-                                  requester_slack_id=None, user=_user())
+                                  requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
     assert run.status == "halted"          # NOT pending_approval
     assert run.approval_id is None         # no durable pending opened for a stop
@@ -131,17 +181,21 @@ async def test_stop_halts_without_routing_or_pending(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_governed_resolution_closes_pending_and_stamps_rule(monkeypatch):
-    monkeypatch.setenv("SLACK_REFUND_APPROVER_ID", "U_DIANA")
-    flow, store, audit, approvals = _flow_with(_require_approval_policy(), monkeypatch)
+    # The directory routes TOM's request to DIANA (his manager).
+    # Diana's approve click resolves through ApprovalService — identity-stamped.
+    # Uses required_role="manager" so _DIANA's directory role satisfies authZ.
+    flow, store, audit, approvals = _flow_with(_manager_role_policy(), monkeypatch)
     with patch("app.workflows.flow.slack_call", new=_noop_slack):
         await flow.handle_request(text="refund 1200", channel="C", thread_ts="t1",
                                   requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
     assert run.status == "pending_approval" and run.approval_id
+    # the flow stored the routed approver from the directory
+    assert run.approver_slack_id == "U_DIANA"
 
     payload = {
         "type": "block_actions", "user": {"id": "U_DIANA", "name": "diana"},
-        "container": {"channel_id": "D", "message_ts": "1"},
+        "container": {"channel_id": "D_APPROVER", "message_ts": "1"},
         "actions": [{"action_id": "refund_approve", "value": run.id}],
     }
     with patch("app.workflows.flow.slack_call", new=_noop_slack):
@@ -160,17 +214,20 @@ async def test_governed_resolution_closes_pending_and_stamps_rule(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_unauthorized_clicker_cannot_decide(monkeypatch):
-    monkeypatch.setenv("SLACK_REFUND_APPROVER_ID", "U_DIANA")
-    flow, store, audit, approvals = _flow_with(_require_approval_policy(), monkeypatch)
+    # TOM's over-limit request routes to DIANA; U_RANDO clicks — must be refused.
+    # Uses required_role="manager" so the approval record is properly configured.
+    flow, store, audit, approvals = _flow_with(_manager_role_policy(), monkeypatch)
     with patch("app.workflows.flow.slack_call", new=_noop_slack):
         await flow.handle_request(text="refund 1200", channel="C", thread_ts="t1",
                                   requester_slack_id="U_TOM", user=_user())
     run = (await store.list_runs())[0]
+    assert run.status == "pending_approval" and run.approval_id
+    assert run.approver_slack_id == "U_DIANA"
 
-    # a random user (not the configured approver) clicks Approve
+    # a random user (not the routed approver) clicks Approve
     payload = {
         "type": "block_actions", "user": {"id": "U_RANDO", "name": "rando"},
-        "container": {"channel_id": "D", "message_ts": "1"},
+        "container": {"channel_id": "D_APPROVER", "message_ts": "1"},
         "actions": [{"action_id": "refund_approve", "value": run.id}],
     }
     with patch("app.workflows.flow.slack_call", new=_noop_slack):
@@ -195,12 +252,12 @@ async def test_auto_approve_emits_typed_audit_and_calls_connector(monkeypatch):
         amount_usd=89.0, order_age_days=12, reasoning="within limits",
     )
     store = RunStore(client=None, force_memory=True)
-    flow = RefundFlow(engine=engine, store=store, audit_log=audit,
-                      refund_connector=StripeRefundConnector())
+    flow = RefundFlow(engine=engine, store=store, directory=_Directory(_TOM, _DIANA),
+                      audit_log=audit, refund_connector=StripeRefundConnector())
 
     with patch("app.workflows.flow.slack_call", new=_noop_slack):
         await flow.handle_request(text="refund $89 order 48190", channel="C",
-                                  thread_ts=None, requester_slack_id=None, user=_user())
+                                  thread_ts=None, requester_slack_id="U_TOM", user=_user())
 
     run = (await store.list_runs())[0]
     trail = await audit.query(run.id)

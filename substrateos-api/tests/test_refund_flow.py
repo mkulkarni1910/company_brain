@@ -4,6 +4,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.approvals.service import ApprovalService
+from app.approvals.store import ApprovalStore
+from app.audit.log import AuditLog
 from app.domain.directory import DirectoryUser
 from app.domain.identity import User
 from app.domain.workflow import RefundDecision
@@ -538,3 +541,53 @@ async def test_skip_when_unreachable_and_mention_fallback(monkeypatch):
     agent_post = str(next(p for p in posts if p["channel"] == "C_REFUNDS"))
     assert "<@" not in agent_post.replace("<@U_DIANA>", "")  # no agent mention
     assert "Tom Reyes" in agent_post
+
+
+# ── governed click closes the durable approval ────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_governed_click_closes_durable_approval(monkeypatch):
+    """After an over-limit request routes (status=pending_approval, approval_id set),
+    the routed manager's approve click leaves the PendingApproval with status='approved'
+    — no orphaned pending record.  All services are in-memory so nothing touches Redis."""
+    monkeypatch.setenv("SLACK_BOT_TOKEN", "xoxb-test")
+    from app.config import get_settings
+    get_settings.cache_clear()
+
+    audit = AuditLog(force_memory=True)
+    approval_service = ApprovalService(
+        store=ApprovalStore(force_memory=True), audit=audit
+    )
+    engine = AsyncMock()
+    engine.evaluate.return_value = _OVER_LIMIT
+    store = RunStore(client=None, force_memory=True)
+    # real refund.v1 policy on disk uses required_role="manager" — _DIANA has role="manager"
+    flow = RefundFlow(
+        engine=engine,
+        store=store,
+        directory=_Directory(_TOM, _DIANA, _PRIYA),
+        audit_log=audit,
+        approval_service=approval_service,
+    )
+
+    calls, fake = _slack_recorder()
+    with patch("app.workflows.flow.slack_call", new=fake):
+        await flow.handle_request(
+            text="refund $1,200 order 48213", channel="C_REFUNDS",
+            thread_ts="100.1", requester_slack_id="U_TOM", user=_user(),
+        )
+
+    run = (await store.list_runs())[0]
+    assert run.status == "pending_approval"
+    assert run.approval_id is not None and run.approval_id.startswith("AP-")
+    assert run.approver_slack_id == "U_DIANA"
+
+    with patch("app.workflows.flow.slack_call", new=fake):
+        await flow.handle_action(
+            _click("refund_approve", run.id, user_id="U_DIANA", name="diana")
+        )
+
+    loaded = await store.get(run.id)
+    assert loaded.status == "completed"
+    pending = await approval_service.get_pending(run.approval_id)
+    assert pending is not None and pending.status == "approved"
