@@ -3,6 +3,22 @@
 Zone 4 intelligence layer monolith. FastAPI + Semantic Kernel + Azure AI Search
 + Azure OpenAI + Redis.
 
+## What's real vs mocked (governed act layer)
+
+**Real, enforced in code on the refund use case:** the guardrail
+(`policies/refund.v1.yaml` evaluated by `app/policy/engine.py` — deterministic,
+fail-closed, never the model), the durable approval gate
+(`app/approvals/` — identity-bound, role-authorized, survives restarts), the
+typed audit trail (`app/audit/` — append-only, actor-stamped, queryable per
+run), and requester identity (Entra + Slack directory sync).
+
+**Seeded/mocked:** order + customer data (seed corpus) and the Stripe
+connector (`app/connectors/act/stripe_mock.py`).
+
+**Roadmap (parked):** managed skill lifecycle (status/version/promote/rollback),
+generic multi-playbook YAML engine, AI-drafted skills, multi-tenant, deep RBAC,
+tamper-evident audit, OpenTelemetry, real connectors.
+
 ## Local dev
 
 ```

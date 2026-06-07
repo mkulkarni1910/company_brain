@@ -169,6 +169,7 @@
       <h3>Production-grade, safe to allow</h3>
       <ul>
         <li><b>Known identity</b> on every surface (Entra) + <b>double-enforcement ACLs</b>, fail-closed.</li>
+        <li><b>Deterministic policy-as-code</b> guardrail (<code>app/policy/</code> — never the model, always fail-closed).</li>
         <li><b>Human approval</b> for risky moves; <b>a full record</b> of who/what/which-rule/when.</li>
         <li>Strict module boundaries — each component a swappable interface.</li>
         <li>Versioned like code: AI drafts → owner reviews → human approves → live → rollback anytime.</li>
@@ -200,18 +201,19 @@
 
     <div class="engine">
       <div class="lbl">The engine — runs the playbook, step by step</div>
+      <div style="display:inline-block;background:var(--amber);color:var(--navy-2);font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border-radius:6px;padding:4px 12px;margin-bottom:10px">Governed Act Layer — guardrails · human approval · audit receipt</div>
       <div class="steps">
         <div class="step"><b>Who's asking</b><small>Entra identity</small></div>
         <div class="seq">→</div>
         <div class="step"><b>Gather facts</b><small>Search · People · Activity · Graph</small></div>
         <div class="seq">→</div>
-        <div class="step risk"><b>Check rules</b><small>policy + ACL</small></div>
+        <div class="step risk"><b>Check rules</b><small>PolicyEngine · policy + ACL</small></div>
         <div class="seq">→</div>
-        <div class="step risk"><b>Ask a human</b><small>Teams approval</small></div>
+        <div class="step risk"><b>Ask a human</b><small>ApprovalService · Teams approval</small></div>
         <div class="seq">→</div>
         <div class="step"><b>Do it</b><small>act in your tools · GitHub PR</small></div>
         <div class="seq">→</div>
-        <div class="step"><b>Log it</b><small>full audit record</small></div>
+        <div class="step"><b>Log it</b><small>AuditLog · append-only</small></div>
       </div>
     </div>
 
@@ -280,13 +282,13 @@
       <div class="steps">
         <div class="step"><b>When</b><small>trigger / event</small></div>
         <div class="seq">→</div>
-        <div class="step"><b>Check</b><small>rules + ACL + role (manager/agent/customer)</small></div>
+        <div class="step"><b>Check</b><small><b>PolicyEngine</b> · policies/*.yaml · deterministic, fail-closed</small></div>
         <div class="seq">→</div>
-        <div class="step risk"><b>Stop</b><small>risky → Entra manager signs off (or stops if none)</small></div>
+        <div class="step risk"><b>Stop</b><small><b>ApprovalService</b> · identity-bound, Redis-backed PendingApproval · Entra manager signs off (or stops if none)</small></div>
         <div class="seq">→</div>
-        <div class="step"><b>Do it</b><small>act in your tools</small></div>
+        <div class="step"><b>Do it</b><small>act in your tools · connectors/act/</small></div>
         <div class="seq">→</div>
-        <div class="step"><b>Record</b><small>RunStore audit</small></div>
+        <div class="step"><b>Record</b><small><b>AuditLog</b> · append-only, actor-stamped</small></div>
       </div>
     </div>
 
@@ -371,7 +373,12 @@
       <div class="card"><h4><code>acl/</code></h4><p>ACLStore — double-enforcement; query-time recheck, fail-closed on outage.</p></div>
       <div class="card"><h4><code>live_fetch/</code></h4><p>MSGraphSearchFetcher — on-behalf-of Graph for "right now" facts.</p></div>
       <div class="card"><h4><code>conversations/</code></h4><p>ConversationStore + memory — trimmed history into grounded prompts (web · Slack · Teams); history-carrying answers bypass the answer cache.</p></div>
-      <div class="card"><h4><code>ingest/ · connectors/</code></h4><p>chunk→embed→ACL-stamp→index; SharePoint/Outlook/Teams connectors. GitHub action connector: <code>github.py</code> (REST client) + <code>github_store.py</code> (config · per-user tokens · OAuth states).</p></div>
+      <div class="card"><h4><code>policy/</code></h4><p><b>PolicyEngine</b> — deterministic guardrail, never the model. Loads + validates <code>policies/*.yaml</code> (PyYAML, via <code>policy/store.py</code>). Fail-closed: any unknown or breached rule blocks the run. Refund policy: <code>policies/refund.v1.yaml</code>.</p>
+        <div class="stack"><span class="chip">PyYAML</span><span class="chip">policies/refund.v1.yaml</span></div></div>
+      <div class="card"><h4><code>approvals/</code></h4><p><b>ApprovalService</b> — durable, identity-bound approval gate. <code>PendingApproval</code> persisted in Redis; survives restarts. Only the role-authorized Entra manager may approve; hard-denies clicks from unrecorded approvers.</p>
+        <div class="stack"><span class="chip">Redis</span><span class="chip">identity-bound</span></div></div>
+      <div class="card"><h4><code>audit/</code></h4><p><b>AuditLog</b> — typed, append-only audit trail. Every action actor-stamped (who asked, which rule, who approved, what changed, when). Queryable per run from the Admin Runs view.</p></div>
+      <div class="card"><h4><code>ingest/ · connectors/</code></h4><p>chunk→embed→ACL-stamp→index; SharePoint/Outlook/Teams connectors. GitHub action connector: <code>github.py</code> (REST client) + <code>github_store.py</code> (config · per-user tokens · OAuth states). Act connectors: <code>connectors/act/stripe_mock.py</code> (seeded/mocked Stripe refund).</p></div>
       <div class="card"><h4><code>discover/ · search/ · history/</code></h4><p>Discover, search, and history services behind the nav surfaces.</p></div>
       <div class="card"><h4><code>cache/ · tokens/ · metrics/</code></h4><p>Redis answer cache · PAT token accounting · metrics store.</p></div>
       <div class="card"><h4><code>directory/</code></h4><p><b>User Directory</b> — joins Slack and Entra ID identities on email. <code>DirectoryStore</code>: Redis-backed (keys <code>directory:user:{email}</code>, <code>directory:slack:{id}</code>) + in-process fallback. <code>DirectorySync</code>: daily pull of Slack <code>users.list</code> + Graph users/<code>$expand=manager</code> + Managers / Support Agent group members; fail-soft merge. <code>DirectoryService</code>: request-time <code>resolve(email)</code> — cache-first, live Slack+Graph write-through fallback. Roles: <b>manager · agent · customer</b>.</p>
@@ -426,8 +433,8 @@
 
     <h2 class="sec" style="font-size:17px">Cross-cutting</h2>
     <div class="grid cols-3">
-      <div class="card"><h4>Security — safe to allow</h4><p>Known identity (Entra) on every surface · double-enforcement ACLs (index stamp + query recheck, fail-closed) · admin console restricted to the Entra Admin group (fail-closed Graph check) · human approval for risky moves · stops if unsure.</p></div>
-      <div class="card"><h4>Audit — a full record</h4><p>Every action logged: who asked · which rule applied · who approved · what changed · when. RunStore + metrics.</p></div>
+      <div class="card"><h4>Security — safe to allow</h4><p>Known identity (Entra) on every surface · double-enforcement ACLs (index stamp + query recheck, fail-closed) · admin console restricted to the Entra Admin group (fail-closed Graph check) · <b>deterministic policy-as-code</b> guardrail (<code>app/policy/</code> — never the model) · human approval for risky moves · stops if unsure.</p></div>
+      <div class="card"><h4>Audit — a full record</h4><p>Every action logged: who asked · which rule applied · who approved · what changed · when. <b>AuditLog</b> (<code>app/audit/</code>): typed, append-only, actor-stamped, queryable per run. RunStore + metrics.</p></div>
       <div class="card"><h4>Observability</h4><p>structlog + OpenTelemetry → Azure Monitor / App Insights. One trace per request, ranking signals as span attributes.</p></div>
       <div class="card"><h4>Quality gates</h4><p>pytest suite + eval harness (golden Q&amp;A recall/MRR). Frontend typecheck + lint + build before ship.</p></div>
       <div class="card"><h4>Identity flow</h4><p>DefaultAzureCredential → user-assigned managed identity in cloud; OBO to Microsoft Graph for Live Fetch.</p></div>
