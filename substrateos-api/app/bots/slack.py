@@ -87,11 +87,21 @@ async def slack_get(token: str, method: str, params: dict) -> dict | None:
         return None
 
 
-async def slack_call(token: str, method: str, payload: dict) -> dict | None:
-    """POST a Slack Web API method; return the body when ok=true, else None.
+# Read-style methods that reject JSON POST bodies: Slack silently ignores the
+# body and then errors on the "missing" argument (users.info → user_not_found).
+# slack_call delegates these to slack_get so no call site can hit that trap.
+_GET_METHODS = frozenset({"users.info", "users.lookupByEmail", "users.list"})
 
-    Slack returns HTTP 200 even for API errors — `ok` in the body is the truth.
+
+async def slack_call(token: str, method: str, payload: dict) -> dict | None:
+    """Call a Slack Web API method; return the body when ok=true, else None.
+
+    POSTs JSON for write-style methods; read-style methods in _GET_METHODS are
+    routed through slack_get (Slack rejects JSON bodies for those). Slack
+    returns HTTP 200 even for API errors — `ok` in the body is the truth.
     """
+    if method in _GET_METHODS:
+        return await slack_get(token, method, payload)
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(

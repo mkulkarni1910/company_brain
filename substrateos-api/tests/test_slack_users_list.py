@@ -39,3 +39,17 @@ async def test_api_error_returns_none():
 async def test_transport_error_returns_none():
     respx.get(_URL).mock(side_effect=ConnectionError)
     assert (await slack_users_list("xoxb-test")) is None
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_slack_call_routes_get_methods_via_get():
+    """users.info & co. reject JSON POST bodies (Slack ignores the body and
+    errors user_not_found) — slack_call must delegate them to slack_get."""
+    from app.bots.slack import slack_call
+
+    route = respx.get("https://slack.com/api/users.info").mock(
+        return_value=Response(200, json={"ok": True, "user": {"id": "U1"}}))
+    body = await slack_call("xoxb-test", "users.info", {"user": "U1"})
+    assert body is not None and body["user"]["id"] == "U1"
+    assert route.calls[0].request.url.params["user"] == "U1"
