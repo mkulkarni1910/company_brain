@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel
 
 from app.api._admin_guard import user_is_admin
+from app.api._sme_guard import user_is_sme
 from app.api._auth_resolve import resolve_user
 from app.bots.slack import slack_get
 from app.config import get_settings
@@ -35,6 +36,9 @@ class Me(BaseModel):
     # Member of the Entra admins group (config: ENTRA_ADMINS_GROUP)? The web UI
     # uses this to gate /admin. Fail-soft false — the backend re-checks anyway.
     is_admin: bool = False
+    # Member of the Entra SME group (config: ENTRA_SME_GROUP)? Gates /studio
+    # in the web UI. Fail-soft false — the backend re-checks anyway.
+    is_sme: bool = False
 
 
 async def _slack_title(email: str, cache) -> str | None:
@@ -70,5 +74,6 @@ async def me(
         debug_header=x_debug_bypass_auth)
     title = await _slack_title(user.email, cache)
     is_admin = await user_is_admin(user, cache)
+    is_sme = await user_is_sme(user, cache)
     return Me(display_name=user.display_name, email=user.email, title=title,
-              is_admin=is_admin)
+              is_admin=is_admin, is_sme=is_sme)

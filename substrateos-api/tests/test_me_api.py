@@ -147,3 +147,14 @@ def test_me_empty_slack_title_is_null(monkeypatch) -> None:
     finally:
         app.dependency_overrides.clear()
         get_settings.cache_clear()
+
+
+def test_me_reports_sme_membership() -> None:
+    # Debug header lists group names directly — "Finance SME" grants is_sme.
+    hdr = {"x-debug-bypass-auth": "t-test,u-deepa,t-test:everyone,Finance SME"}
+    with _client_with(FakeCache()) as client:
+        r = client.get("/me", headers=hdr)
+        assert r.status_code == 200
+        assert r.json()["is_sme"] is True
+        r2 = client.get("/me", headers=_HDR)  # plain user: not an SME
+        assert r2.json()["is_sme"] is False
