@@ -3,11 +3,12 @@ name: substrateos-feature
 description: >-
   The end-to-end workflow for building ANY feature, change, or fix on the
   SubstrateOS / Company Brain project (the backend `substrateos-api/`, the User
-  Web Chat at `web/app/`, or the Admin Panel at `web/app/admin/`). Use this
-  WHENEVER the user asks to add, build, implement, change, extend, or wire up
-  anything in this repo — e.g. "add a feedback button to the chat", "new admin
-  screen for X", "expose a /something endpoint", "let users filter sources",
-  "build the Teams connector UI". It enforces the project's rules: mockup-first
+  Web Chat at `web/app/`, the Admin Panel at `web/app/admin/`, or the SME Skill
+  Studio at `web/app/studio/`). Use this WHENEVER the user asks to add, build,
+  implement, change, extend, or wire up anything in this repo — e.g. "add a
+  feedback button to the chat", "new admin screen for X", "expose a /something
+  endpoint", "let users filter sources", "build the Teams connector UI", "add X to
+  the skill studio". It enforces the project's rules: mockup-first
   for any frontend change (update the mockup and show a browser preview for
   approval BEFORE writing React), every feature in its own git worktree (never
   edit directly on main), parallel subagents for independent tasks, keep mockups
@@ -49,13 +50,14 @@ non-trivial feature so what you ship advances the actual product, not a tangent.
 surface plugs into the same engine + identity layer (`app/bots/`, `app/mcp/`,
 `app/api/context`, `app/auth.py`) — never fork the playbook logic per surface.
 
-## The three components
+## The four components
 
 | Component | Lives in | Stack | Mockup |
 |-----------|----------|-------|--------|
 | **Backend (brain-api)** | `substrateos-api/` | FastAPI · Python 3.12 · uv · pytest | — |
 | **User Web Chat** | `web/app/` (root routes) | Next.js 14 · React 18 · Tailwind · MSAL | `mockups/user-web-chat.html` |
 | **Admin Panel** | `web/app/admin/` | same Next.js app | `mockups/admin-portal.html` |
+| **SME Skill Studio** | `web/app/studio/` | same Next.js app | `mockups/sme-studio.html` |
 
 Read `references/techstack.md` before reaching for a new library — we reuse what's
 already here. Add to that file when you genuinely introduce something new.
@@ -66,6 +68,72 @@ Work through these phases in order. Skip a phase only when it clearly doesn't
 apply (e.g. a backend-only change skips the mockup phase), and say so out loud.
 If the change is non-trivial, **brainstorm the design with the user first** — this
 workflow is about *how* to ship safely, not a license to skip thinking.
+
+### Tracking progress — show the table after every phase
+
+So the user can see how far along we are, **reprint this progress table at the end
+of each phase** (and once at the start, in Phase 0). Use a plain Markdown table
+(no blockquote — it mangles the rendering) with four columns —
+**Status · Step · Phase · Comment**. Mark each phase ✅ done, 🟡 in-progress,
+⬜️ not started, or ⏭️ skipped, and compute a percentage = *phases done ÷ phases
+that apply* (a skipped phase drops out of the denominator). The **Comment** column
+is required for any ⏭️ row — say *why* it was skipped — and is where you note the
+chosen test scope, the approved mockup, branch name, etc.
+
+Print a bold heading line, then the table:
+
+**SubstrateOS feature: `<feature name>` — progress: `<NN>%`**
+
+| Status | Step | Phase | Comment |
+|:------:|:----:|-------|---------|
+| ✅ | 0 | Orient | Touches Studio frontend + backend |
+| ✅ | 1 | Mockup first (frontend) | `sme-studio.html` approved |
+| 🟡 | 2 | Implement | Wiring `/skills/{id}/duplicate` |
+| ⬜️ | 3 | Tests (scope + parallel) | — |
+| ⬜️ | 4 | Sync design + docs | — |
+| ⬜️ | 5 | Merge to main & delete worktree | — |
+| ⬜️ | 6 | Deploy | ⏭️ until approved |
+
+Legend: ✅ done · 🟡 in-progress · ⬜️ not started · ⏭️ skipped. Keep the same row
+order every time so the user reads it as a steadily filling checklist. A skipped
+phase (e.g. backend-only → Phase 1) drops out of the denominator, so 2 of 5 done
+shows as 40%. The feature is 100% after Phase 5 (Phase 6/deploy is approval-gated
+and may legitimately stay ⬜️/⏭️).
+
+### Final summary — when the work is complete
+
+After **Phase 5** (and Phase 6, if deploy was approved), close out with a short
+wrap-up so the user gets a clean finish — not just the raw progress table. Plain
+Markdown table, adapt/drop rows to what the feature actually touched:
+
+## ✅ `<feature name>` — shipped · `<NN>%`
+
+| Field | Detail |
+|-------|--------|
+| **Surfaces touched** | Backend · SME Skill Studio |
+| **Mockup** | `sme-studio.html` — approved before code |
+| **Tests** | Full suite green (`-n auto`), N passed |
+| **Docs synced** | mockups + `architecture.html` + techstack |
+| **Merged** | `feat/<feature>` → `main`, worktree removed |
+| **Deployed** | ✅ `centralindia`, health-checked — or — ⏭️ awaiting approval |
+
+**What changed:** one-line plain-English description of the user-visible result.
+
+### Decision gates — stop and ask, clearly
+
+At four points the workflow **must pause and get an answer from the user** before
+continuing — never assume. After printing the progress table for that phase, ask
+the exact question and wait:
+
+| After phase | Gate | Ask the user, verbatim-ish |
+|:-----------:|------|----------------------------|
+| **1** | Mockup approval | *"Here's the updated `<mockup>.html` in the browser — does this look right to build? I won't write any React until you approve."* |
+| **3** | Test scope | *"Do you want me to run the **full suite**, or **only the tests related to this change**?"* |
+| **5** | Merge to main | *"All tests pass and the worktree is clean. OK to merge `feat/<feature>` into `main` and delete the worktree?"* |
+| **6** | Deploy | *"Merged to `main`. Production (`centralindia`) is live and shared — do you want me to deploy this now via `substrateos-deploy`, or hold?"*
+
+Make the ask its own clear line (not buried in a paragraph), state what you'll do
+with each answer, and **do not proceed past the gate until the user responds.**
 
 ### Where the work happens — a worktree per feature, never on main
 
@@ -93,27 +161,32 @@ Phase 5 happen one at a time, re-running tests after each merge.
 
 ### Phase 0 — Orient
 
-- Decide which component(s) the feature touches. Most user-facing features touch
-  both the backend (an endpoint) and a frontend (the surface that calls it).
+- Decide which component(s) the feature touches: the **Backend**, the **User Web
+  Chat**, the **Admin Panel**, or the **SME Skill Studio** (`web/app/studio/` —
+  plain-English skill authoring that routes into admin approval). Most user-facing
+  features touch both the backend (an endpoint) and a frontend (the surface that
+  calls it); a Studio change usually pairs with an admin-approval and backend path.
 - Skim the matching design spec/plan in `docs/superpowers/specs/` and
   `docs/superpowers/plans/` — this project has a spec for nearly every feature,
   and they encode decisions you shouldn't silently contradict.
 - Check `references/techstack.md` so you build with the stack we already run.
+- **Print the progress table** (see *Tracking progress* below) so you and the user
+  start from a shared 0% baseline.
 
 ### Phase 1 — Mockup first (frontend changes only)
 
 This is the project's firmest rule, because design review is cheap in HTML and
-expensive in React. **For any change to the User Web Chat or Admin Panel, do NOT
-write a single line of `.tsx` until the mockup is approved.**
+expensive in React. **For any change to the User Web Chat, Admin Panel, or SME
+Skill Studio, do NOT write a single line of `.tsx` until the mockup is approved.**
 
-1. Update (or add) the relevant mockup in `mockups/` — `user-web-chat.html` or
-   `admin-portal.html`. Match the existing design system (Fraunces/Archivo/
-   JetBrains Mono, the warm-paper palette, the CSS variables already defined in
-   those files). Reuse the existing components and tokens rather than inventing
-   new visual language.
+1. Update (or add) the relevant mockup in `mockups/` — `user-web-chat.html`,
+   `admin-portal.html`, or `sme-studio.html`. Match the existing design system
+   (Fraunces/Archivo/JetBrains Mono, the warm-paper palette, the CSS variables
+   already defined in those files). Reuse the existing components and tokens rather
+   than inventing new visual language.
 2. Open it in the browser for review:
    ```bash
-   open mockups/user-web-chat.html   # or admin-portal.html
+   open mockups/user-web-chat.html   # or admin-portal.html / sme-studio.html
    ```
 3. Present the change to the user and **wait for explicit approval.** Iterate on
    the mockup until they're happy. Only then proceed to Phase 2.
@@ -148,16 +221,24 @@ them before calling it done.
 Nothing ships untested. Add tests alongside the change, then run them and report
 real output — if something fails, say so.
 
-**Ask the user which scope to run during development** (saves time on
-iteration; default to **targeted** if they don't say):
+**Always ask the user which scope to run** — don't assume. Put the choice to them
+explicitly:
+
+> *"Do you want me to run the **full suite**, or **only the tests related to this
+> change**?"*
+
+Default to **targeted** only if they don't answer. Whichever scope, **run the
+tests in parallel** so the suite finishes fast. Parallelism comes from
+`pytest-xdist`'s `-n auto`; it isn't in the dev deps yet, so add it once with
+`uv add --dev pytest-xdist` (then it's reusable — note it in `references/techstack.md`):
 
 - **Targeted (fast inner loop):** only the new/affected tests —
   ```bash
-  cd substrateos-api && uv run pytest tests/test_<feature>.py -q
+  cd substrateos-api && uv run pytest tests/test_<feature>.py -n auto -q
   ```
-- **Full suite:** everything —
+- **Full suite:** everything, in parallel —
   ```bash
-  cd substrateos-api && uv run pytest tests/ -q
+  cd substrateos-api && uv run pytest tests/ -n auto -q
   ```
 
 Targeted runs are a development convenience, not a substitute: **the full suite
@@ -200,7 +281,7 @@ system, so drift makes the whole project look unmaintained.
 3. **Tech stack:** if you introduced anything new, add it to
    `references/techstack.md` with a one-line "why / where used" so it's reusable.
 
-### Phase 5 — Merge & Deploy (only with approval)
+### Phase 5 — Merge back to main & delete the worktree (with approval)
 
 1. Confirm the **full test suite** passes (not just the targeted subset from
    Phase 3) and the worktree is clean.
@@ -212,17 +293,23 @@ system, so drift makes the whole project look unmaintained.
    ```bash
    git worktree remove .worktrees/<feature> && git branch -d feat/<feature>
    ```
-4. **Get explicit approval to deploy.** Production (`centralindia`) is shared and
+
+### Phase 6 — Deploy (only with explicit approval)
+
+1. **Get explicit approval to deploy.** Production (`centralindia`) is shared and
    live; never deploy on your own initiative.
-5. On approval, deploy with the **`substrateos-deploy`** skill (it handles
+2. On approval, deploy with the **`substrateos-deploy`** skill (it handles
    build → ACR push → Container Apps rollout → health check, and refuses to
    deploy from anything but `main`).
 
 ## Definition of done
 
 A feature is done when: it was built in its own git worktree (never directly on
-`main`), the mockup (if any) was approved before implementation, the code matches
-it, tests are written and the **full suite** is green, the mockups +
-`architecture.html` + tech-stack tracker are updated, it's merged to `main`, the
-worktree and branch are deleted, and — if the user approved — deployed via
-`substrateos-deploy` and health-checked.
+`main`); the mockup (if any — User Web Chat, Admin Panel, or SME Skill Studio) was
+approved before implementation and the code matches it; tests are written, were run
+at the user's chosen scope in parallel, and the **full suite** is green; the mockups
+(`user-web-chat.html` / `admin-portal.html` / `sme-studio.html`) +
+`architecture.html` + tech-stack tracker are updated; the progress table was kept
+current and reached **100% at Phase 5**; it's merged to `main` and the worktree +
+branch are deleted (Phase 5); and — only if the user gave explicit approval —
+deployed via `substrateos-deploy` and health-checked (Phase 6).
