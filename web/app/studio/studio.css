@@ -223,7 +223,7 @@
 .st-panel{animation:st-fade .25s ease}
 
 /* ── access restricted (mirrors admin denied screen) ── */
-.st-denied{min-height:100vh;display:grid;place-items:center;padding:40px 20px;
+.st-denied{grid-column:1/-1;min-height:100vh;display:grid;place-items:center;padding:40px 20px;
   background:
     radial-gradient(900px 460px at 88% -16%, rgba(196,122,22,.05), transparent 60%),
     radial-gradient(800px 600px at -8% 116%, rgba(15,137,126,.04), transparent 55%),
