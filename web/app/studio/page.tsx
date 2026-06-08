@@ -93,27 +93,26 @@ function formToSkill(f: FormState): SkillCreate {
   };
 }
 
-/* ── access-restricted screen (mirrors the admin denied screen) ── */
+/* ── access-restricted screen (shares the global .denied* styles with the admin
+   panel so the two stay identical — see web/app/globals.css) ── */
 function AccessRestricted({ me }: { me: Me | null }) {
   return (
-    <div className="st-app">
-      <div className="st-denied">
-        <div className="st-denied-card">
-          <div className="st-glyph" />
-          <h2>Access restricted</h2>
-          <p className="why">The Skill Studio is limited to members of the{" "}
-            <b>Finance&nbsp;SME</b> group in Microsoft&nbsp;Entra&nbsp;ID.</p>
-          <span className="st-denied-group">{ShieldIcon}Entra ID · Finance SME group</span>
-          {me && (
-            <div className="st-denied-id">
-              <div className="st-avatar">{initials(me.display_name)}</div>
-              <div className="nm">{me.display_name}<span>{me.email}</span></div>
-            </div>
-          )}
-          <p className="st-denied-hint">You&apos;re signed in, but your account isn&apos;t in the group.
-            Ask your administrator to add you, then reload this page.</p>
-          <Link className="st-denied-back" href="/">{BackIcon}Back to chat</Link>
-        </div>
+    <div className="denied">
+      <div className="denied-card">
+        <div className="glyph" />
+        <h2>Access restricted</h2>
+        <p className="why">The Skill Studio is limited to members of the{" "}
+          <b>Finance&nbsp;SME</b> group in Microsoft&nbsp;Entra&nbsp;ID.</p>
+        <span className="denied-group">{ShieldIcon}Entra ID · Finance SME group</span>
+        {me && (
+          <div className="denied-id">
+            <div className="avatar">{initials(me.display_name)}</div>
+            <div className="nm">{me.display_name}<span>{me.email}</span></div>
+          </div>
+        )}
+        <p className="denied-hint">You&apos;re signed in, but your account isn&apos;t in the group.
+          Ask your administrator to add you, then reload this page.</p>
+        <Link className="denied-back" href="/">{BackIcon}Back to chat</Link>
       </div>
     </div>
   );
