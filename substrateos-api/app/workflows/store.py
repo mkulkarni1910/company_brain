@@ -170,3 +170,18 @@ class RunStore:
                     and run.decision.order_id == order_id):
                 return run
         return None
+
+    async def find_handoff_run(self, channel: str | None,
+                               thread_ts: str | None) -> RefundRun | None:
+        """Customer hand-off run whose support-channel card anchors this thread.
+        An agent replying under the card means *this* request — the flow reuses
+        the run's already-fetched order facts instead of re-extracting an order
+        from the reply text. Most recent match wins (list_runs is newest-first)."""
+        if not channel or not thread_ts:
+            return None
+        for run in await self.list_runs(limit=100):
+            if (run.kind == "refund" and run.status == "routed_to_support"
+                    and run.handoff_channel == channel
+                    and run.handoff_ts == thread_ts):
+                return run
+        return None

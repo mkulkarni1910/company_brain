@@ -284,7 +284,7 @@
 
     <div class="mono-label">The playbook engine — same shape for any task (act → stay in control)</div>
     <div class="engine">
-      <div class="lbl"><code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/workflows/</code> (RefundFlow · ApprovalFlow · GithubFlow · RunStore) + <code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/skills/</code> (SkillStore · SkillRouter) — approval routed to the requester's <b>Entra manager</b> (Managers group only) via <code style="color:var(--amber)">DirectoryService</code>; customers route to the support channel; run stops (<code style="color:var(--amber)">needs_attention</code>) when no eligible approver exists</div>
+      <div class="lbl"><code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/workflows/</code> (RefundFlow · ApprovalFlow · GithubFlow · RunStore) + <code style="color:var(--amber);font-family:'JetBrains Mono',monospace">app/skills/</code> (SkillStore · SkillRouter) — approval routed to the requester's <b>Entra manager</b> (Managers group only) via <code style="color:var(--amber)">DirectoryService</code>; customers route to the support channel (agent replies in the hand-off thread reuse the pre-fetched order — no order id needed); run stops (<code style="color:var(--amber)">needs_attention</code>) when no eligible approver exists</div>
       <div class="steps">
         <div class="step"><b>When</b><small>trigger / event</small></div>
         <div class="seq">→</div>
@@ -321,6 +321,7 @@
           <div class="substeps">
             <div class="substep acl"><b>customer</b><small>→ customer requests route to the support channel with their own order pre-fetched (read-only engine lookup)</small></div>
             <div class="substep"><b>agent</b><small>→ engine evaluates; over-limit → route to requester's Entra manager</small></div>
+            <div class="substep"><b>agent in hand-off thread</b><small>→ reuses the routed run's pre-fetched order facts (thread = card anchor, RunStore.find_handoff_run) — "can we refund this" needs no order id</small></div>
             <div class="substep acl"><b>no eligible manager</b><small>→ run stops (needs_attention); no fallback approver</small></div>
             <div class="substep"><b>approve/reject</b><small>only routed manager (role=manager) may act — enforced + audited</small></div>
             <div class="substep"><b>outcome</b><small>decision fans out: agent @-mentioned, customer answered in their thread (DM fallback), hand-off card resolved — both runs audited</small></div>

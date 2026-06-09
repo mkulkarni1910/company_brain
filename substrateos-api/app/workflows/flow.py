@@ -322,8 +322,33 @@ class RefundFlow:
         await self._post(token, channel, thread_ts,
                          text="Pulling up the order and checking the refund policy…")
 
+        # An agent replying under a customer hand-off card means *this* request:
+        # reuse the order facts already fetched (and shown on the card) at routing
+        # time, so "can we refund this" needs no order id in the message text.
+        facts = None
+        linked = await self._store.find_handoff_run(channel, thread_ts)
+        if linked is not None and linked.decision is not None and linked.decision.found:
+            d = linked.decision
+            facts = RefundFacts(
+                found=True, order_id=d.order_id, customer=d.customer,
+                customer_email=d.customer_email, amount_usd=d.amount_usd,
+                order_age_days=d.order_age_days,
+                reasoning=f"Order #{d.order_id} taken from hand-off {linked.id} in this thread",
+            )
+            await self._store.add_event(
+                run.id, step="Order reused from hand-off",
+                detail=(f"Thread is the hand-off card for {linked.id} — "
+                        f"reusing Order #{d.order_id} ({d.customer})"),
+                actor="SubstrateOS")
+            await self._audit.record(
+                run_id=run.id, step="Order reused from hand-off",
+                actor=Actor.system(),
+                detail=f"linked run {linked.id} · order #{d.order_id}",
+            )
+
         try:
-            facts = await self._engine.evaluate(text, user=user, requester=record)
+            if facts is None:
+                facts = await self._engine.evaluate(text, user=user, requester=record)
         except RefundEngineError:
             run.status = "error"
             await self._store.save(run)
