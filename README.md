@@ -1,8 +1,8 @@
 # SubstrateOS — the Company Brain
 
-> The operating system for AI-native enterprises.
+> Building AI agents is becoming easy. Trusting them with real work is the hard part.
 
-**Building AI agents is easy now. Trusting them with real work is the hard part.** How a company actually runs — how a refund gets handled, a discount approved, an outage triaged — was never written down. It lives in people's heads and across a dozen tools, so AI can't see it, follow it, or be trusted to act on it.
+**The work itself was never written down.** How a company actually runs — how a refund gets handled, a discount approved, an outage triaged — lives in people's heads and across a dozen tools, so AI can't see it, follow it, or be trusted to act on it.
 
 SubstrateOS is the company's brain: it captures that know-how and makes it runnable by AI under your controls — **retrieve the facts → reason → act → log it** — grounded in your real data, identity-aware, and auditable end to end. The intelligence isn't a bigger model; it's *capturing how the work is actually done* and making it safe to run.
 
