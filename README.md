@@ -16,11 +16,7 @@ SubstrateOS is the company's brain: it captures that know-how and makes it runna
 
 ---
 
-Production-grade intelligence layer for unified enterprise search and LLM
-orchestration on Microsoft Azure. See `docs/superpowers/specs/` for the
-architecture spec and `docs/superpowers/plans/` for implementation plans.
-
-## Phase 1 demo (Days 0–2)
+## Quick start — Phase 1 (grounded Q&A)
 
 Grounded Q&A with citations against ~12 markdown docs, end-to-end on real
 Azure services.
@@ -76,27 +72,46 @@ Phase 1 baseline: 1.0 / 1.0 on 10 golden Qs (2026-05-29).
 
 ## Layout
 
-- `substrateos-api/` — FastAPI monolith (Zone 4 intelligence layer)
-- `web/` — Next.js 14 chat UI with Entra SSO
+- `substrateos-api/` — FastAPI monolith: the intelligence layer (search ·
+  ranking · retrieval) **and** the governed act layer (`policy/` · `approvals/` ·
+  `audit/` · `workflows/` · `connectors/` · `bots/`)
+- `web/` — Next.js 14 app: Entra-SSO chat, Skill **Studio** (`/studio`), and
+  **Admin** governance views (`/admin`)
 - `infra/` — Azure provisioning (`az` CLI; Bicep later)
-- `docs/` — specs and plans
+- `docs/` — specs (`docs/superpowers/specs/`) and plans (`docs/superpowers/plans/`)
 
-## Next phases
+## Build status
 
-- Phase 2a (done): People pillar (Cosmos Gremlin), query-time ACL re-check,
-personalized ranker (Content + People). Same query → different ranking per user.
-- Phase 2b (done): Activity pillar (Azure Data Explorer free cluster) + engagement
-signal as the ranker's third weighted term. /feedback ingests events; recent
-engagement lifts ranking.
-- Phase 3 (done): Live Fetch via Microsoft Graph /search — freshness queries merge
-live results into ranking. Heuristic trigger; DefaultAzureCredential (single-identity).
-- Phase 4 (done, pure-code Zone 4 completion): LLM plan-step classifier, ranker
-recency signal, per-event-type engagement weighting, ACL freshness gate, eval
-isolation.
-- Phase 5 (infra / needs Entra): per-user OBO for Live Fetch, APIM gateway,
-OpenTelemetry, Event Hubs ingest path, per-tenant index isolation, JWKS caching.
+**Intelligence layer (retrieve + reason) — shipped.**
 
-Each gets its own plan in `docs/superpowers/plans/`.
+- Phase 1: grounded Q&A with citations.
+- Phase 2a/2b: People (Cosmos Gremlin) + Activity (ADX) pillars; query-time ACL
+  re-check; personalized ranker (Content · People · Activity).
+- Phase 3: Live Fetch via Microsoft Graph `/search` (Recency signal).
+- Phase 4: LLM plan-step classifier, recency signal, per-event-type engagement
+  weighting, ACL freshness gate.
+
+**Governed act layer (act + log) — shipped.**
+
+- Deterministic Guardrail engine (`app/policy/`) — the verdict is policy-as-code,
+  not the model.
+- Durable, identity-bound, role-authorized approval gate (`app/approvals/`).
+- Append-only, identity-stamped AuditLog (`app/audit/`) — the governance receipt
+  (`GET /runs/{id}`), surfaced in the Admin run-detail view.
+- Workflow engine (`app/workflows/`) + act connectors (`app/connectors/act/`),
+  driven from directory-routed Slack/Teams bots. Live use cases: refund approval
+  and the GitHub PR playbook.
+
+**Capture (know-how → runnable skill) — shipped.**
+
+- Skill **Studio** (`/studio`): an SME describes how the work is done in plain
+  English → AI drafts a skill → a manager reviews and approves before it goes
+  live (Entra SME-group gated, fail-closed).
+
+**Infra (needs Entra) — next.** Per-user OBO for Live Fetch, APIM gateway,
+OpenTelemetry, Event Hubs ingest, per-tenant index isolation, JWKS caching.
+
+Each item has a plan in `docs/superpowers/plans/`.
 
 ## Run the web chat (SubstrateOS, light)
 
