@@ -69,6 +69,18 @@
   .os-tag{position:absolute;top:-10px;left:22px;background:#fff;padding:0 10px;
     font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber-2)}
   .os-tag b{color:var(--navy)}
+  .os-tag-right{position:absolute;top:-11px;right:22px;background:var(--navy);color:#fff;padding:4px 12px;border-radius:7px;
+    font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+  .os-tag-right span{color:var(--amber)}
+  .contain-ribbon{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;
+    background:rgba(247,234,210,.40);border:1px solid var(--amber-line);border-radius:10px;
+    padding:6px 14px;margin-top:9px;font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:600;letter-spacing:.2px}
+  .contain-ribbon .hd{color:var(--navy);text-transform:uppercase;letter-spacing:1.4px}
+  .contain-ribbon .ok{color:var(--green)}
+  .contain-ribbon .ok b{color:var(--navy);font-weight:700}
+  .contain-ribbon .next{color:var(--amber-2)}
+  .contain-ribbon .sep{color:var(--amber-line)}
+  .contain-ribbon .tail{color:var(--amber-2);font-weight:700}
 
   /* ENTRA GATEWAY */
   .gateway{display:flex;align-items:center;justify-content:center;gap:13px;
@@ -81,7 +93,7 @@
 
   /* ENGINE */
   .engine{background:linear-gradient(135deg,var(--navy),var(--navy-2));border-radius:14px;
-    padding:14px 18px 15px;box-shadow:var(--shadow);position:relative;overflow:hidden;margin-top:11px}
+    padding:14px 18px 15px;box-shadow:var(--shadow);position:relative;overflow:hidden;margin-top:6px}
   .engine::after{content:"";position:absolute;left:-50px;bottom:-90px;width:240px;height:240px;border-radius:50%;
     background:radial-gradient(circle,rgba(200,134,13,.12),transparent 70%)}
   .engine .top{display:flex;align-items:center;gap:12px;margin-bottom:11px;position:relative;z-index:2}
@@ -274,7 +286,8 @@
 
   <!-- ===== SUBSTRATEOS LAYER ===== -->
   <div class="os-layer">
-    <span class="os-tag"><b>SubstrateOS</b> — the governed layer · identity · engine · foundation</span>
+    <span class="os-tag"><b>SubstrateOS</b> — your governed layer, inside your <b>Azure / Entra tenant</b></span>
+    <span class="os-tag-right">Your IP, <span>contained</span></span>
 
     <!-- ENTRA GATEWAY -->
     <div class="gateway">
@@ -288,6 +301,16 @@
       </div>
       <b>All surfaces sign in through <span>Microsoft Entra ID</span></b>
       <span class="sub">— known identity on every request · double-enforcement ACLs, fail-closed —</span>
+    </div>
+
+    <!-- IP CONTAINMENT RIBBON -->
+    <div class="contain-ribbon">
+      <span class="hd">Capture without leakage —</span>
+      <span class="ok">✓ <b>data stays in your tenant</b></span><span class="sep">·</span>
+      <span class="ok">✓ <b>identity + ACLs</b></span><span class="sep">·</span>
+      <span class="ok">✓ <b>append-only audit</b></span><span class="sep">·</span>
+      <span class="next">→ grounding, not training <b>(Azure OpenAI–ready)</b></span>
+      <span class="tail">— safe to run, and safe to hold</span>
     </div>
 
     <!-- ENGINE -->
