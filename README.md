@@ -129,8 +129,9 @@ we know the path forward:
 - *Tamper-evident audit — next.* Harden the append-only log toward a WORM-grade
   store with retention.
 
-Rationale, threat model, and honest per-control status:
-[`docs/ip-containment.md`](docs/ip-containment.md).
+Rationale and threat model: [`docs/ip-containment.md`](docs/ip-containment.md).
+Roadmap with deep-dive callouts:
+[`docs/superpowers/plans/2026-06-12-ip-containment-roadmap.md`](docs/superpowers/plans/2026-06-12-ip-containment-roadmap.md).
 
 **Infra (needs Entra) — next.** Per-user OBO for Live Fetch, APIM gateway,
 OpenTelemetry, Event Hubs ingest, per-tenant index isolation, JWKS caching.
