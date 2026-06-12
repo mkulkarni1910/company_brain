@@ -12,6 +12,13 @@ SubstrateOS is the company's brain: it captures that know-how and makes it runna
 
 ![SubstrateOS — high-level architecture](docs/architecture.png)
 
+**Your IP, contained.** Codifying know-how for AI is the same act that destroys
+its old tacit moat — once it's legible to a machine, it's copyable in one action.
+SubstrateOS rebuilds the moat as *containment*: stays in your tenant · grounding,
+not training · identity-scoped access · append-only audit. The governance frame
+is "safe to run" **and** "safe to hold." Design rationale and honest status of
+each control: [`docs/ip-containment.md`](docs/ip-containment.md).
+
 *Setup and run instructions are below. Architecture spec: [`docs/superpowers/specs/`](docs/superpowers/specs/) · implementation plans: [`docs/superpowers/plans/`](docs/superpowers/plans/).*
 
 ---
@@ -107,6 +114,23 @@ Phase 1 baseline: 1.0 / 1.0 on 10 golden Qs (2026-05-29).
 - Skill **Studio** (`/studio`): an SME describes how the work is done in plain
   English → AI drafts a skill → a manager reviews and approves before it goes
   live (Entra SME-group gated, fail-closed).
+
+**IP containment (capture without leakage) — partly shipped, path mapped.**
+Two of the four containment controls are live today: identity-scoped access
+(Entra + ACLs) and append-only audit. The rest is **planned, not hand-waved** —
+we know the path forward:
+
+- *Grounding, not training (the crux) — next.* Answer generation runs on Gemini
+  today; the planned move is an enterprise **no-train + data-residency** model
+  deployment (Azure OpenAI — the deck's "Gemini today, Azure OpenAI–ready"), so
+  no vendor ever absorbs the playbooks.
+- *Fully tenant-resident — next.* Keep the library and run/audit state inside the
+  Azure/Entra boundary end to end.
+- *Tamper-evident audit — next.* Harden the append-only log toward a WORM-grade
+  store with retention.
+
+Rationale, threat model, and honest per-control status:
+[`docs/ip-containment.md`](docs/ip-containment.md).
 
 **Infra (needs Entra) — next.** Per-user OBO for Live Fetch, APIM gateway,
 OpenTelemetry, Event Hubs ingest, per-tenant index isolation, JWKS caching.
