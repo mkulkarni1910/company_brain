@@ -31,7 +31,7 @@ Azure services.
 ### Prerequisites
 
 1. Azure subscription with Owner/Contributor.
-2. Azure OpenAI quota approved in the chosen region (default `swedencentral` (eastus2 was capacity-blocked at provision time)).
+2. Azure OpenAI quota approved in the chosen region (default `centralindia`).
 3. Entra ID tenant admin (for app registrations + admin consent).
 4. `az` CLI logged in (`az login`), `uv` and `pnpm` installed locally.
 

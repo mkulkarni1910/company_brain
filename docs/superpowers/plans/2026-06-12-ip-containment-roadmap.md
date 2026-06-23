@@ -30,7 +30,7 @@ can honestly claim *"contained, governed, auditable, never vendor-absorbed."*
 claim rests on. Until it's closed, the "no vendor absorbs your playbooks" line is
 aspirational. It gates the CISO security story and the moat argument.
 
-**Where we are:** answer generation runs on **Gemini 2.5 Pro via the Google AI
+**Where we are:** answer generation runs on **Gemini 3.1 Pro via the Google AI
 Studio API** (`app/generation/gemini.py`). The grounding *pattern* is already
 correct — know-how is retrieved as context at inference time, nothing is
 fine-tuned into weights — but the *vendor posture* is not: AI Studio's data terms

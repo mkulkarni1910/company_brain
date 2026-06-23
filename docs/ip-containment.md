@@ -3,7 +3,7 @@
 > **Status: design rationale.** This captures a critical design decision for the
 > platform — *capture without leakage*. Some controls are shipped; the headline
 > one (no-train enterprise model posture) is **design intent, not yet baked in**.
-> Each control below carries an honest status. See [Status today](#status-today).
+> Each control below carries an honest status. See [Status today](#5-status-today).
 
 Preserving company know-how in the AI era. Internal reference for why
 containment is load-bearing — not a feature, the precondition for the whole
@@ -92,7 +92,7 @@ an engineering reference and not a brochure.
 | Control | Status | Where it stands |
 |---|---|---|
 | **Stays in your tenant** | 🟡 Partial | Library & connector data persist in **Cosmos DB** inside the Azure/Entra tenant (`app/connectors/cosmos_store.py`). But model **inference egresses to Google's Gemini API** (see next row), and run/audit state is currently Redis-backed. "Fully in-tenant" requires closing both. |
-| **Grounding, not training** | 🔴 Design intent | The *grounding* half is real: it's RAG — know-how is injected as context, nothing is fine-tuned into weights. The *vendor-containment* half is **not yet true**: answers run on **Gemini 2.5 Pro via the Google AI Studio API** (`app/generation/gemini.py`), a third-party endpoint whose data terms are **not** an enterprise no-train + data-residency deployment. **This is the headline gap.** Target: Azure OpenAI (or Vertex enterprise) with contractual no-train + residency. The deck's "Gemini today, Azure OpenAI–ready" *is* this gap. |
+| **Grounding, not training** | 🔴 Design intent | The *grounding* half is real: it's RAG — know-how is injected as context, nothing is fine-tuned into weights. The *vendor-containment* half is **not yet true**: answers run on **Gemini 3.1 Pro via the Google AI Studio API** (`app/generation/gemini.py`), a third-party endpoint whose data terms are **not** an enterprise no-train + data-residency deployment. **This is the headline gap.** Target: Azure OpenAI (or Vertex enterprise) with contractual no-train + residency. The deck's "Gemini today, Azure OpenAI–ready" *is* this gap. |
 | **Identity-scoped access (Entra + ACLs)** | 🟢 Shipped | Entra SSO on every surface; query-time ACL filter (`app/acl/enforcement.py` → `build_acl_filter`, applied in `app/retrieval/`); Skill Studio gated to an Entra SME group, fail-closed. |
 | **Append-only audit** | 🟢 Shipped *(hardening pending)* | Immutable, identity-stamped event log per run (`app/audit/log.py` — "Events are immutable"), surfaced as the governance receipt `GET /runs/{id}`. Hardening target: tamper-evident / WORM-grade store with retention, rather than Redis with in-process degradation. |
 
@@ -111,7 +111,7 @@ an engineering reference and not a brochure.
 - **The vendor guarantee is a dependency, not magic.** "Grounding not training"
   is only as strong as the deployment's data terms. Name the Azure/no-train
   posture explicitly; don't wave at it. (Today that posture is *aspirational* —
-  see [Status](#status-today).)
+  see [Status](#5-status-today).)
 
 ## 7. Why it matters
 
